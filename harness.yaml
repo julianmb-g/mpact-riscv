@@ -1,0 +1,3 @@
+build_cmd: "bazel build //..."
+test_cmd: "bazel test //..."
+lint_cmd: "buildifier -r ."
