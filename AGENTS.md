@@ -5,4 +5,3 @@ An instruction set simulator for the standard RISC-V architecture, built upon th
 
 ## Lessons Learned
 - Currently tracking the main branch. Ensure any features implemented are modular and adhere to the MPACT-Sim framework.
-- Git constraints: Use HTTPS remotes only. Do not attempt to use `git remote set-url` to convert to SSH.
