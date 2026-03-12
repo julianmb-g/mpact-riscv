@@ -302,6 +302,7 @@ cc_library(
     deps = [
         ":riscv_g",
         ":riscv_state",
+        ":riscv_fp_state",
         "@com_google_mpact-sim//mpact/sim/generic:arch_state",
         "@com_google_mpact-sim//mpact/sim/generic:instruction",
     ],
@@ -327,6 +328,28 @@ cc_library(
         "@com_google_absl//absl/numeric:bits",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
+        "@com_google_mpact-sim//mpact/sim/generic:instruction",
+        "@com_google_mpact-sim//mpact/sim/generic:type_helpers",
+    ],
+)
+
+
+cc_library(
+    name = "riscv_zfa_instructions",
+    srcs = ["riscv_zfa_instructions.cc"],
+    hdrs = [
+        "riscv_instruction_helpers.h",
+        "riscv_zfa_instructions.h",
+    ],
+    copts = [
+        "-ffp-model=strict",
+        "-O3",
+    ],
+    deps = [
+                ":riscv_state",
+        ":riscv_fp_state",
+        "@com_google_mpact-sim//mpact/sim/generic:arch_state",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_mpact-sim//mpact/sim/generic:instruction",
         "@com_google_mpact-sim//mpact/sim/generic:type_helpers",
     ],
@@ -1683,6 +1706,7 @@ mpact_isa_decoder(
         "riscv_zihintntl.isa",
         "riscv_zvbb.isa",
         "riscv_zfh.isa",
+        "riscv_zfa.isa",
     ],
     isa_name = "Rva23u64",
     prefix = "rva23u64",
@@ -1692,6 +1716,7 @@ mpact_isa_decoder(
         ":riscv_v",
         ":riscv_vector_basic_bit_manipulation_instructions",
         ":riscv_zfh_instructions",
+        ":riscv_zfa_instructions",
         ":rvm23_instructions",
         "@com_google_absl//absl/functional:bind_front",
     ],

@@ -23,6 +23,7 @@ decoder Rva23u64 {
     RiscVZvkbInst32,
     RiscVBasicBitInst32,
     RiscVZfh64Inst32,
+    RiscVZfaInst32,
   };
   Rva23u64Inst16 = {
     RiscVCInst16,
@@ -102,4 +103,47 @@ instruction group RiscVBasicBitInst32[32] : Inst32Format {
   vwsll_vv : VArith : func6 == 0b110'101, func3 == 0b000, opcode == 0b101'0111;
   vwsll_vx : VArith : func6 == 0b110'101, func3 == 0b100, opcode == 0b101'0111;
   vwsll_vi : VArith : func6 == 0b110'101, func3 == 0b011, opcode == 0b101'0111;
+}
+
+format ZfaRType[32] : Inst32Format {
+  fields:
+    unsigned func7[7];
+    unsigned rs2[5];
+    unsigned rs1[5];
+    unsigned func3[3];
+    unsigned rd[5];
+    unsigned opcode[7];
+  overlays:
+    unsigned zfa_rs1_imm[5] = rs1;
+    unsigned zfa_rm_imm[3] = func3;
+};
+
+instruction group RiscVZfaInst32[32] : Inst32Format {
+  fli_s        : ZfaRType : func7 == 0b1111000, rs2 == 0b00001, func3 == 0b000, opcode == 0b1010011;
+  fminm_s      : RType : func7 == 0b0010100, func3 == 0b010, opcode == 0b1010011;
+  fmaxm_s      : RType : func7 == 0b0010100, func3 == 0b011, opcode == 0b1010011;
+  fround_s     : ZfaRType : func7 == 0b0100000, rs2 == 0b00100, opcode == 0b1010011;
+  froundnx_s   : ZfaRType : func7 == 0b0100000, rs2 == 0b00101, opcode == 0b1010011;
+  fleq_s       : RType : func7 == 0b1010000, func3 == 0b100, opcode == 0b1010011;
+  fltq_s       : RType : func7 == 0b1010000, func3 == 0b101, opcode == 0b1010011;
+  
+  fli_d        : ZfaRType : func7 == 0b1111001, rs2 == 0b00001, func3 == 0b000, opcode == 0b1010011;
+  fminm_d      : RType : func7 == 0b0010101, func3 == 0b010, opcode == 0b1010011;
+  fmaxm_d      : RType : func7 == 0b0010101, func3 == 0b011, opcode == 0b1010011;
+  fround_d     : ZfaRType : func7 == 0b0100001, rs2 == 0b00100, opcode == 0b1010011;
+  froundnx_d   : ZfaRType : func7 == 0b0100001, rs2 == 0b00101, opcode == 0b1010011;
+  fcvtmod_w_d  : ZfaRType : func7 == 0b1100001, rs2 == 0b01000, func3 == 0b001, opcode == 0b1010011;
+  fleq_d       : RType : func7 == 0b1010001, func3 == 0b100, opcode == 0b1010011;
+  fltq_d       : RType : func7 == 0b1010001, func3 == 0b101, opcode == 0b1010011;
+  
+  fli_h        : ZfaRType : func7 == 0b1111010, rs2 == 0b00001, func3 == 0b000, opcode == 0b1010011;
+  fminm_h      : RType : func7 == 0b0010110, func3 == 0b010, opcode == 0b1010011;
+  fmaxm_h      : RType : func7 == 0b0010110, func3 == 0b011, opcode == 0b1010011;
+  fround_h     : ZfaRType : func7 == 0b0100010, rs2 == 0b00100, opcode == 0b1010011;
+  froundnx_h   : ZfaRType : func7 == 0b0100010, rs2 == 0b00101, opcode == 0b1010011;
+  fleq_h       : RType : func7 == 0b1010010, func3 == 0b100, opcode == 0b1010011;
+  fltq_h       : RType : func7 == 0b1010010, func3 == 0b101, opcode == 0b1010011;
+  
+  fmvh_x_d     : RType : func7 == 0b1110001, rs2 == 0b00001, func3 == 0b000, opcode == 0b1010011;
+  fmvp_d_x     : RType : func7 == 0b1011001, func3 == 0b000, opcode == 0b1010011;
 }

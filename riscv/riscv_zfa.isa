@@ -1,0 +1,98 @@
+isa ZFA {
+  namespace mpact::sim::riscv::zfa;
+  slots {
+    riscv_zfa;
+  }
+}
+
+slot riscv_zfa {
+  includes {
+    #include "riscv/riscv_zfa_instructions.h"
+  }
+  default size = 4;
+  default opcode =
+    disasm: "Illegal instruction at 0x%(@:08x)",
+    semfunc: "&RiscVIllegalInstruction";
+
+  opcodes {
+    // Zfa single-precision
+    fli_s{: ZfaRType_zfa_rs1_imm : frd},
+      semfunc: "&RiscVFliS",
+      disasm: "fli.s", "%frd, %ZfaRType_zfa_rs1_imm";
+    fminm_s{: frs1, frs2 : frd, fflags},
+      semfunc: "&RiscVFMinmS",
+      disasm: "fminm.s", "%frd, %frs1, %frs2";
+    fmaxm_s{: frs1, frs2 : frd, fflags},
+      semfunc: "&RiscVFMaxmS",
+      disasm: "fmaxm.s", "%frd, %frs1, %frs2";
+    fround_s{: frs1, ZfaRType_zfa_rm_imm : frd, fflags},
+      semfunc: "&RiscVFRoundS",
+      disasm: "fround.s", "%frd, %frs1, %ZfaRType_zfa_rm_imm";
+    froundnx_s{: frs1, ZfaRType_zfa_rm_imm : frd, fflags},
+      semfunc: "&RiscVFRoundnxS",
+      disasm: "froundnx.s", "%frd, %frs1, %ZfaRType_zfa_rm_imm";
+    fleq_s{: frs1, frs2 : rd, fflags},
+      semfunc: "&RiscVFleqS",
+      disasm: "fleq.s", "%rd, %frs1, %frs2";
+    fltq_s{: frs1, frs2 : rd, fflags},
+      semfunc: "&RiscVFltqS",
+      disasm: "fltq.s", "%rd, %frs1, %frs2";
+
+    // Zfa double-precision
+    fli_d{: ZfaRType_zfa_rs1_imm : frd},
+      semfunc: "&RiscVFliD",
+      disasm: "fli.d", "%frd, %ZfaRType_zfa_rs1_imm";
+    fminm_d{: frs1, frs2 : frd, fflags},
+      semfunc: "&RiscVFMinmD",
+      disasm: "fminm.d", "%frd, %frs1, %frs2";
+    fmaxm_d{: frs1, frs2 : frd, fflags},
+      semfunc: "&RiscVFMaxmD",
+      disasm: "fmaxm.d", "%frd, %frs1, %frs2";
+    fround_d{: frs1, ZfaRType_zfa_rm_imm : frd, fflags},
+      semfunc: "&RiscVFRoundD",
+      disasm: "fround.d", "%frd, %frs1, %ZfaRType_zfa_rm_imm";
+    froundnx_d{: frs1, ZfaRType_zfa_rm_imm : frd, fflags},
+      semfunc: "&RiscVFRoundnxD",
+      disasm: "froundnx.d", "%frd, %frs1, %ZfaRType_zfa_rm_imm";
+    fcvtmod_w_d{: frs1, ZfaRType_zfa_rm_imm : rd, fflags},
+      semfunc: "&RiscVFCvtmodWD",
+      disasm: "fcvtmod.w.d", "%rd, %frs1, %ZfaRType_zfa_rm_imm";
+    fleq_d{: frs1, frs2 : rd, fflags},
+      semfunc: "&RiscVFleqD",
+      disasm: "fleq.d", "%rd, %frs1, %frs2";
+    fltq_d{: frs1, frs2 : rd, fflags},
+      semfunc: "&RiscVFltqD",
+      disasm: "fltq.d", "%rd, %frs1, %frs2";
+
+    // Zfa half-precision
+    fli_h{: ZfaRType_zfa_rs1_imm : frd},
+      semfunc: "&RiscVFliH",
+      disasm: "fli.h", "%frd, %ZfaRType_zfa_rs1_imm";
+    fminm_h{: frs1, frs2 : frd, fflags},
+      semfunc: "&RiscVFMinmH",
+      disasm: "fminm.h", "%frd, %frs1, %frs2";
+    fmaxm_h{: frs1, frs2 : frd, fflags},
+      semfunc: "&RiscVFMaxmH",
+      disasm: "fmaxm.h", "%frd, %frs1, %frs2";
+    fround_h{: frs1, ZfaRType_zfa_rm_imm : frd, fflags},
+      semfunc: "&RiscVFRoundH",
+      disasm: "fround.h", "%frd, %frs1, %ZfaRType_zfa_rm_imm";
+    froundnx_h{: frs1, ZfaRType_zfa_rm_imm : frd, fflags},
+      semfunc: "&RiscVFRoundnxH",
+      disasm: "froundnx.h", "%frd, %frs1, %ZfaRType_zfa_rm_imm";
+    fleq_h{: frs1, frs2 : rd, fflags},
+      semfunc: "&RiscVFleqH",
+      disasm: "fleq.h", "%rd, %frs1, %frs2";
+    fltq_h{: frs1, frs2 : rd, fflags},
+      semfunc: "&RiscVFltqH",
+      disasm: "fltq.h", "%rd, %frs1, %frs2";
+
+    // Zfa RV32 helpers for D-extension
+    fmvh_x_d{: frs1 : rd},
+      semfunc: "&RiscVFmvhXD",
+      disasm: "fmvh.x.d", "%rd, %frs1";
+    fmvp_d_x{: rs1, rs2 : frd},
+      semfunc: "&RiscVFmvpDX",
+      disasm: "fmvp.d.x", "%frd, %rs1, %rs2";
+  }
+}
