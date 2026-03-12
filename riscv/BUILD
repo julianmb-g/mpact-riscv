@@ -300,9 +300,9 @@ cc_library(
         "-ffp-model=strict",
     ],
     deps = [
-        ":riscv_g",
         ":riscv_state",
         ":riscv_fp_state",
+        ":riscv_g",
         "@com_google_mpact-sim//mpact/sim/generic:arch_state",
         "@com_google_mpact-sim//mpact/sim/generic:instruction",
     ],
@@ -348,6 +348,7 @@ cc_library(
     deps = [
                 ":riscv_state",
         ":riscv_fp_state",
+        ":riscv_g",
         "@com_google_mpact-sim//mpact/sim/generic:arch_state",
         "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_mpact-sim//mpact/sim/generic:instruction",
