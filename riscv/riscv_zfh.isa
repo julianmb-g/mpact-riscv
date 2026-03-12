@@ -40,7 +40,7 @@ slot riscv_zfh_min_common {
   default latency = 0;
   default opcode =
     disasm: "Unimplemented instruction at 0x%(@:08x)",
-    semfunc: "&RV32VUnimplementedInstruction";
+    semfunc: "&RV32ZfhUnimplementedInstruction";
   opcodes {
     fcvt_sh{: frs1, rm : frd, fflags},
       resources: {next_pc, frs1 : frd[0..]},
@@ -70,7 +70,7 @@ slot riscv32_zfh_min: riscv_zfh_min_common {
   default latency = 0;
   default opcode =
     disasm: "Unimplemented instruction at 0x%(@:08x)",
-    semfunc: "&RV32VUnimplementedInstruction";
+    semfunc: "&RV32ZfhUnimplementedInstruction";
   opcodes {
     flh{(: rs1, I_imm12 : ), (: : frd)},
       resources: {next_pc, rs1 : frd[0..]},
@@ -100,7 +100,7 @@ slot riscv64_zfh_min: riscv_zfh_min_common {
   default latency = 0;
   default opcode =
     disasm: "Unimplemented instruction at 0x%(@:08x)",
-    semfunc: "&RV32VUnimplementedInstruction";
+    semfunc: "&RV32ZfhUnimplementedInstruction";
   opcodes {
     flh{(: rs1, I_imm12 : ), (: : frd)},
       resources: {next_pc, rs1 : frd[0..]},
@@ -129,7 +129,7 @@ slot riscv_zfh_common {
   default latency = 0;
   default opcode =
     disasm: "Unimplemented instruction at 0x%(@:08x)",
-    semfunc: "&RV32VUnimplementedInstruction";
+    semfunc: "&RV32ZfhUnimplementedInstruction";
   opcodes {
     fcvt_hw{: rs1, rm : frd, fflags},
       resources: {next_pc, frs1 : frd[0..]},
@@ -206,7 +206,7 @@ slot riscv32_zfh : riscv32_zfh_min, riscv_zfh_common {
   default latency = 0;
   default opcode =
     disasm: "Unimplemented instruction at 0x%(@:08x)",
-    semfunc: "&RV32VUnimplementedInstruction";
+    semfunc: "&RV32ZfhUnimplementedInstruction";
   opcodes {
     fcvt_wh{: frs1, rm : rd, fflags},
       resources: {next_pc, frs1 : rd[0..]},
@@ -243,7 +243,7 @@ slot riscv64_zfh : riscv64_zfh_min, riscv_zfh_common {
   default latency = 0;
   default opcode =
     disasm: "Unimplemented instruction at 0x%(@:08x)",
-    semfunc: "&RV32VUnimplementedInstruction";
+    semfunc: "&RV32ZfhUnimplementedInstruction";
   opcodes {
     fcvt_wh{: frs1, rm : rd, fflags},
       resources: {next_pc, frs1 : rd[0..]},

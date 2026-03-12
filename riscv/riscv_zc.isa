@@ -297,27 +297,27 @@ slot riscv_zcb32 {
   }
 }
 
-slot riscv_zcb64 {
+slot riscv_zcb64 : riscv_zcb32 {
   includes {
     #include "riscv/riscv_bitmanip_instructions.h"
   }
   default size = 2;
     opcodes {
     c_lbu = override, semfunc: "&RV64::RiscVILbu", "&RV64::RiscVILbuChild";
-    c_lhu = override, semfunc: "&RV64::RiscVLhu", "&RV64::RiscVILhuChild";
-    c_lh = override, semfunc: "&RV64::RiscVLh", "&RV64::RiscVILhChild";
-    c_sb = override, semfunc: "&RV64::RiscVSb";
-    c_sh = override, semfunc: "&RV64::RiscVSh";
+    c_lhu = override, semfunc: "&RV64::RiscVILhu", "&RV64::RiscVILhuChild";
+    c_lh = override, semfunc: "&RV64::RiscVILh", "&RV64::RiscVILhChild";
+    c_sb = override, semfunc: "&RV64::RiscVISb";
+    c_sh = override, semfunc: "&RV64::RiscVISh";
     c_zext_b = override, semfunc: "&RV64::RiscVZextB";
     c_sext_b = override, semfunc: "&RV64::RiscVSextB";
     c_zext_h = override, semfunc: "&RV64::RiscVZextH";
     c_sext_h = override, semfunc: "&RV64::RiscVSextH";
-    c_not = override, semfunc: "&RV64::RiscV";
+    c_not = override, semfunc: "&RV64::RiscVNot";
     c_mul = override, semfunc: "&RV64::MMul";
-    c_sext_w{: c3rs1 : c3rd},
+    c_zext_w{: c3rs1 : c3rd},
       resources: {c3rs1 : c3rd},
-      disasm: "c.sext.w", "%c3rs1",
-      semfunc: "&RV64::RiscVSextW";
+      disasm: "c.zext.w", "%c3rs1",
+      semfunc: "&RV64::RiscVZextw";
   }
 }
 

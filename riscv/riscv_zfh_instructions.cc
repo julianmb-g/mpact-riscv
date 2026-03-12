@@ -939,7 +939,7 @@ void RiscVZfhCvtHwu(const Instruction* instruction) {
 
 // TODO(b/409778536): Factor out generic unimplemented instruction semantic
 //                    function.
-void RV32VUnimplementedInstruction(const Instruction* instruction) {
+void RV32ZfhUnimplementedInstruction(const Instruction* instruction) {
   auto* state = static_cast<RiscVState*>(instruction->state());
   state->Trap(/*is_interrupt*/ false, /*trap_value*/ 0,
               *ExceptionCode::kIllegalInstruction,

@@ -53,6 +53,7 @@ void RiscVSextB(const Instruction* instruction);
 void RiscVSextH(const Instruction* instruction);
 void RiscVZextB(const Instruction* instruction);
 void RiscVZextH(const Instruction* instruction);
+void RiscVZextw(const Instruction* instruction);
 // These functions take 2 source operands, rs1, rs2, and one destination operand
 // rd.
 void RiscVRol(const Instruction* instruction);
@@ -102,7 +103,10 @@ void RiscVMinu(const Instruction* instruction);
 // These functions take 1 source operands, rs1, and one destination operand rd.
 void RiscVSextB(const Instruction* instruction);
 void RiscVSextH(const Instruction* instruction);
+void RiscVZextB(const Instruction* instruction);
 void RiscVZextH(const Instruction* instruction);
+void RiscVZextw(const Instruction* instruction);
+void RiscVNot(const generic::Instruction* instruction);
 // These functions take 2 source operands, rs1, rs2, and one destination operand
 // rd.
 void RiscVRol(const Instruction* instruction);

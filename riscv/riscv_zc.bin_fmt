@@ -82,7 +82,7 @@ instruction group RiscVCZcb32[16] : Inst16Format {
 }
 
 // For 64 bit CPUs the zext_w instruction is added.
-instruction group RiscV64Zcb64[64] : Inst16Format {
+instruction group RiscV64Zcb64[16] : Inst16Format {
   c_zext_w : CU : func6 == 0b100'111, func5 == 0b11100, op == 0b01;
 }
 

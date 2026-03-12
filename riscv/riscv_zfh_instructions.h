@@ -218,7 +218,7 @@ void RiscVZfhCvtHd(const Instruction* instruction);
 
 // TODO(b/409778536): Factor out generic unimplemented instruction semantic
 //                    function.
-void RV32VUnimplementedInstruction(const Instruction* instruction);
+void RV32ZfhUnimplementedInstruction(const Instruction* instruction);
 
 // Source Operands:
 //   frs1: Float Register

@@ -526,6 +526,10 @@ void RiscVBset(const Instruction* instruction) {
       [](UIntReg a, UIntReg b) { return a | (1ULL << (b & 0x3f)); });
 }
 
+void RiscVZextw(const Instruction* instruction) {
+  RiscVUnaryOp<RegisterType, UIntReg, UIntReg>(
+      instruction, [](UIntReg a) { return a & 0x0000'0000'ffff'ffffULL; });
+}
 }  // namespace RV64
 
 }  // namespace mpact::sim::riscv
