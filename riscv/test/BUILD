@@ -1026,6 +1026,11 @@ cc_test(
     srcs = ["rva23u64_sim_test.cc"],
     copts = ["-O3"],
     deps = [
+        "//riscv:riscv_fp_state",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "//riscv:rva23u64_decoder",
+        "//riscv:riscv_state",
+        "//riscv:riscv_top",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
     ],
