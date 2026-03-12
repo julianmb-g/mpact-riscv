@@ -542,10 +542,10 @@ slot riscv_vector {
     vrgatherei16_vv{: vs2, vs1, vmask: vd},
       disasm: "vrgatherei16.vv", "%vd, %vs2, %vs1, %vmask",
       semfunc: "&Vrgatherei16";
-    vslideup_vx{: vs2, rs1, vmask: vd},
+    vslideup_vx{: vs2, rs1, vmask, vd : vd},
       disasm: "vslideup.vx", "%vd, %vs2, %rs1, %vmask",
       semfunc: "&Vslideup";
-    vslideup_vi{: vs2, uimm5, vmask: vd},
+    vslideup_vi{: vs2, uimm5, vmask, vd : vd},
       disasm: "vslideup.vi", "%vd, %vs2, %uimm5, %vmask",
       semfunc: "&Vslideup";
     vslidedown_vx{: vs2, rs1, vmask: vd},
@@ -847,13 +847,13 @@ slot riscv_vector {
     vasub_vx{: vs2, rs1, vmask: vd},
       disasm: "vasub.vx", "%vd, %vs2, %rs1, %vmask",
       semfunc: "&Vasub";
-    vslide1up_vx{: vs2, rs1, vmask: vd},
+    vslide1up_vx{: vs2, rs1, vmask, vd : vd},
       disasm: "vslide1up.vx", "%vd, %vs2, %rs1, %vmask",
       semfunc: "&Vslide1up";
     vslide1down_vx{: vs2, rs1, vmask: vd},
       disasm: "vslide1down.vx", "%vd, %vs2, %rs1, %vmask",
       semfunc: "&Vslide1down";
-    vcompress_vv{: vs2, vs1: vd},
+    vcompress_vv{: vs2, vs1, vd : vd},
       disasm: "vcompress.vv", "%vd, %vs2, %vs1",
       semfunc: "&Vcompress";
     vmandnot_vv{: vs2, vs1: vd},
@@ -1868,10 +1868,10 @@ slot riscv_zve32x {
     vrgatherei16_vv{: vs2, vs1, vmask: vd},
       disasm: "vrgatherei16.vv", "%vd, %vs2, %vs1, %vmask",
       semfunc: "&::mpact::sim::riscv::Vrgatherei16";
-    vslideup_vx{: vs2, rs1, vmask: vd},
+    vslideup_vx{: vs2, rs1, vmask, vd : vd},
       disasm: "vslideup.vx", "%vd, %vs2, %rs1, %vmask",
       semfunc: "&::mpact::sim::riscv::Vslideup";
-    vslideup_vi{: vs2, uimm5, vmask: vd},
+    vslideup_vi{: vs2, uimm5, vmask, vd : vd},
       disasm: "vslideup.vi", "%vd, %vs2, %uimm5, %vmask",
       semfunc: "&::mpact::sim::riscv::Vslideup";
     vslidedown_vx{: vs2, rs1, vmask: vd},
@@ -2173,13 +2173,13 @@ slot riscv_zve32x {
     vasub_vx{: vs2, rs1, vmask: vd},
       disasm: "vasub.vx", "%vd, %vs2, %rs1, %vmask",
       semfunc: "&::mpact::sim::riscv::Vasub";
-    vslide1up_vx{: vs2, rs1, vmask: vd},
+    vslide1up_vx{: vs2, rs1, vmask, vd : vd},
       disasm: "vslide1up.vx", "%vd, %vs2, %rs1, %vmask",
       semfunc: "&::mpact::sim::riscv::Vslide1up";
     vslide1down_vx{: vs2, rs1, vmask: vd},
       disasm: "vslide1down.vx", "%vd, %vs2, %rs1, %vmask",
       semfunc: "&::mpact::sim::riscv::Vslide1down";
-    vcompress_vv{: vs2, vs1: vd},
+    vcompress_vv{: vs2, vs1, vd : vd},
       disasm: "vcompress.vv", "%vd, %vs2, %vs1",
       semfunc: "&::mpact::sim::riscv::Vcompress";
     vmandnot_vv{: vs2, vs1: vd},
