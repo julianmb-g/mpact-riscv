@@ -1020,3 +1020,13 @@ config_setting(
     name = "darwin_arm64_cpu",
     values = {"cpu": "darwin_arm64"},
 )
+
+cc_test(
+    name = "rva23u64_sim_test",
+    srcs = ["rva23u64_sim_test.cc"],
+    copts = ["-O3"],
+    deps = [
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

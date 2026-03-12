@@ -206,6 +206,7 @@ int main(int argc, char** argv) {
   if (absl::GetFlag(FLAGS_semihost_htif) && absl::GetFlag(FLAGS_semihost_arm)) {
     LOG(ERROR) << "Cannot specify both htif and arm semihosting";
     std::cerr << "Only one semihosting mechanism can be specified" << std::endl;
+    return -1;
   }
 
   arg_vec.erase(arg_vec.begin());
