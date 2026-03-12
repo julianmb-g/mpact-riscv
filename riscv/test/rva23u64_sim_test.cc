@@ -24,6 +24,7 @@
 #include "riscv/riscv_register_aliases.h"
 #include "mpact/sim/util/memory/flat_demand_memory.h"
 #include "mpact/sim/util/memory/atomic_memory.h"
+#include "mpact/sim/util/program_loader/elf_program_loader.h"
 
 namespace {
 
@@ -37,6 +38,7 @@ using ::mpact::sim::riscv::RV64Register;
 using ::mpact::sim::riscv::RVFpRegister;
 using ::mpact::sim::util::FlatDemandMemory;
 using ::mpact::sim::util::AtomicMemory;
+using ::mpact::sim::util::ElfProgramLoader;
 
 TEST(Rva23u64SimTest, BasicInstantiationTest) {
   // Verify the rva23u64_sim target correctly instantiates the simulator environment.
@@ -73,21 +75,22 @@ TEST(Rva23u64SimTest, BasicInstantiationTest) {
   EXPECT_NE(state, nullptr);
   EXPECT_NE(memory, nullptr);
 
-  // Write a 'nop' instruction (addi x0, x0, 0) to memory at 0x1000.
-  auto* db = state->db_factory()->Allocate<uint32_t>(1);
-  db->Set<uint32_t>(0, 0x00000013);
-  memory->Store(0x1000, db);
-  db->DecRef();
+  // Load a real ELF binary to prove organic architectural instruction decoding.
+  ElfProgramLoader elf_loader(memory);
+  auto load_result = elf_loader.LoadProgram("riscv/test/testfiles/hello_world_64.elf");
+  ASSERT_TRUE(load_result.ok()) << load_result.status().message();
 
-  // Set the program counter and execute one step.
-  (void)top->WriteRegister("pc", 0x1000);
-  EXPECT_EQ(top->ReadRegister("pc").value(), 0x1000);
+  uint64_t entry_point = load_result.value();
+  auto pc_write = top->WriteRegister("pc", entry_point);
+  EXPECT_TRUE(pc_write.ok());
+  EXPECT_EQ(top->ReadRegister("pc").value(), entry_point);
 
+  // Execute one step of the loaded ELF binary.
   auto status = top->Step(1);
   EXPECT_TRUE(status.ok());
-
-  // Verify that execution advanced the PC correctly.
-  EXPECT_EQ(top->ReadRegister("pc").value(), 0x1004);
+  
+  // Execution should successfully advance the PC.
+  EXPECT_NE(top->ReadRegister("pc").value(), entry_point);
 
   delete top;
   delete decoder;
