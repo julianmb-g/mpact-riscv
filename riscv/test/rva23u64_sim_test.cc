@@ -73,6 +73,22 @@ TEST(Rva23u64SimTest, BasicInstantiationTest) {
   EXPECT_NE(state, nullptr);
   EXPECT_NE(memory, nullptr);
 
+  // Write a 'nop' instruction (addi x0, x0, 0) to memory at 0x1000.
+  auto* db = state->db_factory()->Allocate<uint32_t>(1);
+  db->Set<uint32_t>(0, 0x00000013);
+  memory->Store(0x1000, db);
+  db->DecRef();
+
+  // Set the program counter and execute one step.
+  (void)top->WriteRegister("pc", 0x1000);
+  EXPECT_EQ(top->ReadRegister("pc").value(), 0x1000);
+
+  auto status = top->Step(1);
+  EXPECT_TRUE(status.ok());
+
+  // Verify that execution advanced the PC correctly.
+  EXPECT_EQ(top->ReadRegister("pc").value(), 0x1004);
+
   delete top;
   delete decoder;
   delete vector_state;
