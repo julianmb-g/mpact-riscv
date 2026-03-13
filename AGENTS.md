@@ -27,3 +27,4 @@
 
 - **vill Trap Architectural Strictness:** When validating `vill` trap exception logic in the RTL, tests and implementation MUST ensure only whole-register loads/stores, moves (`vmv<nr>r.v`), and scalar translations are whitelisted. Blindly whitelisting all standard loads/stores is strictly forbidden as it bypasses valid architectural fault boundaries.
 - **JIT Synchronization Safety:** Successfully enforced the 'Zero-Trust Baseline Synchronization Safeguards' by executing `git status` and `git stash` prior to upstream synchronization. Confirmed pristine working tree, precluding stash conflicts.
+- **Upstream Sync Process:** Rebase against origin/main before executing tests to ensure a pristine state for the base ISS.
