@@ -28,3 +28,5 @@
 ### Miscellaneous
 - **Linker Duplicate Symbols:** When adding support for disjoint instruction extensions (e.g. `Zfh` and `Vector`), do not reuse generic, un-namespaced helper functions (like `RV32VUnimplementedInstruction`) in different translation units. This causes `duplicate symbol` linker errors in the top-level `cc_binary` simulator. Either mark them `inline` in the header or uniquely namespace/prefix them (e.g. `RV32ZfhUnimplementedInstruction`).
 
+- **Strict Aliasing Violation (reinterpret_cast):** Reinterpreting the address of an integer (`kCanonicalNaN`) as a float pointer (`*reinterpret_cast<T*>(&val)`) is a strict aliasing violation and invokes Undefined Behavior. Use `std::memcpy` or `std::bit_cast`.
+- **RVA23 Ssnpm Pointer Masking Execution Flaw:** Pointer masking only applies to data loads/stores. Instruction fetches must fault if upper bits are not canonical to prevent severe security loopholes.
