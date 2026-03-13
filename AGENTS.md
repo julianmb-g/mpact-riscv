@@ -17,7 +17,7 @@
 ### Testing & Verification
 \[FLAG: stale\] - **Test Integrity (rva23u64_sim_test.cc):** Eradicate useless "Happy-Path" padding like `EXPECT_TRUE(true)` when validating new binary targets. Tests must structurally instantiate the simulator environment and execute actual instructions to be valid.
 - **Test Invariance & Environment Instantiation:** Tests for top-level binary simulators like `rva23u64_sim` must not be trivial `EXPECT_TRUE(true)` assertions. They must definitively link `_decoder`, `_top`, `_state`, `fp_state`, `vector_state` and allocate registers to mathematically prove the architectural environment initializes correctly without segfaulting.
-- **Testing Fidelity Rule**: When creating new architectural binary targets (e.g. `rva23u64_sim`), avoid writing empty tests like `EXPECT_TRUE(true)`. The test must actually verify the binary target executes.
+[FLAG: stale] - **Testing Fidelity Rule**: When creating new architectural binary targets (e.g. `rva23u64_sim`), avoid writing empty tests like `EXPECT_TRUE(true)`. The test must actually verify the binary target executes.
 \[FLAG: stale\] - **Useless Happy-Path Padding:** Do not create dummy tests (e.g., `EXPECT_TRUE(true)`) to artificially pass CI requirements for new binary targets like `rva23u64_sim`. Tests must instantiate the environment and verify actual execution.
 
 ### Miscellaneous
