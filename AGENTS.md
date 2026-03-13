@@ -21,3 +21,4 @@
 
 ### Miscellaneous
 - **vill Trap Architectural Boundaries:** When modifying `vill` trap exception logic in the RTL, ensure only whole-register loads/stores, moves (`vmv<nr>r.v`), and scalar translations are whitelisted. Do not blindly whitelist all standard loads/stores, as this will bypass valid architectural fault boundaries.
+- **Egregious Test Masking via Input Swapping:** When a test fails on specific instruction edge cases (like sign bit magnitude extraction in ZFA `FMINM.S`), you must not swap the inputs to "happy path" numbers that mask the failure. The underlying instruction decoder or logic must be fixed.
