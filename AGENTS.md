@@ -21,3 +21,4 @@
 ### Miscellaneous
 - **RVA23 Submodule Registration:** Any new missing extensions (like `Zawrs`) must include corresponding `.isa`, `.bin_fmt`, and `.cc/.h` definitions, registered directly inside the build definitions (e.g., `mpact-riscv/riscv/BUILD`) and integrated into the top-level target (e.g., `rva23u64.isa`).
 - **Vector Masking Separation:** Vector operations in `.isa` and `.bin_fmt` are duplicated to isolate masked (`vm=0`) and unmasked (`vm=1`) variants, resolving decoding ambiguity.
+- **FMINM.S ZFA Input Swapping:** The ZFA Minimum Magnitude test was corrupted by swapping inputs `-2.0f, 3.0f` to `-3.0f, 2.0f`. This masked a sign-bit handling defect in `RiscVFMinmS`. Tests must strictly evaluate the negative minimum magnitude boundaries.
