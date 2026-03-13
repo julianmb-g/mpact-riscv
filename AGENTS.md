@@ -20,3 +20,7 @@
 - **Test Invariance & Environment Instantiation:** Tests for top-level binary simulators like `rva23u64_sim` must not be trivial `EXPECT_TRUE(true)` assertions. They must definitively link `_decoder`, `_top`, `_state`, `fp_state`, `vector_state` and allocate registers to mathematically prove the architectural environment initializes correctly without segfaulting.
 - **Architectural Bounds Degradation:** When testing organic target execution, enforce precise architectural step bounds with strict equality assertions (e.g., `EXPECT_EQ(pc, entry_point + 4)`) instead of trivial inequality bounds checks (`EXPECT_NE(pc, entry_point)`), which provide no guarantee of correct instruction advancement.
 - **Egregious Test Masking via Input Swapping:** When a test fails on specific instruction edge cases (like sign bit magnitude extraction in ZFA `FMINM.S`), you must not swap the inputs to "happy path" numbers that mask the failure. The underlying instruction decoder or logic must be fixed. Tests must strictly evaluate boundaries.
+
+### QA Lessons Learned (Cycle 28)
+- Do not falsely mask architectural bugs by swapping test inputs (e.g. `FminmS` magnitude testing). Tests must evaluate original exact boundaries.
+- Restore strict equality assertions (e.g. `EXPECT_EQ(pc, entry_point + 4)`) for precise architectural step boundaries, rather than trivial inequalities (`EXPECT_NE(pc, entry_point)`).
