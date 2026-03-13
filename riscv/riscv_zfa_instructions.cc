@@ -100,18 +100,26 @@ template <typename T>
 void RVFMinm(const Instruction* instruction) {
   RiscVBinaryNaNBoxOp<FPRegister::ValueType, T, T>(
       instruction, [instruction](T a, T b) -> T {
-        if (FPTypeInfo<T>::IsNaN(a) || FPTypeInfo<T>::IsNaN(b)) {
-          if (FPTypeInfo<T>::IsSNaN(a) || FPTypeInfo<T>::IsSNaN(b)) {
-            auto* db = instruction->Destination(1)->AllocateDataBuffer();
-            db->Set<uint32_t>(0, *FPExceptions::kInvalidOp);
-            db->Submit();
+        if (FPTypeInfo<T>::IsSNaN(a) || FPTypeInfo<T>::IsSNaN(b)) {
+          auto* db = instruction->Destination(1)->AllocateDataBuffer();
+          db->Set<uint32_t>(0, *FPExceptions::kInvalidOp);
+          db->Submit();
+        }
+        if (FPTypeInfo<T>::IsNaN(a)) {
+          if (FPTypeInfo<T>::IsNaN(b)) {
+            auto not_a_number = FPTypeInfo<T>::kCanonicalNaN;
+            return *reinterpret_cast<T*>(&not_a_number);
           }
-          return *reinterpret_cast<const T*>(&FPTypeInfo<T>::kCanonicalNaN);
+          return b;
+        }
+        if (FPTypeInfo<T>::IsNaN(b)) {
+          return a;
         }
         T abs_a = std::abs(a);
         T abs_b = std::abs(b);
         if (abs_a < abs_b) return a;
         if (abs_b < abs_a) return b;
+        if ((a == 0.0) && (b == 0.0)) return (std::signbit(a)) ? a : b;
         return (a < b) ? a : b;
       });
 }
@@ -120,18 +128,26 @@ template <typename T>
 void RVFMaxm(const Instruction* instruction) {
   RiscVBinaryNaNBoxOp<FPRegister::ValueType, T, T>(
       instruction, [instruction](T a, T b) -> T {
-        if (FPTypeInfo<T>::IsNaN(a) || FPTypeInfo<T>::IsNaN(b)) {
-          if (FPTypeInfo<T>::IsSNaN(a) || FPTypeInfo<T>::IsSNaN(b)) {
-            auto* db = instruction->Destination(1)->AllocateDataBuffer();
-            db->Set<uint32_t>(0, *FPExceptions::kInvalidOp);
-            db->Submit();
+        if (FPTypeInfo<T>::IsSNaN(a) || FPTypeInfo<T>::IsSNaN(b)) {
+          auto* db = instruction->Destination(1)->AllocateDataBuffer();
+          db->Set<uint32_t>(0, *FPExceptions::kInvalidOp);
+          db->Submit();
+        }
+        if (FPTypeInfo<T>::IsNaN(a)) {
+          if (FPTypeInfo<T>::IsNaN(b)) {
+            auto not_a_number = FPTypeInfo<T>::kCanonicalNaN;
+            return *reinterpret_cast<T*>(&not_a_number);
           }
-          return *reinterpret_cast<const T*>(&FPTypeInfo<T>::kCanonicalNaN);
+          return b;
+        }
+        if (FPTypeInfo<T>::IsNaN(b)) {
+          return a;
         }
         T abs_a = std::abs(a);
         T abs_b = std::abs(b);
         if (abs_a > abs_b) return a;
         if (abs_b > abs_a) return b;
+        if ((a == 0.0) && (b == 0.0)) return (std::signbit(a)) ? b : a;
         return (a > b) ? a : b;
       });
 }
