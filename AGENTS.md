@@ -15,13 +15,13 @@
 - **Zero-Trust Baseline Synchronization Safeguards (mpact-riscv):** Always mandate `git status` and `git stash` prior to invoking baseline extraction or rebasing logic to protect uncommitted orchestration state from accidental destruction.
 
 ### Testing & Verification
-- **Test Integrity (rva23u64_sim_test.cc):** Eradicate useless "Happy-Path" padding like `EXPECT_TRUE(true)` when validating new binary targets. Tests must structurally instantiate the simulator environment and execute actual instructions to be valid.
+\[FLAG: stale\] - **Test Integrity (rva23u64_sim_test.cc):** Eradicate useless "Happy-Path" padding like `EXPECT_TRUE(true)` when validating new binary targets. Tests must structurally instantiate the simulator environment and execute actual instructions to be valid.
 - **Test Invariance & Environment Instantiation:** Tests for top-level binary simulators like `rva23u64_sim` must not be trivial `EXPECT_TRUE(true)` assertions. They must definitively link `_decoder`, `_top`, `_state`, `fp_state`, `vector_state` and allocate registers to mathematically prove the architectural environment initializes correctly without segfaulting.
 - **Testing Fidelity Rule**: When creating new architectural binary targets (e.g. `rva23u64_sim`), avoid writing empty tests like `EXPECT_TRUE(true)`. The test must actually verify the binary target executes.
-- **Useless Happy-Path Padding:** Do not create dummy tests (e.g., `EXPECT_TRUE(true)`) to artificially pass CI requirements for new binary targets like `rva23u64_sim`. Tests must instantiate the environment and verify actual execution.
+\[FLAG: stale\] - **Useless Happy-Path Padding:** Do not create dummy tests (e.g., `EXPECT_TRUE(true)`) to artificially pass CI requirements for new binary targets like `rva23u64_sim`. Tests must instantiate the environment and verify actual execution.
 
 ### Miscellaneous
 - **RVA23 Submodule Registration:** Any new missing extensions (like `Zawrs`) must include corresponding `.isa`, `.bin_fmt`, and `.cc/.h` definitions, registered directly inside the build definitions (e.g., `mpact-riscv/riscv/BUILD`) and integrated into the top-level target (e.g., `rva23u64.isa`).
-- **Vector Extension vill Whitelist:** Whitelist whole-register moves (`vmv<nr>r.v`) in `RvvFrontEnd.sv` to bypass `vill` trap checks.
+\[FLAG: invalid\] - **Vector Extension vill Whitelist:** Whitelist whole-register moves (`vmv<nr>r.v`) in `RvvFrontEnd.sv` to bypass `vill` trap checks.
 - **Vector Masking Separation:** Vector operations in `.isa` and `.bin_fmt` are duplicated to isolate masked (`vm=0`) and unmasked (`vm=1`) variants, resolving decoding ambiguity.
 
