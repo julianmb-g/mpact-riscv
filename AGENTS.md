@@ -1,15 +1,27 @@
 # mpact-riscv Agent Instructions
 
 ## Lessons Learned
+
+### Architecture & Integration
+- **Bazel Decoder Architecture Dependencies:** When implementing new instruction extensions (e.g., Zfa), ensure base architectural dependencies like `:riscv_g` are not accidentally removed from top-level `cc_library` targets in `riscv/BUILD`, as this causes silent missing symbol link errors.
+- **Bazel Decoder Dependencies:** When a new `mpact_isa_decoder` macro relies on functionality, ensure the associated `cc_library` directly `deps` on the `.cc`/`.h` files implementing those semantic actions (like `riscv_bitmanip_instructions`), or compilation errors about unknown types (`Instruction`, `RegisterType`) will occur.
+- **Instruction Decoders:** Generated from `.isa` and `.bin_fmt` files, translating binary opcodes into executable instructions.
 - **Instruction Set & Decoder Generation namespaces (`.isa` files):** When implementing new ISA profiles (e.g., RVA23) and modifying `.isa` decoder logic, explicitly qualify the `RV32` or `RV64` namespaces for semantic functions. Be careful when overriding opcodes from base `.isa` files; ensure the functions like `RiscVZextw` or `RiscVNot` exist in the expected namespace or the resulting decoder C++ files will fail to compile.
 - **Linker Duplicate Symbols:** When adding support for disjoint instruction extensions (e.g. `Zfh` and `Vector`), do not reuse generic, un-namespaced helper functions (like `RV32VUnimplementedInstruction`) in different translation units. This causes `duplicate symbol` linker errors in the top-level `cc_binary` simulator. Either mark them `inline` in the header or uniquely namespace/prefix them (e.g. `RV32ZfhUnimplementedInstruction`).
-- **Bazel Decoder Dependencies:** When a new `mpact_isa_decoder` macro relies on functionality, ensure the associated `cc_library` directly `deps` on the `.cc`/`.h` files implementing those semantic actions (like `riscv_bitmanip_instructions`), or compilation errors about unknown types (`Instruction`, `RegisterType`) will occur.
-- **Bazel Decoder Dependencies:** When implementing new instruction extensions (e.g., Zfa), ensure base architectural dependencies like `:riscv_g` are not accidentally removed from top-level `cc_library` targets in `riscv/BUILD`, as this causes silent missing symbol link errors.
-- **Useless Happy-Path Padding:** Do not create dummy tests (e.g., `EXPECT_TRUE(true)`) to artificially pass CI requirements for new binary targets like `rva23u64_sim`. Tests must instantiate the environment and verify actual execution.
-- **Test Invariance & Environment Instantiation:** Tests for top-level binary simulators like `rva23u64_sim` must not be trivial `EXPECT_TRUE(true)` assertions. They must definitively link `_decoder`, `_top`, `_state`, `fp_state`, `vector_state` and allocate registers to mathematically prove the architectural environment initializes correctly without segfaulting.
-- **Zero-Trust Baseline Synchronization Safeguards:** Always execute `git status` and `git stash` prior to initiating any upstream synchronization or baseline isolation procedures to definitively safeguard uncommitted local state from catastrophic rebase overwrites.
-- **Rebase Conflict Handling (Upstream Sync):** When resolving `git rebase` conflicts in binary entry points (e.g., `main`), always ensure upstream error-handling paths (like `return -1;` for invalid flag combinations) are strictly preserved to avoid regressions, rather than blindly accepting `HEAD` which may drop them.
-- **RVA23 Submodule Registration:** Any new missing extensions (like `Zawrs`) must include corresponding `.isa`, `.bin_fmt`, and `.cc/.h` definitions, registered directly inside the build definitions (e.g., `riscv/BUILD`) and integrated into the top-level target (e.g., `rva23u64.isa`).
+- **RISC-V Architecture**: Specifications for the unprivileged ISA, privileged architecture, scalable Vector (V) extension, and standard profiles (RVA23).
+- **vill Trap Architectural Boundaries:** When modifying `vill` trap exception logic in the RTL, ensure only whole-register loads/stores, moves (`vmv<nr>r.v`), and scalar translations are whitelisted. Do not blindly whitelist all standard loads/stores, as this will bypass valid architectural fault boundaries.
+
+### Git & Environment Management
+- **Zero-Trust Baseline Synchronization Safeguards (mpact-riscv):** Always mandate `git status` and `git stash` prior to invoking baseline extraction or rebasing logic to protect uncommitted orchestration state from accidental destruction.
+
+### Testing & Verification
 - **Test Integrity (rva23u64_sim_test.cc):** Eradicate useless "Happy-Path" padding like `EXPECT_TRUE(true)` when validating new binary targets. Tests must structurally instantiate the simulator environment and execute actual instructions to be valid.
-- **Zero-Trust Baseline Rebase Divergence:** When running `git rebase upstream/main`, if `upstream/main` is an ancestor of the local branch, the rebase will perform no operations. Always explicitly verify divergence with `git log HEAD...upstream/main` before expecting codebase changes.
+- **Test Invariance & Environment Instantiation:** Tests for top-level binary simulators like `rva23u64_sim` must not be trivial `EXPECT_TRUE(true)` assertions. They must definitively link `_decoder`, `_top`, `_state`, `fp_state`, `vector_state` and allocate registers to mathematically prove the architectural environment initializes correctly without segfaulting.
 - **Testing Fidelity Rule**: When creating new architectural binary targets (e.g. `rva23u64_sim`), avoid writing empty tests like `EXPECT_TRUE(true)`. The test must actually verify the binary target executes.
+- **Useless Happy-Path Padding:** Do not create dummy tests (e.g., `EXPECT_TRUE(true)`) to artificially pass CI requirements for new binary targets like `rva23u64_sim`. Tests must instantiate the environment and verify actual execution.
+
+### Miscellaneous
+- **RVA23 Submodule Registration:** Any new missing extensions (like `Zawrs`) must include corresponding `.isa`, `.bin_fmt`, and `.cc/.h` definitions, registered directly inside the build definitions (e.g., `mpact-riscv/riscv/BUILD`) and integrated into the top-level target (e.g., `rva23u64.isa`).
+- **Vector Extension vill Whitelist:** Whitelist whole-register moves (`vmv<nr>r.v`) in `RvvFrontEnd.sv` to bypass `vill` trap checks.
+- **Vector Masking Separation:** Vector operations in `.isa` and `.bin_fmt` are duplicated to isolate masked (`vm=0`) and unmasked (`vm=1`) variants, resolving decoding ambiguity.
+
