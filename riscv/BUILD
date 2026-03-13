@@ -1708,6 +1708,7 @@ mpact_isa_decoder(
         "riscv_zvbb.isa",
         "riscv_zfh.isa",
         "riscv_zfa.isa",
+        "riscv_zawrs.isa",
     ],
     isa_name = "Rva23u64",
     prefix = "rva23u64",
@@ -1742,6 +1743,7 @@ mpact_bin_fmt_decoder(
         "riscv_zimop.bin_fmt",
         "riscv_zvbb.bin_fmt",
         "riscv_zfh64.bin_fmt",
+        "riscv_zawrs.bin_fmt",
     ],
     prefix = "rva23u64",
     deps = [
@@ -1825,3 +1827,37 @@ cc_library(
     ],
 )
 
+
+cc_binary(
+    name = "rva23s64_sim",
+    srcs = [
+        "rva23s64_sim.cc",
+    ],
+    copts = ["-O3"],
+    deps = [
+        ":debug_command_shell",
+        ":riscv_arm_semihost",
+        ":riscv_fp_state",
+        ":riscv_state",
+        ":riscv_top",
+        ":rva23u64_decoder",
+        "@com_google_absl//absl/base:log_severity",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:globals",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/time",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/generic:core_debug_interface",
+        "@com_google_mpact-sim//mpact/sim/generic:counters",
+        "@com_google_mpact-sim//mpact/sim/generic:instruction",
+        "@com_google_mpact-sim//mpact/sim/proto:component_data_cc_proto",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
+        "@com_google_protobuf//:protobuf",
+        "@com_googlesource_code_re2//:re2",
+    ],
+)

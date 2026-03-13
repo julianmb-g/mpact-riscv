@@ -1,0 +1,6 @@
+// Copyright 2024 Google LLC
+
+instruction group RiscVZawrs[32] : Inst32Format {
+  wrs_nto : IType : imm12 == 0b000000001101, rs1 == 0b00000, func3 == 0b000, rd == 0b00000, opcode == 0b1110011;
+  wrs_sto : IType : imm12 == 0b000000011101, rs1 == 0b00000, func3 == 0b000, rd == 0b00000, opcode == 0b1110011;
+}
