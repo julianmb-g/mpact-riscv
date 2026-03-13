@@ -132,7 +132,9 @@ template <typename T>
 static inline T CanonicalizeNaN(T value) {
   if (!std::isnan(value)) return value;
   auto nan_value = FPTypeInfo<T>::kCanonicalNaN;
-  return *reinterpret_cast<T*>(&nan_value);
+  T result;
+  std::memcpy(&result, &nan_value, sizeof(T));
+  return result;
 }
 
 }  // namespace internal
@@ -189,7 +191,9 @@ void RiscVFSqrt(const Instruction* instruction) {
         flag_db->Set<uint32_t>(0, *FPExceptions::kInvalidOp);
         flag_db->Submit();
       }
-      return *reinterpret_cast<const float*>(&FPTypeInfo<float>::kCanonicalNaN);
+      float result;
+      std::memcpy(&result, &FPTypeInfo<float>::kCanonicalNaN, sizeof(float));
+      return result;
     }
 
     // Square root of 0 returns 0, and of -0.0 returns -0.0.
@@ -204,8 +208,9 @@ void RiscVFSqrt(const Instruction* instruction) {
     if (rm_value == *FPRoundingMode::kDynamic) {
       if (!rv_fp->rounding_mode_valid()) {
         LOG(ERROR) << "Invalid rounding mode";
-        return *reinterpret_cast<const float*>(
-            &FPTypeInfo<float>::kCanonicalNaN);
+            float result;
+            std::memcpy(&result, &FPTypeInfo<float>::kCanonicalNaN, sizeof(float));
+            return result;
       }
       rm_value = *rv_fp->GetRoundingMode();
     }
@@ -231,7 +236,9 @@ void RiscVFMin(const Instruction* instruction) {
           if (FPTypeInfo<float>::IsNaN(b)) {
             FPTypeInfo<float>::UIntType not_a_number =
                 FPTypeInfo<float>::kCanonicalNaN;
-            return *reinterpret_cast<float*>(&not_a_number);
+            float result;
+            std::memcpy(&result, &not_a_number, sizeof(float));
+            return result;
           }
           return b;
         }
@@ -257,7 +264,9 @@ void RiscVFMax(const Instruction* instruction) {
           if (FPTypeInfo<float>::IsNaN(b)) {
             FPTypeInfo<float>::UIntType not_a_number =
                 FPTypeInfo<float>::kCanonicalNaN;
-            return *reinterpret_cast<float*>(&not_a_number);
+            float result;
+            std::memcpy(&result, &not_a_number, sizeof(float));
+            return result;
           }
           return b;
         }

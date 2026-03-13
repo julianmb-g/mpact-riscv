@@ -89,8 +89,9 @@ TEST(Rva23u64SimTest, BasicInstantiationTest) {
   auto status = top->Step(1);
   EXPECT_TRUE(status.ok());
   
-  // Execution should successfully advance the PC.
-  EXPECT_NE(top->ReadRegister("pc").value(), entry_point);
+  // Execution should successfully advance the PC exactly 4 bytes (or 2 for compressed, but it's an ELF).
+  // Strictly enforce equality assertion to prove architectural step boundaries.
+  EXPECT_EQ(top->ReadRegister("pc").value(), entry_point + 4);
 
   delete top;
   delete decoder;

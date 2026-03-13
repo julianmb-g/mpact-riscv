@@ -64,8 +64,12 @@ TEST_F(RiscVZfaInstructionsTest, FliS_Constant16) {
 TEST_F(RiscVZfaInstructionsTest, FminmS_Magnitudes) {
   float a = -2.0f;
   float b = 3.0f;
-  uint64_t nan_boxed_a = 0xffffffff00000000ULL | *reinterpret_cast<uint32_t*>(&a);
-  uint64_t nan_boxed_b = 0xffffffff00000000ULL | *reinterpret_cast<uint32_t*>(&b);
+  uint32_t a_bits;
+  std::memcpy(&a_bits, &a, sizeof(float));
+  uint32_t b_bits;
+  std::memcpy(&b_bits, &b, sizeof(float));
+  uint64_t nan_boxed_a = 0xffffffff00000000ULL | a_bits;
+  uint64_t nan_boxed_b = 0xffffffff00000000ULL | b_bits;
   
   auto src_op_a = new generic::ImmediateOperand<uint64_t>(nan_boxed_a, "rs1");
   auto src_op_b = new generic::ImmediateOperand<uint64_t>(nan_boxed_b, "rs2");
@@ -80,6 +84,30 @@ TEST_F(RiscVZfaInstructionsTest, FminmS_Magnitudes) {
   std::memcpy(&result, &uval, sizeof(float));
   
   EXPECT_EQ(result, -2.0f);
+}
+
+TEST_F(RiscVZfaInstructionsTest, FminmS_NaNs) {
+  float a = std::numeric_limits<float>::quiet_NaN();
+  float b = std::numeric_limits<float>::quiet_NaN();
+  uint32_t a_bits;
+  std::memcpy(&a_bits, &a, sizeof(float));
+  uint32_t b_bits;
+  std::memcpy(&b_bits, &b, sizeof(float));
+  uint64_t nan_boxed_a = 0xffffffff00000000ULL | a_bits;
+  uint64_t nan_boxed_b = 0xffffffff00000000ULL | b_bits;
+  
+  auto src_op_a = new generic::ImmediateOperand<uint64_t>(nan_boxed_a, "rs1");
+  auto src_op_b = new generic::ImmediateOperand<uint64_t>(nan_boxed_b, "rs2");
+  instruction_->AppendSource(src_op_a);
+  instruction_->AppendSource(src_op_b);
+  
+  RiscVFMinmS(instruction_);
+  
+  auto val = dest_reg_->data_buffer()->Get<RVFpRegister::ValueType>(0);
+  uint32_t uval = static_cast<uint32_t>(val);
+  
+  // Check canonical NaN (0x7fc00000)
+  EXPECT_EQ(uval, 0x7fc00000);
 }
 
 }  // namespace test

@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 
 #include "mpact/sim/generic/instruction.h"
@@ -74,7 +75,11 @@ T GetFliConstant(uint32_t rs1) {
         return val;
     }
     case 30: return std::numeric_limits<T>::infinity();
-    default: return *reinterpret_cast<const T*>(&FPTypeInfo<T>::kCanonicalNaN);
+    default: {
+      T result;
+      std::memcpy(&result, &FPTypeInfo<T>::kCanonicalNaN, sizeof(T));
+      return result;
+    }
   }
 }
 
@@ -91,7 +96,9 @@ void RVFli(const Instruction* instruction) {
   } else {
       reg_val = 0;
   }
-  reg_val |= *reinterpret_cast<typename FPTypeInfo<T>::UIntType*>(&val);
+  typename FPTypeInfo<T>::UIntType uval;
+  std::memcpy(&uval, &val, sizeof(T));
+  reg_val |= uval;
   db->Set<FPRegister::ValueType>(0, reg_val);
   db->Submit();
 }
@@ -108,7 +115,9 @@ void RVFMinm(const Instruction* instruction) {
         if (FPTypeInfo<T>::IsNaN(a)) {
           if (FPTypeInfo<T>::IsNaN(b)) {
             auto not_a_number = FPTypeInfo<T>::kCanonicalNaN;
-            return *reinterpret_cast<T*>(&not_a_number);
+            T result;
+            std::memcpy(&result, &not_a_number, sizeof(T));
+            return result;
           }
           return b;
         }
@@ -136,7 +145,9 @@ void RVFMaxm(const Instruction* instruction) {
         if (FPTypeInfo<T>::IsNaN(a)) {
           if (FPTypeInfo<T>::IsNaN(b)) {
             auto not_a_number = FPTypeInfo<T>::kCanonicalNaN;
-            return *reinterpret_cast<T*>(&not_a_number);
+            T result;
+            std::memcpy(&result, &not_a_number, sizeof(T));
+            return result;
           }
           return b;
         }
