@@ -96,76 +96,106 @@ class RiscVSstcTest : public ::testing::Test {
 };
 
 TEST_F(RiscVSstcTest, TestSstcStimecmpInterrupt) {
-  // We want to organically execute: csrw stimecmp, t0
-  // t0 is x5. The instruction bytes for `csrw stimecmp, x5` is 0x14D29073.
-  uint32_t inst_csrw = 0x14D29073;
-
   uint64_t inst_addr = 0x1000;
+  
+  // csrw stimecmp, x5 -> 0x14D29073
+  uint32_t inst_csrw = 0x14D29073;
   auto* db = state_->db_factory()->Allocate<uint32_t>(1);
   db->Set<uint32_t>(0, inst_csrw);
   memory_->Store(inst_addr, db);
   db->DecRef();
 
-  // Set the mock "current time" to 500
-  uint64_t current_time = 500;
+  // NOPs (addi x0, x0, 0) for subsequent execution sequence
+  uint32_t inst_nop = 0x00000013;
+  for (int i = 1; i <= 5; ++i) {
+    db = state_->db_factory()->Allocate<uint32_t>(1);
+    db->Set<uint32_t>(0, inst_nop);
+    memory_->Store(inst_addr + i * 4, db);
+    db->DecRef();
+  }
+
+  // Simulate an advancing hardware clock external to the architectural core
+  uint64_t simulated_clock = 0;
+  uint64_t target_time = 0;
+  bool target_set = false;
   
   auto csr_res = state_->csr_set()->GetCsr(0x14D); // stimecmp
   ASSERT_TRUE(csr_res.ok());
   auto* stimecmp = static_cast<STimeCmpCsr*>(csr_res.value());
   
-  // Wire the stimecmp callback to our hardware comparator simulator
+  // The architectural wire from the out-of-band hardware timer to the Sstc interface
   stimecmp->set_timer_cb([&](uint64_t val) {
-    if (current_time >= val) {
-      // Pend the Supervisor Timer Interrupt (bit 5)
+    target_time = val;
+    target_set = true;
+  });
+
+  // Architectural Configuration
+  state_->set_privilege_mode(PrivilegeMode::kSupervisor);
+  
+  auto sstatus_res = state_->csr_set()->GetCsr(0x100);
+  ASSERT_TRUE(sstatus_res.ok());
+  sstatus_res.value()->SetBits(static_cast<uint64_t>(0x2)); // sstatus.SIE = 1
+
+  auto sie_res = state_->csr_set()->GetCsr(0x104);
+  ASSERT_TRUE(sie_res.ok());
+  sie_res.value()->SetBits(static_cast<uint64_t>(0x20)); // sie.STIE = 1
+
+  auto mideleg_res = state_->csr_set()->GetCsr(0x303);
+  ASSERT_TRUE(mideleg_res.ok());
+  mideleg_res.value()->SetBits(static_cast<uint64_t>(0x20)); // mideleg.STIP = 1
+
+  uint64_t trap_vector = 0x2000;
+  auto stvec_res = state_->csr_set()->GetCsr(0x105);
+  ASSERT_TRUE(stvec_res.ok());
+  stvec_res.value()->Write(trap_vector);
+
+  // We write `3` to stimecmp. The interrupt should only fire when simulated_clock >= 3.
+  auto t0_write = top_->WriteRegister("x5", 3ULL);
+  EXPECT_TRUE(t0_write.ok());
+
+  auto pc_write = top_->WriteRegister("pc", inst_addr);
+  EXPECT_TRUE(pc_write.ok());
+
+  // Hardware evaluation tick function
+  auto HardwareTick = [&]() {
+    simulated_clock++;
+    if (target_set && simulated_clock >= target_time) {
       state_->mip()->SetBits(static_cast<uint64_t>(0x20));
       state_->CheckForInterrupt();
     } else {
       state_->mip()->ClearBits(static_cast<uint64_t>(0x20));
     }
-  });
+  };
 
-  // Configure architectural state to allow S-mode timer interrupts
-  state_->set_privilege_mode(PrivilegeMode::kSupervisor);
-  
-  // sstatus.SIE is bit 1
-  auto sstatus_res = state_->csr_set()->GetCsr(0x100); // sstatus
-  ASSERT_TRUE(sstatus_res.ok());
-  sstatus_res.value()->SetBits(static_cast<uint64_t>(0x2));
-
-  // sie.STIE is bit 5
-  auto sie_res = state_->csr_set()->GetCsr(0x104); // sie
-  ASSERT_TRUE(sie_res.ok());
-  sie_res.value()->SetBits(static_cast<uint64_t>(0x20));
-
-  // Delegate STIP to S-mode by setting mideleg bit 5
-  auto mideleg_res = state_->csr_set()->GetCsr(0x303); // mideleg
-  ASSERT_TRUE(mideleg_res.ok());
-  mideleg_res.value()->SetBits(static_cast<uint64_t>(0x20));
-
-  // set stvec to 0x2000 (our trap handler)
-  uint64_t trap_vector = 0x2000;
-  auto stvec_res = state_->csr_set()->GetCsr(0x105); // stvec
-  ASSERT_TRUE(stvec_res.ok());
-  stvec_res.value()->Write(trap_vector);
-
-  // set t0 (x5) to 500 (so that current_time >= stimecmp triggers the interrupt)
-  auto t0_write = top_->WriteRegister("x5", 500ULL);
-  EXPECT_TRUE(t0_write.ok());
-
-  // Set PC
-  auto pc_write = top_->WriteRegister("pc", inst_addr);
-  EXPECT_TRUE(pc_write.ok());
-
-  // Step 1: Execute `csrw stimecmp, t0`. This should decode, execute, and write 500 to stimecmp.
-  // The callback fires, sees current_time (500) >= stimecmp (500), and sets mip.STIP = 1.
+  // Execute csrw (clock becomes 1)
   auto status = top_->Step(1);
   EXPECT_TRUE(status.ok());
+  HardwareTick();
+  EXPECT_EQ(top_->ReadRegister("pc").value(), inst_addr + 4) << "Trap taken prematurely!";
 
-  // The instruction retired successfully, and because STIP became pending and enabled,
-  // the core immediately evaluated CheckForInterrupt() and vectored to the S-mode trap handler.
-  EXPECT_EQ(top_->ReadRegister("pc").value(), trap_vector);
+  // Execute NOP (clock becomes 2)
+  status = top_->Step(1);
+  EXPECT_TRUE(status.ok());
+  HardwareTick();
+  EXPECT_EQ(top_->ReadRegister("pc").value(), inst_addr + 8) << "Trap taken prematurely!";
 
-  // Verify scause is 5 (Supervisor Timer Interrupt) with the Interrupt bit (63) set.
+  // Execute NOP (clock becomes 3 - BOUNDARY EXCEEDED)
+  status = top_->Step(1);
+  EXPECT_TRUE(status.ok());
+  HardwareTick();
+  
+  // The hardware tick asserts the pending STIP, but because `CheckForInterrupt` 
+  // was evaluated AFTER the current step completed natively, the core will vector 
+  // on the IMMEDIATELY NEXT step. 
+  // Wait! Actually, if HardwareTick sets the bit AFTER the step, the PC advances normally.
+  EXPECT_EQ(top_->ReadRegister("pc").value(), inst_addr + 12);
+
+  // Next Step (Interrupt Taken)
+  status = top_->Step(1);
+  EXPECT_TRUE(status.ok());
+  EXPECT_EQ(top_->ReadRegister("pc").value(), trap_vector) << "Trap not taken at bounds!";
+
+  // Verify Architectural Vector Output
   auto scause_res = state_->csr_set()->GetCsr(0x142); // scause
   ASSERT_TRUE(scause_res.ok());
   EXPECT_EQ(scause_res.value()->AsUint64(), (1ULL << 63) | 5ULL);
