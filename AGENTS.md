@@ -31,7 +31,7 @@
 - **Timing Parity Padding:** Do not use arbitrary delta bounds (e.g., `delta <= 100`) in timing microbenchmarks without verifying the architectural outputs. Ensure the test evaluates the actual memory buffer or return code before asserting cycle parity.
 - **Purely Synthetic Interrupt Mocking:** Tests for hardware interrupts (e.g., `Sstc`) must organically execute the relevant instructions (like `csrw stimecmp`) through the simulator pipeline to verify that an actual architectural interrupt is pended, rather than bypassing the pipeline by directly invoking C++ setter methods.
 ## Lessons Learned
-- **AsyncFormattingDaemon Thread Deadlock Risk:** Sleeping when a queue is empty using `std::this_thread::sleep_for` causes `worker_thread_.join()` to hang if `Stop()` is called. Use `std::condition_variable` instead.
+[FLAG: stale] - **AsyncFormattingDaemon Thread Deadlock Risk:** Sleeping when a queue is empty using `std::this_thread::sleep_for` causes `worker_thread_.join()` to hang if `Stop()` is called. Use `std::condition_variable` instead.
 - **Purely Synthetic Interrupt Mocking:** Tests for hardware interrupts (e.g., `Sstc`) must organically execute the relevant instructions (like `csrw stimecmp`) through the simulator pipeline to verify that an actual architectural interrupt is pended, rather than bypassing the pipeline by directly invoking C++ setter methods.
 - **Negative PTE Fault Tests:** Distinct MMU page fault scenarios (like Store to Read-Only vs Invalid PTE) must be cleanly separated into distinct, targeted tests rather than bundled into a single negative test case. Each test must explicitly assert `mcause` and `mtval`.
 
