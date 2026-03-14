@@ -171,6 +171,28 @@ static void sim_sigint_handler(int arg) {
   }
 }
 
+using ::mpact::sim::riscv::RiscVSimpleCsr;
+
+// Mseccfg CSR implements the Rule Lock Bypass (RLB) and Machine Mode Lock (MML) policies.
+class MseccfgCsr : public RiscVSimpleCsr<uint64_t> {
+ public:
+  MseccfgCsr(mpact::sim::riscv::RiscVState *state)
+      : RiscVSimpleCsr<uint64_t>("mseccfg", 0x747, 0, 0x7, state) {}
+  void Write(uint64_t value) override {
+    uint64_t current = GetUint64();
+    uint64_t next_val = current;
+    // MML (bit 0) is sticky.
+    if (value & 1) next_val |= 1;
+    // MMWP (bit 1) is sticky.
+    if (value & 2) next_val |= 2;
+    // RLB (bit 2) is writable only if MML is 0.
+    if (!(current & 1)) {
+      next_val = (next_val & ~4ULL) | (value & 4);
+    }
+    Set(next_val);
+  }
+};
+
 using ::mpact::sim::riscv::RiscVTop;
 
 // This is an example custom command that is added to the interactive
@@ -245,7 +267,7 @@ int main(int argc, char** argv) {
     memory_interface = memory_watcher;
   }
   // Set up architectural state and decoder.
-  RiscVState rv_state("RVA23U64", RiscVXlen::RV64, memory_interface,
+  RiscVState rv_state("RVA23S64", RiscVXlen::RV64, memory_interface,
                       atomic_memory);
   // For floating point support add the fp state.
   RiscVFPState rv_fp_state(rv_state.csr_set(), &rv_state);
@@ -279,6 +301,13 @@ int main(int argc, char** argv) {
     }
     auto misa_csr = misa_res.value();
     misa_csr->Set(absl::GetFlag(FLAGS_misa).value());
+  }
+
+  // Wire up RLB and MML policies (ignoring Sv48/Sv57).
+  MseccfgCsr mseccfg_csr(&rv_state);
+  auto add_status = rv_state.csr_set()->AddCsr(&mseccfg_csr);
+  if (!add_status.ok()) {
+    LOG(ERROR) << "Failed to add mseccfg CSR: " << add_status.message();
   }
 
   RiscVTop riscv_top("RiscV32Sim", &rv_state, rv_decoder);
