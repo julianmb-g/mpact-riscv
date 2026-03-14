@@ -21,10 +21,10 @@
 - **Architectural Bounds Degradation:** When testing organic target execution, enforce precise architectural step bounds with strict equality assertions (e.g., `EXPECT_EQ(pc, entry_point + 4)`) instead of trivial inequality bounds checks (`EXPECT_NE(pc, entry_point)`), which provide no guarantee of correct instruction advancement.
 - **Egregious Test Masking via Input Swapping:** When a test fails on specific instruction edge cases (like sign bit magnitude extraction in ZFA `FMINM.S`), you must not swap the inputs to "happy path" numbers that mask the failure. The underlying instruction decoder or logic must be fixed. Tests must strictly evaluate boundaries.
 
-### QA Lessons Learned (Cycle 28)
-- Do not falsely mask architectural bugs by swapping test inputs (e.g. `FminmS` magnitude testing). Tests must evaluate original exact boundaries.
-- Restore strict equality assertions (e.g. `EXPECT_EQ(pc, entry_point + 4)`) for precise architectural step boundaries, rather than trivial inequalities (`EXPECT_NE(pc, entry_point)`).
+[FLAG: stale] ### QA Lessons Learned (Cycle 28)
+[FLAG: stale] - Do not falsely mask architectural bugs by swapping test inputs (e.g. `FminmS` magnitude testing). Tests must evaluate original exact boundaries.
+[FLAG: stale] - Restore strict equality assertions (e.g. `EXPECT_EQ(pc, entry_point + 4)`) for precise architectural step boundaries, rather than trivial inequalities (`EXPECT_NE(pc, entry_point)`).
 
-### Fixed Test Degredation
-- **Strict Aliasing Violation (NaN Boxing):** Avoid `reinterpret_cast` when assigning to Canonical NaN constants; instead, use `std::memcpy` or `std::bit_cast` to prevent Undefined Behavior during C++ float-to-int memory conversions.
-- **Architectural PC Step Validation:** Test binary simulators utilizing `EXPECT_EQ(pc, entry_point + 4)` instead of `EXPECT_NE(pc, entry_point)` to explicitly verify precise boundary bounds instead of relying on trivial inequalities.
+[FLAG: stale] ### Fixed Test Degredation
+[FLAG: stale] - **Strict Aliasing Violation (NaN Boxing):** Avoid `reinterpret_cast` when assigning to Canonical NaN constants; instead, use `std::memcpy` or `std::bit_cast` to prevent Undefined Behavior during C++ float-to-int memory conversions.
+[FLAG: stale] - **Architectural PC Step Validation:** Test binary simulators utilizing `EXPECT_EQ(pc, entry_point + 4)` instead of `EXPECT_NE(pc, entry_point)` to explicitly verify precise boundary bounds instead of relying on trivial inequalities.
