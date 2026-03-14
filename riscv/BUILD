@@ -1978,3 +1978,14 @@ cc_library(
     copts = ["-O3"],
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "mmu_sv39",
+    srcs = ["mmu_sv39.cc"],
+    hdrs = ["mmu_sv39.h"],
+    deps = [
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_absl//absl/log:check",
+    ],
+)
