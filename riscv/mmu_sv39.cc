@@ -104,9 +104,8 @@ void MmuSv39::Load(uint64_t address, mpact::sim::generic::DataBuffer* db,
   if (Translate(address, /*is_store=*/false, &paddr)) {
     physical_memory_->Load(paddr, db, inst, context);
   } else {
-    if (inst != nullptr) {
-      state_->Trap(/*is_interrupt=*/false, address, static_cast<uint64_t>(ExceptionCode::kLoadPageFault), inst->address(), inst);
-    }
+    uint64_t epc = inst != nullptr ? inst->address() : 0;
+    state_->Trap(/*is_interrupt=*/false, address, static_cast<uint64_t>(ExceptionCode::kLoadPageFault), epc, inst);
   }
 }
 
