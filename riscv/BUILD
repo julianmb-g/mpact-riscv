@@ -1769,6 +1769,7 @@ cc_binary(
     ],
     copts = ["-O3"],
     deps = [
+        "//riscv:rvvi_sim",
         ":debug_command_shell",
         ":riscv_arm_semihost",
         ":riscv_fp_state",
@@ -1938,6 +1939,7 @@ cc_binary(
     ],
     copts = ["-O3"],
     deps = [
+        "//riscv:rvvi_sim",
         ":debug_command_shell",
         ":riscv_arm_semihost",
         ":riscv_fp_state",
@@ -1969,6 +1971,10 @@ cc_library(
     name = "rvvi_sim",
     srcs = ["rvvi_sim.cc"],
     hdrs = ["rvvi_sim.h"],
+    deps = [
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
     copts = ["-O3"],
     visibility = ["//visibility:public"],
 )

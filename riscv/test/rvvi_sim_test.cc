@@ -83,3 +83,33 @@ TEST(SpscRingBufferTest, AbortDeadlockPrevention) {
 }
 
 }  // namespace
+
+#include "mpact/sim/util/memory/flat_demand_memory.h"
+#include "mpact/sim/generic/data_buffer.h"
+
+using mpact::sim::riscv::rvvi::RvviMemoryMapper;
+
+TEST(RvviMemoryMapperTest, RMWCycles) {
+  auto memory = new mpact::sim::util::FlatDemandMemory();
+  RvviMemoryMapper mapper(memory);
+  
+  mapper.AddMmioRange(0x1000, 0x2000);
+  
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  auto db = db_factory.Allocate<uint32_t>(1);
+  db->Set<uint32_t>(0, 0xDEADBEEF);
+  
+  // Unaligned 4-byte write crossing 8-byte boundary
+  mapper.Store(0x6, db);
+  
+  auto check_db = db_factory.Allocate<uint64_t>(1);
+  mapper.Load(0x0, check_db, nullptr, nullptr);
+  EXPECT_EQ((check_db->Get<uint64_t>(0) >> 48) & 0xFFFF, 0xBEEF);
+  
+  mapper.Load(0x8, check_db, nullptr, nullptr);
+  EXPECT_EQ(check_db->Get<uint64_t>(0) & 0xFFFF, 0xDEAD);
+  
+  db->DecRef();
+  check_db->DecRef();
+  delete memory;
+}

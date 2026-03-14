@@ -5,6 +5,9 @@
 #include <atomic>
 #include <thread>
 #include <stdexcept>
+#include "mpact/sim/util/memory/memory_interface.h"
+#include "mpact/sim/generic/data_buffer.h"
+#include <vector>
 
 namespace mpact {
 namespace sim {
@@ -61,6 +64,71 @@ class SpscRingBuffer {
   std::atomic<size_t> tail_;
   std::atomic<bool> abort_;
 };
+
+class RvviMemoryMapper : public util::MemoryInterface {
+
+ public:
+
+  struct AddressRange {
+
+    uint64_t start;
+
+    uint64_t end;
+
+  };
+
+
+
+  explicit RvviMemoryMapper(util::MemoryInterface* memory);
+
+  ~RvviMemoryMapper() override;
+
+
+
+  void AddMmioRange(uint64_t start, uint64_t end);
+  void set_context(generic::Instruction* inst, generic::ReferenceCount* context) {
+    current_inst_ = inst;
+    current_context_ = context;
+  }
+
+
+
+  void Load(uint64_t address, generic::DataBuffer* db,
+
+            generic::Instruction* inst, generic::ReferenceCount* context) override;
+
+  void Load(generic::DataBuffer* address_db, generic::DataBuffer* mask_db,
+
+            int el_size, generic::DataBuffer* db, generic::Instruction* inst,
+
+            generic::ReferenceCount* context) override;
+
+  void Store(uint64_t address, generic::DataBuffer* db) override;
+
+  void Store(generic::DataBuffer* address_db, generic::DataBuffer* mask_db,
+
+             int el_size, generic::DataBuffer* db) override;
+
+
+
+ private:
+
+  bool IsMmio(uint64_t address) const;
+
+  void DoRmwStore(uint64_t address, generic::DataBuffer* db);
+
+
+
+  util::MemoryInterface* memory_;
+
+  std::vector<AddressRange> mmio_ranges_;
+
+  generic::DataBufferFactory db_factory_;
+  generic::Instruction* current_inst_ = nullptr;
+  generic::ReferenceCount* current_context_ = nullptr;
+
+};
+
 
 extern "C" {
   void ClearTransientInstructionBuffer(uint32_t hartId);

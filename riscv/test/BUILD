@@ -1088,6 +1088,8 @@ cc_test(
     srcs = ["rvvi_sim_test.cc"],
     deps = [
         "//riscv:rvvi_sim",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_googletest//:gtest_main",
     ],
 )

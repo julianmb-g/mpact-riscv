@@ -46,6 +46,7 @@
 #include "mpact/sim/util/memory/flat_demand_memory.h"
 #include "mpact/sim/util/memory/memory_interface.h"
 #include "mpact/sim/util/memory/memory_watcher.h"
+#include "riscv/rvvi_sim.h"
 #include "mpact/sim/util/program_loader/elf_program_loader.h"
 #include "re2/re2.h"
 #include "riscv/debug_command_shell.h"
@@ -248,6 +249,11 @@ int main(int argc, char** argv) {
   if (memory_watcher != nullptr) {
     memory_interface = memory_watcher;
   }
+  auto* rvvi_mapper = new mpact::sim::riscv::rvvi::RvviMemoryMapper(memory_interface);
+  rvvi_mapper->AddMmioRange(0x10000000, 0x10001000); // UART
+  rvvi_mapper->AddMmioRange(0x02000000, 0x02010000); // CLINT
+  rvvi_mapper->AddMmioRange(0x0C000000, 0x10000000); // PLIC
+  memory_interface = rvvi_mapper;
   // Set up architectural state and decoder.
   RiscVState rv_state("RVA23U64", RiscVXlen::RV64, memory_interface,
                       atomic_memory);
