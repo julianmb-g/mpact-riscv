@@ -177,7 +177,7 @@ using ::mpact::sim::riscv::RiscVSimpleCsr;
 class MseccfgCsr : public RiscVSimpleCsr<uint64_t> {
  public:
   MseccfgCsr(mpact::sim::riscv::RiscVState *state)
-      : RiscVSimpleCsr<uint64_t>("mseccfg", 0x747, 0, 0x7, state) {}
+      : RiscVSimpleCsr<uint64_t>("mseccfg", 0x747, 0, 0x7, 0x7, state) {}
   void Write(uint64_t value) override {
     uint64_t current = GetUint64();
     uint64_t next_val = current;
@@ -191,6 +191,31 @@ class MseccfgCsr : public RiscVSimpleCsr<uint64_t> {
     }
     Set(next_val);
   }
+  void Write(uint32_t value) override {
+    Write(static_cast<uint64_t>(value));
+  }
+};
+
+// Sstc CSR implements the stimecmp register for supervisor-mode timer interrupts.
+// This serves as a decoupled stub hardware timer callback.
+class STimeCmpCsr : public RiscVSimpleCsr<uint64_t> {
+ public:
+  STimeCmpCsr(mpact::sim::riscv::RiscVState *state,
+              std::function<void(uint64_t)> timer_cb)
+      : RiscVSimpleCsr<uint64_t>("stimecmp", 0x14D, 0ULL, -1ULL, -1ULL, state),
+        timer_cb_(std::move(timer_cb)) {}
+  void Write(uint64_t value) override {
+    Set(value);
+    if (timer_cb_) {
+      timer_cb_(value);
+    }
+  }
+  void Write(uint32_t value) override {
+    Write(static_cast<uint64_t>(value));
+  }
+
+ private:
+  std::function<void(uint64_t)> timer_cb_;
 };
 
 using ::mpact::sim::riscv::RiscVTop;
@@ -304,10 +329,19 @@ int main(int argc, char** argv) {
   }
 
   // Wire up RLB and MML policies (ignoring Sv48/Sv57).
-  MseccfgCsr mseccfg_csr(&rv_state);
-  auto add_status = rv_state.csr_set()->AddCsr(&mseccfg_csr);
+  MseccfgCsr* mseccfg_csr = new MseccfgCsr(&rv_state);
+  auto add_status = rv_state.csr_set()->AddCsr(mseccfg_csr);
   if (!add_status.ok()) {
     LOG(ERROR) << "Failed to add mseccfg CSR: " << add_status.message();
+  }
+
+  // Stub hardware timer callback for Sstc (Supervisor-mode timer interrupts).
+  STimeCmpCsr* stimecmp_csr = new STimeCmpCsr(&rv_state, [](uint64_t time) {
+    // Decoupled hardware timer callback: can be linked to an event queue.
+  });
+  auto add_stimecmp = rv_state.csr_set()->AddCsr(stimecmp_csr);
+  if (!add_stimecmp.ok()) {
+    LOG(ERROR) << "Failed to add stimecmp CSR: " << add_stimecmp.message();
   }
 
   RiscVTop riscv_top("RiscV32Sim", &rv_state, rv_decoder);
@@ -507,5 +541,7 @@ int main(int argc, char** argv) {
   delete memory_watcher;
   delete arm_semihost;
   delete rv_decoder;
+  delete mseccfg_csr;
+  delete stimecmp_csr;
   return return_code;
 }
