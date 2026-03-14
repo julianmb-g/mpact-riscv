@@ -33,3 +33,4 @@
 ## Lessons Learned
 - **AsyncFormattingDaemon Thread Deadlock Risk:** Sleeping when a queue is empty using `std::this_thread::sleep_for` causes `worker_thread_.join()` to hang if `Stop()` is called. Use `std::condition_variable` instead.
 - **Purely Synthetic Interrupt Mocking:** Tests for hardware interrupts (e.g., `Sstc`) must organically execute the relevant instructions (like `csrw stimecmp`) through the simulator pipeline to verify that an actual architectural interrupt is pended, rather than bypassing the pipeline by directly invoking C++ setter methods.
+- **Negative PTE Fault Tests:** Distinct MMU page fault scenarios (like Store to Read-Only vs Invalid PTE) must be cleanly separated into distinct, targeted tests rather than bundled into a single negative test case. Each test must explicitly assert `mcause` and `mtval`.
