@@ -31,3 +31,7 @@
 - **ZFA Magnitude Integrity**: The `Fminm` and `Fmaxm` operations accurately evaluate mathematical magnitudes (`std::abs(a) < std::abs(b)`). Tests must authentically verify these architectural evaluations using inverted mathematical pairs (e.g., `-3.0, 2.0` -> `2.0`) rather than swapping inputs to mask the defect.
 
 - **Zero-Coverage MMIO Exemption Illusion:** When verifying that unaligned Read-Modify-Write (RMW) cycles exempt memory-mapped I/O (MMIO) regions, the test must definitively execute an unaligned memory access *inside* the defined MMIO boundaries. Executing addresses outside the MMIO region (e.g., `mapper.Store(0x6, ...)` when MMIO is `0x1000-0x2000`) provides fraudulent coverage and completely misses the exemption logic.
+## Lessons Learned
+
+### Testing Gotchas
+- **Zero-Coverage MMIO Exemption Illusion:** When verifying that unaligned Read-Modify-Write (RMW) cycles exempt memory-mapped I/O (MMIO) regions, the test must definitively execute an unaligned memory access *inside* the defined MMIO boundaries. Executing addresses outside the MMIO region provides fraudulent coverage and completely misses the exemption logic.
