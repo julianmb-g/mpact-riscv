@@ -1065,3 +1065,20 @@ cc_test(
         "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
+
+cc_test(
+    name = "rva23s64_sim_test",
+    srcs = ["rva23s64_sim_test.cc"],
+    copts = ["-O3"],
+    data = ["testfiles/hello_world_64.elf"],
+    deps = [
+        "//riscv:riscv_fp_state",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
+        "//riscv:rva23s64_decoder",
+        "//riscv:riscv_state",
+        "//riscv:riscv_top",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

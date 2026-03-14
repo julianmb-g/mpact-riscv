@@ -1830,6 +1830,107 @@ cc_library(
 )
 
 
+mpact_isa_decoder(
+    name = "rva23s64_isa",
+    src = "rva23s64.isa",
+    includes = [
+        "riscv32zb.isa",
+        "riscv64g.isa",
+        "riscv64zb.isa",
+        "riscv_vector.isa",
+        "riscv_zc.isa",
+        "riscv_zicond.isa",
+        "riscv_zimop.isa",
+        "riscv_zhintpause.isa",
+        "riscv_zihintntl.isa",
+        "riscv_zvbb.isa",
+        "riscv_zfh.isa",
+        "riscv_zfa.isa",
+        "riscv_zawrs.isa",
+    ],
+    isa_name = "Rva23s64",
+    prefix = "rva23s64",
+    deps = [
+        ":riscv_bitmanip_instructions",
+        ":riscv_g",
+        ":riscv_v",
+        ":riscv_vector_basic_bit_manipulation_instructions",
+        ":riscv_zfh_instructions",
+        ":riscv_zfa_instructions",
+        ":rvm23_instructions",
+        "@com_google_absl//absl/functional:bind_front",
+    ],
+)
+
+mpact_bin_fmt_decoder(
+    name = "rva23s64_bin_fmt",
+    src = "rva23s64.bin_fmt",
+    decoder_name = "Rva23s64",
+    includes = [
+        "riscv32g.bin_fmt",
+        "riscv32zb.bin_fmt",
+        "riscv64g.bin_fmt",
+        "riscv64zb.bin_fmt",
+        "riscv_format16.bin_fmt",
+        "riscv_format32.bin_fmt",
+        "riscv_vector.bin_fmt",
+        "riscv_zc.bin_fmt",
+        "riscv_zhintpause.bin_fmt",
+        "riscv_zicond.bin_fmt",
+        "riscv_zihintntl.bin_fmt",
+        "riscv_zimop.bin_fmt",
+        "riscv_zvbb.bin_fmt",
+        "riscv_zfh64.bin_fmt",
+        "riscv_zawrs.bin_fmt",
+    ],
+    prefix = "rva23s64",
+    deps = [
+        ":riscv_g",
+        ":rva23s64_isa",
+        "@com_google_absl//absl/functional:bind_front",
+        "@com_google_absl//absl/strings",
+        "@com_google_mpact-sim//mpact/sim/generic:arch_state",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/generic:instruction",
+        "@com_google_mpact-sim//mpact/sim/generic:program_error",
+        "@com_google_mpact-sim//mpact/sim/generic:type_helpers",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
+cc_library(
+    name = "rva23s64_decoder",
+    srcs = [
+        "rva23s64_decoder_wrapper.cc",
+        "rva23s64_encoding.cc",
+    ],
+    hdrs = [
+        "rva23s64_decoder_wrapper.h",
+        "rva23s64_encoding.h",
+    ],
+    copts = ["-O3"],
+    deps = [
+        ":riscv_encoding_common",
+        ":riscv_g",
+        ":riscv_generic_decoder",
+        ":riscv_getters",
+        ":riscv_state",
+        ":rva23s64_bin_fmt",
+        ":rva23s64_isa",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/functional:bind_front",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/strings",
+        "@com_google_mpact-sim//mpact/sim/generic:arch_state",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/generic:instruction",
+        "@com_google_mpact-sim//mpact/sim/generic:program_error",
+        "@com_google_mpact-sim//mpact/sim/generic:type_helpers",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
+
+
 cc_binary(
     name = "rva23s64_sim",
     srcs = [
@@ -1842,7 +1943,7 @@ cc_binary(
         ":riscv_fp_state",
         ":riscv_state",
         ":riscv_top",
-        ":rva23u64_decoder",
+        ":rva23s64_decoder",
         "@com_google_absl//absl/base:log_severity",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
@@ -1863,4 +1964,3 @@ cc_binary(
         "@com_googlesource_code_re2//:re2",
     ],
 )
-

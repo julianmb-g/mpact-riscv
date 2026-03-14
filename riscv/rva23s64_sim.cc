@@ -49,7 +49,7 @@
 #include "mpact/sim/util/program_loader/elf_program_loader.h"
 #include "re2/re2.h"
 #include "riscv/debug_command_shell.h"
-#include "riscv/rva23u64_decoder_wrapper.h"
+#include "riscv/rva23s64_decoder_wrapper.h"
 
 #include "riscv/riscv_arm_semihost.h"
 #include "riscv/riscv_csr.h"
@@ -64,7 +64,7 @@
 
 using ::mpact::sim::generic::Instruction;
 using ::mpact::sim::proto::ComponentData;
-using ::mpact::sim::riscv::Rva23u64DecoderWrapper;
+using ::mpact::sim::riscv::Rva23s64DecoderWrapper;
 
 using ::mpact::sim::riscv::RiscVArmSemihost;
 using ::mpact::sim::riscv::RiscVFPState;
@@ -305,7 +305,7 @@ int main(int argc, char** argv) {
   RiscVVectorState rv_vector_state(&rv_state, 64);
   rv_state.set_rv_vector(&rv_vector_state);
   // Create the instruction decoder (incorporating Zawrs mpause mappings).
-  mpact::sim::generic::DecoderInterface* rv_decoder = new Rva23u64DecoderWrapper(&rv_state, memory);
+  mpact::sim::generic::DecoderInterface* rv_decoder = new Rva23s64DecoderWrapper(&rv_state, memory);
 
   // Make sure the architectural and abi register aliases are added.
   std::string reg_name;
