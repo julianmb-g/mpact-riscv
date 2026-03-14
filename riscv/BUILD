@@ -1984,6 +1984,7 @@ cc_library(
     srcs = ["mmu_sv39.cc"],
     hdrs = ["mmu_sv39.h"],
     deps = [
+        ":riscv_state",
         "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_mpact-sim//mpact/sim/util/memory",
         "@com_google_absl//absl/log:check",

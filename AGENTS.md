@@ -35,3 +35,4 @@
 
 ### Testing Gotchas
 - **Zero-Coverage MMIO Exemption Illusion:** When verifying that unaligned Read-Modify-Write (RMW) cycles exempt memory-mapped I/O (MMIO) regions, the test must definitively execute an unaligned memory access *inside* the defined MMIO boundaries. Executing addresses outside the MMIO region provides fraudulent coverage and completely misses the exemption logic.
+- **MMU Instantiation & State Dependencies:** When scaffolding memory management units like `MmuSv39` that perform active page walks, do not construct them with only `MemoryInterface`. They must be explicitly instantiated with `RiscVState*` to access architectural CSRs like `satp` and `mstatus`. The associated Bazel targets (both `cc_library` and `_test`) must strictly depend on `//riscv:riscv_state` to prevent missing symbol linkage errors.

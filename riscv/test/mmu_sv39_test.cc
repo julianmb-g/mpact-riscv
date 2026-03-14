@@ -14,6 +14,9 @@
 
 #include "riscv/mmu_sv39.h"
 
+#include "riscv/mmu_sv39.h"
+#include "riscv/riscv_state.h"
+#include "riscv/riscv_csr.h"
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "mpact/sim/util/memory/flat_demand_memory.h"
@@ -25,26 +28,68 @@ namespace riscv {
 namespace {
 
 TEST(MmuSv39Test, ConstructorRequiresPhysicalMemory) {
-  EXPECT_DEATH(MmuSv39(nullptr), "physical_memory must not be null");
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
+  EXPECT_DEATH(MmuSv39(&state, nullptr), "physical_memory must not be null");
+  delete physical_memory;
 }
 
-TEST(MmuSv39Test, ForwardsLoadsAndStores) {
+TEST(MmuSv39Test, ConstructorRequiresState) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
-  MmuSv39 mmu(physical_memory);
+  EXPECT_DEATH(MmuSv39(nullptr, physical_memory), "state must not be null");
+  delete physical_memory;
+}
+
+TEST(MmuSv39Test, Sv39PageWalkTranslation) {
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
   
+  // Create a mocked satp CSR.
+  auto* satp_csr = new RiscVSimpleCsr<uint64_t>("satp", 0x180, &state);
+  state.csr_set()->AddCsr(satp_csr);
+
+  MmuSv39 mmu(&state, physical_memory);
   auto db_factory = mpact::sim::generic::DataBufferFactory();
+  
+  // Set satp.MODE = 8 (Sv39), PPN = 1 (Page at physical 0x1000)
+  uint64_t satp_val = (8ULL << 60) | 1ULL;
+  satp_csr->Write(satp_val);
+
+  // Set up L2 PTE at physical 0x1000 + vpn[2]*8
+  // VA: 0x40000000 -> vpn[2] = 1, vpn[1]=0, vpn[0]=0, pgoff=0
+  // L2 PTE addr = 0x1000 + 1*8 = 0x1008
+  // Let L2 PTE point to L1 Page Table at PPN 2 (0x2000)
+  auto pte2_db = db_factory.Allocate<uint64_t>(1);
+  pte2_db->Set<uint64_t>(0, (2ULL << 10) | 0x1); // V=1, non-leaf
+  physical_memory->Store(0x1008, pte2_db);
+
+  // Set up L1 PTE at physical 0x2000 + vpn[1]*8 = 0x2000
+  // Let L1 PTE point to L0 Page Table at PPN 3 (0x3000)
+  auto pte1_db = db_factory.Allocate<uint64_t>(1);
+  pte1_db->Set<uint64_t>(0, (3ULL << 10) | 0x1); // V=1, non-leaf
+  physical_memory->Store(0x2000, pte1_db);
+
+  // Set up L0 PTE at physical 0x3000 + vpn[0]*8 = 0x3000
+  // Let L0 PTE map to physical PPN 4 (0x4000). Leaf.
+  // Permissions: V=1, R=1, W=1, X=0 (RW page).
+  auto pte0_db = db_factory.Allocate<uint64_t>(1);
+  pte0_db->Set<uint64_t>(0, (4ULL << 10) | 0x7); // V=1, R=1, W=1
+  physical_memory->Store(0x3000, pte0_db);
+
+  // Write some data at physical address 0x4000
   auto write_db = db_factory.Allocate<uint32_t>(1);
-  write_db->Set<uint32_t>(0, 0x12345678);
-  
-  // Store through MMU
-  mmu.Store(0x1000, write_db);
-  
-  // Load through MMU
+  write_db->Set<uint32_t>(0, 0xDEADBEEF);
+  physical_memory->Store(0x4000, write_db);
+
+  // Load through MMU with VA 0x40000000
   auto read_db = db_factory.Allocate<uint32_t>(1);
-  mmu.Load(0x1000, read_db, nullptr, nullptr);
+  mmu.Load(0x40000000, read_db, nullptr, nullptr);
   
-  EXPECT_EQ(read_db->Get<uint32_t>(0), 0x12345678);
+  EXPECT_EQ(read_db->Get<uint32_t>(0), 0xDEADBEEF);
   
+  pte2_db->DecRef();
+  pte1_db->DecRef();
+  pte0_db->DecRef();
   write_db->DecRef();
   read_db->DecRef();
   delete physical_memory;

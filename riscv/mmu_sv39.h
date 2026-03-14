@@ -18,6 +18,7 @@
 #include "mpact/sim/generic/data_buffer.h"
 #include "mpact/sim/generic/instruction.h"
 #include "mpact/sim/util/memory/memory_interface.h"
+#include "riscv/riscv_state.h"
 
 namespace mpact {
 namespace sim {
@@ -28,7 +29,7 @@ namespace riscv {
 // to the RISC-V Privileged Architecture specifications.
 class MmuSv39 : public mpact::sim::util::MemoryInterface {
  public:
-  explicit MmuSv39(mpact::sim::util::MemoryInterface* physical_memory);
+  explicit MmuSv39(RiscVState* state, mpact::sim::util::MemoryInterface* physical_memory);
   ~MmuSv39() override;
 
   // MemoryInterface methods.
@@ -49,6 +50,9 @@ class MmuSv39 : public mpact::sim::util::MemoryInterface {
              mpact::sim::generic::DataBuffer* db) override;
 
  private:
+  bool Translate(uint64_t vaddr, bool is_store, uint64_t* paddr);
+
+  RiscVState* state_;
   mpact::sim::util::MemoryInterface* physical_memory_;
 };
 
