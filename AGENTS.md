@@ -3,6 +3,7 @@
 ## Lessons Learned
 
 ### Architecture Quirks
+- **Zawrs Polling Yield (mpause):** When simulating spin-wait loops (e.g., `WRS.NTO` in the `Zawrs` extension), use `std::this_thread::yield()` within the instruction semantic function (like `RiscVPause`) to yield the host simulator thread to the OS. This prevents the simulator from spinning at 100% CPU.
 - **Instruction Decoders:** Generated from `.isa` and `.bin_fmt` files, translating binary opcodes into executable instructions.
 - **Instruction Set & Decoder Generation namespaces (`.isa` files):** When implementing new ISA profiles (e.g., RVA23) and modifying `.isa` decoder logic, explicitly qualify the `RV32` or `RV64` namespaces for semantic functions. Be careful when overriding opcodes from base `.isa` files; ensure the functions like `RiscVZextw` or `RiscVNot` exist in the expected namespace or the resulting decoder C++ files will fail to compile.
 - **Linker Duplicate Symbols:** When adding support for disjoint instruction extensions (e.g. `Zfh` and `Vector`), do not reuse generic, un-namespaced helper functions (like `RV32VUnimplementedInstruction`) in different translation units. This causes `duplicate symbol` linker errors in the top-level `cc_binary` simulator. Either mark them `inline` in the header or uniquely namespace/prefix them (e.g. `RV32ZfhUnimplementedInstruction`).
