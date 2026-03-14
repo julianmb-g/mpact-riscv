@@ -57,6 +57,7 @@
 #include "riscv/riscv_register.h"
 #include "riscv/riscv_register_aliases.h"
 #include "riscv/riscv_state.h"
+#include "riscv/riscv_boot.h"
 #include "riscv/riscv_top.h"
 #include "riscv/riscv_vector_state.h"
 #include "src/google/protobuf/text_format.h"
@@ -199,6 +200,9 @@ static bool PrintRegisters(
   return true;
 }
 
+ABSL_FLAG(uint64_t, dtb, 0, "dtb address");
+ABSL_FLAG(uint64_t, hartid, 0, "hartid");
+
 int main(int argc, char** argv) {
   int return_code = 0;
   auto arg_vec = absl::ParseCommandLine(argc, argv);
@@ -330,6 +334,13 @@ int main(int argc, char** argv) {
   auto pc_write = riscv_top.WriteRegister("pc", entry_point);
   if (!pc_write.ok()) {
     std::cerr << "Error writing to pc: " << pc_write.message();
+    return -1;
+  }
+
+  // Native DTB handoff explicitly seeds a0 = hartid, a1 = dtb
+  auto boot_status = ::mpact::sim::riscv::WriteBootHandoffRegisters(&riscv_top, absl::GetFlag(FLAGS_hartid), absl::GetFlag(FLAGS_dtb));
+  if (!boot_status.ok()) {
+    std::cerr << "Error writing boot handoff registers: " << boot_status.message();
     return -1;
   }
 

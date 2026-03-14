@@ -1145,9 +1145,11 @@ cc_library(
 cc_library(
     name = "riscv_top",
     srcs = [
+        "riscv_boot.cc",
         "riscv_top.cc",
     ],
     hdrs = [
+        "riscv_boot.h",
         "riscv_top.h",
     ],
     copts = ["-O3"],
@@ -1861,3 +1863,4 @@ cc_binary(
         "@com_googlesource_code_re2//:re2",
     ],
 )
+
