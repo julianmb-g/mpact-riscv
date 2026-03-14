@@ -1964,3 +1964,11 @@ cc_binary(
         "@com_googlesource_code_re2//:re2",
     ],
 )
+
+cc_library(
+    name = "rvvi_sim",
+    srcs = ["rvvi_sim.cc"],
+    hdrs = ["rvvi_sim.h"],
+    copts = ["-O3"],
+    visibility = ["//visibility:public"],
+)

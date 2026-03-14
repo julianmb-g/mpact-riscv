@@ -1082,3 +1082,12 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "rvvi_sim_test",
+    srcs = ["rvvi_sim_test.cc"],
+    deps = [
+        "//riscv:rvvi_sim",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
