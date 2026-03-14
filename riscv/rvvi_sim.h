@@ -130,6 +130,26 @@ class RvviMemoryMapper : public util::MemoryInterface {
 };
 
 
+class AsyncFormattingDaemon {
+ public:
+  explicit AsyncFormattingDaemon(int timeout_seconds)
+      : timeout_seconds_(timeout_seconds), running_(false) {}
+
+  ~AsyncFormattingDaemon() {
+    Stop();
+  }
+
+  void Start();
+  void Stop();
+
+ private:
+  void DaemonLoop();
+
+  int timeout_seconds_;
+  std::atomic<bool> running_;
+  std::thread worker_thread_;
+};
+
 extern "C" {
   void ClearTransientInstructionBuffer(uint32_t hartId);
 }

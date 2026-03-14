@@ -20,6 +20,37 @@ extern "C" {
   }
 }
 
+void AsyncFormattingDaemon::Start() {
+  if (running_.exchange(true)) {
+    return;
+  }
+  worker_thread_ = std::thread(&AsyncFormattingDaemon::DaemonLoop, this);
+}
+
+void AsyncFormattingDaemon::Stop() {
+  if (!running_.exchange(false)) {
+    return;
+  }
+  g_trace_buffer.Abort(); // Unblock ring buffer
+  if (worker_thread_.joinable()) {
+    worker_thread_.join();
+  }
+}
+
+void AsyncFormattingDaemon::DaemonLoop() {
+  int64_t timeout_ms = static_cast<int64_t>(timeout_seconds_) * 1000;
+  
+  while (running_.load()) {
+    TracePacket packet;
+    if (g_trace_buffer.Pop(packet)) {
+      // Process packet here. (Dummy processing for scaffolding)
+      (void)packet;
+    } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
+    }
+  }
+}
+
 RvviMemoryMapper::RvviMemoryMapper(util::MemoryInterface* memory)
     : memory_(memory), db_factory_() {}
 
