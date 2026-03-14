@@ -28,8 +28,12 @@ void AsyncFormattingDaemon::Start() {
 }
 
 void AsyncFormattingDaemon::Stop() {
-  if (!running_.exchange(false)) {
-    return;
+  {
+    std::lock_guard<std::mutex> lock(cv_m_);
+    if (!running_.exchange(false)) {
+      return;
+    }
+    cv_.notify_all();       // Instantly wake up the daemon if it's waiting
   }
   g_trace_buffer.Abort(); // Unblock ring buffer
   if (worker_thread_.joinable()) {
@@ -46,7 +50,8 @@ void AsyncFormattingDaemon::DaemonLoop() {
       // Process packet here. (Dummy processing for scaffolding)
       (void)packet;
     } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
+      std::unique_lock<std::mutex> lock(cv_m_);
+      cv_.wait_for(lock, std::chrono::milliseconds(timeout_ms), [this] { return !running_.load(); });
     }
   }
 }

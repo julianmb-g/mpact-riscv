@@ -1095,6 +1095,17 @@ cc_test(
 )
 
 cc_test(
+    name = "rvvi_formatting_daemon_test",
+    srcs = ["rvvi_formatting_daemon_test.cc"],
+    deps = [
+        "//riscv:rvvi_sim",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "mmu_sv39_test",
     srcs = ["mmu_sv39_test.cc"],
     deps = [

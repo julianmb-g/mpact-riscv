@@ -5,6 +5,8 @@
 #include <atomic>
 #include <thread>
 #include <stdexcept>
+#include <mutex>
+#include <condition_variable>
 #include "mpact/sim/util/memory/memory_interface.h"
 #include "mpact/sim/generic/data_buffer.h"
 #include <vector>
@@ -148,6 +150,8 @@ class AsyncFormattingDaemon {
   int timeout_seconds_;
   std::atomic<bool> running_;
   std::thread worker_thread_;
+  std::mutex cv_m_;
+  std::condition_variable cv_;
 };
 
 extern "C" {
