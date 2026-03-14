@@ -232,6 +232,37 @@ class RiscVUStatus : public RiscVSimpleCsr<uint64_t> {
   RiscVMStatus* mstatus_;
 };
 
+// The satp register.
+template <typename T>
+class RiscVSAtp : public RiscVSimpleCsr<T> {
+ public:
+  explicit RiscVSAtp(ArchState* state)
+      : RiscVSimpleCsr<T>("satp", RiscVCsrEnum::kSAtp, 0, state) {}
+
+  void Write(uint32_t value) override {
+    if constexpr (std::is_same_v<T, uint32_t>) {
+      // For RV32, MODE is bit 31. Allowed modes: 0 (Bare), 1 (Sv32).
+      // Since it's a 1-bit field, it can only be 0 or 1, so all writes are valid.
+      RiscVSimpleCsr<T>::Write(value);
+    } else {
+      // Writing 32-bit value to a 64-bit register clears upper 32 bits.
+      // Mode (bits 63..60) becomes 0, which is valid.
+      RiscVSimpleCsr<T>::Write(value);
+    }
+  }
+
+  void Write(uint64_t value) override {
+    if constexpr (std::is_same_v<T, uint64_t>) {
+      uint64_t mode = (value >> 60) & 0xF;
+      // For RV64, only 0 (Bare) and 8 (Sv39) are supported.
+      if (mode != 0 && mode != 8) {
+        return; // strictly ignored
+      }
+    }
+    RiscVSimpleCsr<T>::Write(value);
+  }
+};
+
 }  // namespace riscv
 }  // namespace sim
 }  // namespace mpact

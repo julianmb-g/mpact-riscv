@@ -44,9 +44,18 @@ TEST(MmuSv39Test, Sv39PageWalkTranslation) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
   RiscVState state("test", RiscVXlen::RV64, physical_memory);
   
-  // Create a mocked satp CSR.
-  auto* satp_csr = new RiscVSimpleCsr<uint64_t>("satp", 0x180, &state);
-  state.csr_set()->AddCsr(satp_csr);
+  // Get the satp CSR from the state.
+  auto satp_res = state.csr_set()->GetCsr("satp");
+  EXPECT_TRUE(satp_res.ok());
+  auto* satp_csr = satp_res.value();
+
+  // Test negative constraint: unsupported modes must be ignored.
+  // 9 is Sv48, 10 is Sv57. Both should be ignored.
+  uint64_t initial_satp = satp_csr->AsUint64();
+  satp_csr->Write(static_cast<uint64_t>(9ULL << 60));
+  EXPECT_EQ(satp_csr->AsUint64(), initial_satp) << "Sv48 mode write should be ignored";
+  satp_csr->Write(static_cast<uint64_t>(10ULL << 60));
+  EXPECT_EQ(satp_csr->AsUint64(), initial_satp) << "Sv57 mode write should be ignored";
 
   MmuSv39 mmu(&state, physical_memory);
   auto db_factory = mpact::sim::generic::DataBufferFactory();

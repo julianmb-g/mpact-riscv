@@ -370,6 +370,9 @@ void CreateCsrs(RiscVState* state, std::vector<RiscVCsrInterface*>& csr_vec) {
   // sstatus
   CHECK_NE(CreateCsr<RiscVSStatus>(state, csr_vec, mstatus, state), nullptr);
 
+  // satp
+  CHECK_NE(CreateCsr<RiscVSAtp<T>>(state, csr_vec, state), nullptr);
+
   // sip and sie are always 32 bit.
   // sip - supervisor interrupt pending register.
   CHECK_NE(CreateCsr(state, state->sip_, csr_vec, mip, mideleg, state),
