@@ -1105,3 +1105,15 @@ cc_test(
         "@com_google_mpact-sim//mpact/sim/generic:core",
     ],
 )
+
+cc_test(
+    name = "riscv_sstc_test",
+    srcs = ["riscv_sstc_test.cc"],
+    deps = [
+        "//riscv:riscv_clint",
+        "//riscv:riscv_state",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
