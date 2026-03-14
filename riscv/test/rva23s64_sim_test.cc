@@ -12,9 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cstdint>
+#include <functional>
+
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "absl/strings/str_cat.h"
+#include "riscv/riscv_csr.h"
+#include "riscv/riscv_sim_csrs.h"
 #include "riscv/riscv_top.h"
 #include "riscv/rva23s64_decoder_wrapper.h"
 #include "riscv/riscv_state.h"
@@ -38,7 +43,38 @@ using ::mpact::sim::riscv::RV64Register;
 using ::mpact::sim::riscv::RVFpRegister;
 using ::mpact::sim::util::FlatDemandMemory;
 using ::mpact::sim::util::AtomicMemory;
+
 using ::mpact::sim::util::ElfProgramLoader;
+using ::mpact::sim::riscv::STimeCmpCsr;
+
+TEST(Rva23s64SimTest, STimeCmpCsrTimerCallback) {
+  // Use the standard architectural environment instantiation without manual injection
+  auto* memory = new FlatDemandMemory();
+  auto* atomic_memory = new AtomicMemory(memory);
+  auto* state = new RiscVState("RVA23S64", RiscVXlen::RV64, memory, atomic_memory);
+
+  auto csr_res = state->csr_set()->GetCsr(0x14D); // stimecmp
+  ASSERT_TRUE(csr_res.ok());
+  auto csr = csr_res.value();
+  auto* stimecmp = static_cast<STimeCmpCsr*>(csr);
+
+  uint64_t callback_value = 0;
+  bool callback_called = false;
+  stimecmp->set_timer_cb([&](uint64_t time) {
+    callback_value = time;
+    callback_called = true;
+  });
+
+  // Test the base implementation
+  csr->Write(static_cast<uint64_t>(0xDEADBEEF12345678ULL));
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(callback_value, 0xDEADBEEF12345678ULL);
+  EXPECT_EQ(csr->AsUint64(), 0xDEADBEEF12345678ULL);
+
+  delete state;
+  delete atomic_memory;
+  delete memory;
+}
 
 TEST(Rva23s64SimTest, BasicInstantiationTest) {
   // Verify the rva23s64_sim target correctly instantiates the simulator environment.

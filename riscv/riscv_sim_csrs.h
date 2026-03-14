@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <string>
+#include <functional>
 
 #include "riscv/riscv_csr.h"
 #include "riscv/riscv_state.h"
@@ -24,6 +25,26 @@
 namespace mpact {
 namespace sim {
 namespace riscv {
+
+// Mseccfg CSR implements the Rule Lock Bypass (RLB) and Machine Mode Lock (MML) policies.
+class MseccfgCsr : public RiscVSimpleCsr<uint64_t> {
+ public:
+  MseccfgCsr(RiscVState *state);
+  void Write(uint64_t value) override;
+  void Write(uint32_t value) override;
+};
+
+// Sstc CSR implements the stimecmp register for supervisor-mode timer interrupts.
+// This serves as a decoupled stub hardware timer callback.
+class STimeCmpCsr : public RiscVSimpleCsr<uint64_t> {
+ public:
+  STimeCmpCsr(RiscVState *state, std::function<void(uint64_t)> timer_cb = nullptr);
+  void Write(uint64_t value) override;
+  void Write(uint32_t value) override;
+  void set_timer_cb(std::function<void(uint64_t)> timer_cb) { timer_cb_ = std::move(timer_cb); }
+ private:
+  std::function<void(uint64_t)> timer_cb_;
+};
 
 class RiscVSimModeCsr : public RiscVSimpleCsr<uint32_t> {
  public:

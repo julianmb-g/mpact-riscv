@@ -163,6 +163,12 @@ void CreateCsrs(RiscVState* state, std::vector<RiscVCsrInterface*>& csr_vec) {
   absl::Status result;
   // Create CSRs.
 
+  // mseccfg
+  CHECK_NE(CreateCsr<MseccfgCsr>(state, csr_vec, state), nullptr);
+
+  // stimecmp
+  CHECK_NE(CreateCsr<STimeCmpCsr>(state, csr_vec, state, nullptr), nullptr);
+
   // menvcfg
   CHECK_NE(CreateCsr<RiscVSimpleCsr<T>>(state, csr_vec, "menvcfg",
                                         RiscVCsrEnum::kMenvcfg, 0, state),

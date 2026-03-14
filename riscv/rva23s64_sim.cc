@@ -60,6 +60,7 @@
 #include "riscv/riscv_boot.h"
 #include "riscv/riscv_top.h"
 #include "riscv/riscv_vector_state.h"
+#include "riscv/riscv_sim_csrs.h"
 #include "src/google/protobuf/text_format.h"
 
 using ::mpact::sim::generic::Instruction;
@@ -173,52 +174,8 @@ static void sim_sigint_handler(int arg) {
 }
 
 using ::mpact::sim::riscv::RiscVSimpleCsr;
-
-// Mseccfg CSR implements the Rule Lock Bypass (RLB) and Machine Mode Lock (MML) policies.
-class MseccfgCsr : public RiscVSimpleCsr<uint64_t> {
- public:
-  MseccfgCsr(mpact::sim::riscv::RiscVState *state)
-      : RiscVSimpleCsr<uint64_t>("mseccfg", 0x747, 0, 0x7, 0x7, state) {}
-  void Write(uint64_t value) override {
-    uint64_t current = GetUint64();
-    uint64_t next_val = current;
-    // MML (bit 0) is sticky.
-    if (value & 1) next_val |= 1;
-    // MMWP (bit 1) is sticky.
-    if (value & 2) next_val |= 2;
-    // RLB (bit 2) is writable only if MML is 0.
-    if (!(current & 1)) {
-      next_val = (next_val & ~4ULL) | (value & 4);
-    }
-    Set(next_val);
-  }
-  void Write(uint32_t value) override {
-    Write(static_cast<uint64_t>(value));
-  }
-};
-
-// Sstc CSR implements the stimecmp register for supervisor-mode timer interrupts.
-// This serves as a decoupled stub hardware timer callback.
-class STimeCmpCsr : public RiscVSimpleCsr<uint64_t> {
- public:
-  STimeCmpCsr(mpact::sim::riscv::RiscVState *state,
-              std::function<void(uint64_t)> timer_cb)
-      : RiscVSimpleCsr<uint64_t>("stimecmp", 0x14D, 0ULL, -1ULL, -1ULL, state),
-        timer_cb_(std::move(timer_cb)) {}
-  void Write(uint64_t value) override {
-    Set(value);
-    if (timer_cb_) {
-      timer_cb_(value);
-    }
-  }
-  void Write(uint32_t value) override {
-    Write(static_cast<uint64_t>(value));
-  }
-
- private:
-  std::function<void(uint64_t)> timer_cb_;
-};
-
+using ::mpact::sim::riscv::MseccfgCsr;
+using ::mpact::sim::riscv::STimeCmpCsr;
 using ::mpact::sim::riscv::RiscVTop;
 
 // This is an example custom command that is added to the interactive
@@ -333,19 +290,20 @@ int main(int argc, char** argv) {
   }
 
   // Wire up RLB and MML policies (ignoring Sv48/Sv57).
-  MseccfgCsr* mseccfg_csr = new MseccfgCsr(&rv_state);
-  auto add_status = rv_state.csr_set()->AddCsr(mseccfg_csr);
-  if (!add_status.ok()) {
-    LOG(ERROR) << "Failed to add mseccfg CSR: " << add_status.message();
+  auto mseccfg_res = rv_state.csr_set()->GetCsr(0x747);
+  if (!mseccfg_res.ok()) {
+    LOG(ERROR) << "Failed to find mseccfg CSR";
   }
 
   // Stub hardware timer callback for Sstc (Supervisor-mode timer interrupts).
-  STimeCmpCsr* stimecmp_csr = new STimeCmpCsr(&rv_state, [](uint64_t time) {
-    // Decoupled hardware timer callback: can be linked to an event queue.
-  });
-  auto add_stimecmp = rv_state.csr_set()->AddCsr(stimecmp_csr);
-  if (!add_stimecmp.ok()) {
-    LOG(ERROR) << "Failed to add stimecmp CSR: " << add_stimecmp.message();
+  auto stimecmp_res = rv_state.csr_set()->GetCsr(0x14D);
+  if (!stimecmp_res.ok()) {
+    LOG(ERROR) << "Failed to find stimecmp CSR";
+  } else {
+    auto* stimecmp_csr = static_cast<STimeCmpCsr*>(stimecmp_res.value());
+    stimecmp_csr->set_timer_cb([](uint64_t time) {
+      // Decoupled hardware timer callback: can be linked to an event queue.
+    });
   }
 
   RiscVTop riscv_top("RiscV32Sim", &rv_state, rv_decoder);
@@ -552,7 +510,5 @@ int main(int argc, char** argv) {
   delete memory_watcher;
   delete arm_semihost;
   delete rv_decoder;
-  delete mseccfg_csr;
-  delete stimecmp_csr;
   return return_code;
 }

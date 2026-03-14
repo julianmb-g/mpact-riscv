@@ -19,6 +19,43 @@ namespace mpact {
 namespace sim {
 namespace riscv {
 
+MseccfgCsr::MseccfgCsr(RiscVState *state)
+    : RiscVSimpleCsr<uint64_t>("mseccfg", 0x747, 0, 0x7, 0x7, state) {}
+
+void MseccfgCsr::Write(uint64_t value) {
+  uint64_t current = GetUint64();
+  uint64_t next_val = current;
+  // MML (bit 0) is sticky.
+  if (value & 1) next_val |= 1;
+  // MMWP (bit 1) is sticky.
+  if (value & 2) next_val |= 2;
+  // RLB (bit 2) is writable only if MML is 0.
+  if (!(current & 1)) {
+    next_val = (next_val & ~4ULL) | (value & 4);
+  }
+  Set(next_val);
+}
+
+void MseccfgCsr::Write(uint32_t value) {
+  Write(static_cast<uint64_t>(value));
+}
+
+STimeCmpCsr::STimeCmpCsr(RiscVState *state,
+                         std::function<void(uint64_t)> timer_cb)
+    : RiscVSimpleCsr<uint64_t>("stimecmp", 0x14D, 0ULL, -1ULL, -1ULL, state),
+      timer_cb_(std::move(timer_cb)) {}
+
+void STimeCmpCsr::Write(uint64_t value) {
+  Set(value);
+  if (timer_cb_) {
+    timer_cb_(value);
+  }
+}
+
+void STimeCmpCsr::Write(uint32_t value) {
+  Write(static_cast<uint64_t>(value));
+}
+
 uint32_t RiscVSimModeCsr::GetUint32() {
   return static_cast<uint32_t>(state_->privilege_mode());
 }
