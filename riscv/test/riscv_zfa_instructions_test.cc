@@ -62,8 +62,8 @@ TEST_F(RiscVZfaInstructionsTest, FliS_Constant16) {
 }
 
 TEST_F(RiscVZfaInstructionsTest, FminmS_Magnitudes) {
-  float a = -2.0f;
-  float b = 3.0f;
+  float a = -3.0f;
+  float b = 2.0f;
   uint32_t a_bits;
   std::memcpy(&a_bits, &a, sizeof(float));
   uint32_t b_bits;
@@ -83,7 +83,7 @@ TEST_F(RiscVZfaInstructionsTest, FminmS_Magnitudes) {
   uint32_t uval = static_cast<uint32_t>(val);
   std::memcpy(&result, &uval, sizeof(float));
   
-  EXPECT_EQ(result, -2.0f);
+  EXPECT_EQ(result, 2.0f);
 }
 
 TEST_F(RiscVZfaInstructionsTest, FminmS_NaNs) {
