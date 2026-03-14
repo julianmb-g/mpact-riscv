@@ -59,7 +59,7 @@ TEST(MmuSv39Test, TestUnsupportedSatpModeFallback) {
   delete physical_memory;
 }
 
-TEST(MmuSv39Test, BareModeTranslation) {
+TEST(MmuSv39Test, TestMmuBareModeBypass) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
   RiscVState state("test", RiscVXlen::RV64, physical_memory);
   
@@ -76,7 +76,7 @@ TEST(MmuSv39Test, BareModeTranslation) {
   mmu.Store(0x80000000, write_db);
 
   auto read_db = db_factory.Allocate<uint32_t>(1);
-  mmu.Load(0x80000000, read_db, nullptr, nullptr);
+  physical_memory->Load(0x80000000, read_db, nullptr, nullptr);
   EXPECT_EQ(read_db->Get<uint32_t>(0), 0xCAFEBABE);
 
   write_db->DecRef();
