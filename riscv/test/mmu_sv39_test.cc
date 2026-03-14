@@ -50,11 +50,12 @@ TEST(MmuSv39Test, TestUnsupportedSatpModeFallback) {
 
   uint64_t initial_satp = satp_csr->AsUint64();
   
-  satp_csr->Write(static_cast<uint64_t>(9ULL << 60)); // Sv48
-  EXPECT_EQ(satp_csr->AsUint64(), initial_satp) << "Sv48 mode write should be ignored";
-  
-  satp_csr->Write(static_cast<uint64_t>(10ULL << 60)); // Sv57
-  EXPECT_EQ(satp_csr->AsUint64(), initial_satp) << "Sv57 mode write should be ignored";
+  // Test multiple unsupported modes (For RV64, only 0 and 8 are valid)
+  uint64_t unsupported_modes[] = {1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15};
+  for (uint64_t mode : unsupported_modes) {
+    satp_csr->Write(static_cast<uint64_t>(mode << 60));
+    EXPECT_EQ(satp_csr->AsUint64(), initial_satp) << "Mode " << mode << " write should be ignored";
+  }
 
   delete physical_memory;
 }
