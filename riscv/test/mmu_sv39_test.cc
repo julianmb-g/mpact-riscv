@@ -117,24 +117,32 @@ TEST(MmuSv39Test, NegativePteFaults) {
   auto write_db = db_factory.Allocate<uint32_t>(1);
   write_db->Set<uint32_t>(0, 0xBADF00D);
   
-  bool trapped = false;
-  state.set_on_trap([&trapped](bool, uint64_t, uint64_t, uint64_t, const mpact::sim::generic::Instruction*) -> bool {
-    trapped = true;
-    return true;
-  });
+  auto mcause_res = state.csr_set()->GetCsr("mcause");
+  EXPECT_TRUE(mcause_res.ok());
+  auto* mcause_csr = mcause_res.value();
+  
+  auto mtval_res = state.csr_set()->GetCsr("mtval");
+  EXPECT_TRUE(mtval_res.ok());
+  auto* mtval_csr = mtval_res.value();
 
-  trapped = false;
+  mcause_csr->Write(static_cast<uint64_t>(0));
+  mtval_csr->Write(static_cast<uint64_t>(0));
+
   mmu.Store(0x40000000, write_db); // Store on read-only page
-  EXPECT_TRUE(trapped); // Should trigger trap
+  EXPECT_EQ(mcause_csr->AsUint64(), static_cast<uint64_t>(ExceptionCode::kStorePageFault));
+  EXPECT_EQ(mtval_csr->AsUint64(), 0x40000000);
+
+  mcause_csr->Write(static_cast<uint64_t>(0));
+  mtval_csr->Write(static_cast<uint64_t>(0));
 
   // Invalid PTE V=0
   auto pte0_inv = db_factory.Allocate<uint64_t>(1);
   pte0_inv->Set<uint64_t>(0, (4ULL << 10) | 0x0); // V=0
   physical_memory->Store(0x3000, pte0_inv);
 
-  trapped = false;
   mmu.Store(0x40000000, write_db); // Store on invalid page
-  EXPECT_TRUE(trapped); // Should trigger trap
+  EXPECT_EQ(mcause_csr->AsUint64(), static_cast<uint64_t>(ExceptionCode::kStorePageFault));
+  EXPECT_EQ(mtval_csr->AsUint64(), 0x40000000);
 
   pte2_db->DecRef();
   pte1_db->DecRef();
