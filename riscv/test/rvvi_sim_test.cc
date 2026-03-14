@@ -115,17 +115,21 @@ TEST(RvviMemoryMapperTest, RMWCycles) {
 
 class StrictMmioMemory : public mpact::sim::util::FlatDemandMemory {
  public:
+  StrictMmioMemory(uint64_t start, uint64_t end) : start_(start), end_(end) {}
   void Load(uint64_t address, mpact::sim::generic::DataBuffer* db,
             mpact::sim::generic::Instruction* inst,
             mpact::sim::generic::ReferenceCount* context) override {
-    EXPECT_FALSE(address >= 0x1000 && address < 0x2000) 
+    EXPECT_FALSE(address >= start_ && address < end_) 
         << "MMIO region should not be read during an unaligned store! RMW bypass failed.";
     mpact::sim::util::FlatDemandMemory::Load(address, db, inst, context);
   }
+ private:
+  uint64_t start_;
+  uint64_t end_;
 };
 
 TEST(RvviMemoryMapperTest, MmioExemption) {
-  auto memory = new StrictMmioMemory();
+  auto memory = new StrictMmioMemory(0x1000, 0x2000);
   RvviMemoryMapper mapper(memory);
   
   mapper.AddMmioRange(0x1000, 0x2000);
@@ -138,10 +142,29 @@ TEST(RvviMemoryMapperTest, MmioExemption) {
   mapper.Store(0x1006, mmio_db);
   
   auto check_mmio = db_factory.Allocate<uint32_t>(1);
-  // We cannot use mapper.Load here because our StrictMmioMemory will trap it.
-  // Instead, we directly check the underlying memory to prove it was stored,
-  // or just rely on the fact that Load was NOT called during Store.
   memory->mpact::sim::util::FlatDemandMemory::Load(0x1006, check_mmio, nullptr, nullptr);
+  EXPECT_EQ(check_mmio->Get<uint32_t>(0), 0xCAFEBABE);
+  
+  mmio_db->DecRef();
+  check_mmio->DecRef();
+  delete memory;
+}
+
+TEST(RvviSimTest, RMWCycles_MMIO_Exemption) {
+  auto memory = new StrictMmioMemory(0x10000000, 0x100000FF);
+  RvviMemoryMapper mapper(memory);
+  
+  mapper.AddMmioRange(0x10000000, 0x100000FF);
+  
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  auto mmio_db = db_factory.Allocate<uint32_t>(1);
+  mmio_db->Set<uint32_t>(0, 0xCAFEBABE);
+  
+  // Unaligned 4-byte write crossing 8-byte boundary INSIDE MMIO bounds
+  mapper.Store(0x10000006, mmio_db);
+  
+  auto check_mmio = db_factory.Allocate<uint32_t>(1);
+  memory->mpact::sim::util::FlatDemandMemory::Load(0x10000006, check_mmio, nullptr, nullptr);
   EXPECT_EQ(check_mmio->Get<uint32_t>(0), 0xCAFEBABE);
   
   mmio_db->DecRef();
