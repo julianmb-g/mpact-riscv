@@ -75,6 +75,9 @@ class RiscVClint : public CounterValueSetInterface<uint64_t>,
   // bound counter is modified.
   void SetValue(const uint64_t& val) override;
 
+  // Supervisor time compare (Sstc) support.
+  void SetSTimeCmp(uint64_t value);
+
   // MemoryInterface overrides.
   // Non-vector load method.
   void Load(uint64_t address, DataBuffer* db, Instruction* inst,
@@ -107,6 +110,8 @@ class RiscVClint : public CounterValueSetInterface<uint64_t>,
   uint64_t mtime_ = 0;
   uint64_t mtimecmp_ = 0;
   int mtip_ = 0;
+  uint64_t stimecmp_ = -1ULL;
+  int stip_ = 0;
   // mip write interface.
   MipExternalWriteInterface* mip_interface_;
   // Counter for how many updates there have been in current period.

@@ -116,7 +116,6 @@ TEST_F(RiscVSstcTest, TestSstcStimecmpInterrupt) {
 
   // Simulate an advancing hardware clock external to the architectural core
   uint64_t simulated_clock = 0;
-  uint64_t timer_threshold = -1ULL;
   
   auto csr_res = state_->csr_set()->GetCsr(0x14D); // stimecmp
   ASSERT_TRUE(csr_res.ok());
@@ -125,7 +124,7 @@ TEST_F(RiscVSstcTest, TestSstcStimecmpInterrupt) {
   // The architectural wire from the out-of-band hardware timer to the Sstc interface
   // When stimecmp is written, this callback checks against the external time.
   stimecmp->set_timer_cb([&](uint64_t val) {
-    timer_threshold = val;
+    clint_->SetSTimeCmp(val);
   });
 
   // Architectural Configuration
@@ -155,17 +154,11 @@ TEST_F(RiscVSstcTest, TestSstcStimecmpInterrupt) {
   auto pc_write = top_->WriteRegister("pc", inst_addr);
   EXPECT_TRUE(pc_write.ok());
 
-  // Execute csrw
-  auto status = top_->Step(1);
-  EXPECT_TRUE(status.ok());
-  
   // Natively step until trap is taken
   while (top_->ReadRegister("pc").value() != trap_vector) {
     simulated_clock++;
-    if (simulated_clock >= timer_threshold) {
-      state_->mip()->set_stip(1); // Set STIP organically via external write interface
-    }
-    status = top_->Step(1);
+    clint_->SetValue(0); // Advance the hardware CLINT clock organically
+    auto status = top_->Step(1);
     EXPECT_TRUE(status.ok());
     if (simulated_clock > 10) break; // Avoid infinite loop
   }

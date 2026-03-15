@@ -40,9 +40,25 @@ RiscVClint::RiscVClint(int period, MipExternalWriteInterface* mip_interface)
   mip_interface_->set_mtip(mtip_);
   mip_interface->set_msip(msip_ & 0b1);
   int bit = mtime_ >= mtimecmp_;
-  if (bit == mtip_) return;
-  mip_interface_->set_mtip(bit);
-  mtip_ = bit;
+  if (bit != mtip_) {
+    mip_interface_->set_mtip(bit);
+    mtip_ = bit;
+  }
+  
+  int sbit = mtime_ >= stimecmp_;
+  if (sbit != stip_) {
+    mip_interface_->set_stip(sbit);
+    stip_ = sbit;
+  }
+}
+
+void RiscVClint::SetSTimeCmp(uint64_t value) {
+  stimecmp_ = value;
+  int sbit = mtime_ >= stimecmp_;
+  if (sbit != stip_) {
+    mip_interface_->set_stip(sbit);
+    stip_ = sbit;
+  }
 }
 
 // Reset of the clint block.
@@ -60,9 +76,16 @@ void RiscVClint::SetValue(const uint64_t& val) {
     update_counter_ = 0;
     mtime_++;
     int bit = mtime_ >= mtimecmp_;
-    if (bit == mtip_) return;
-    mip_interface_->set_mtip(bit);
-    mtip_ = bit;
+    if (bit != mtip_) {
+      mip_interface_->set_mtip(bit);
+      mtip_ = bit;
+    }
+    
+    int sbit = mtime_ >= stimecmp_;
+    if (sbit != stip_) {
+      mip_interface_->set_stip(sbit);
+      stip_ = sbit;
+    }
   }
 }
 

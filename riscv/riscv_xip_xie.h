@@ -36,6 +36,7 @@ class MipExternalWriteInterface {
   virtual ~MipExternalWriteInterface() = default;
   virtual void set_meip(uint64_t value) = 0;
   virtual void set_mtip(uint64_t value) = 0;
+  virtual void set_stip(uint64_t value) = 0;
   virtual void set_msip(uint64_t value) = 0;
   virtual void set_ext_seip(uint64_t value) = 0;
 };
@@ -74,7 +75,7 @@ class RiscVMIp : public MipExternalWriteInterface,
   bool stip() { return GetterHelper<5, 0b1>(); }
   bool utip() { return GetterHelper<4, 0b1>(); }
   void set_mtip(uint64_t value) override { SetterHelper<7, 0b1>(value); }
-  void set_stip(uint64_t value) { SetterHelper<5, 0b1>(value); }
+  void set_stip(uint64_t value) override { SetterHelper<5, 0b1>(value); }
   void set_utip(uint64_t value) { SetterHelper<4, 0b1>(value); }
 
   // X software interrupt pending.
