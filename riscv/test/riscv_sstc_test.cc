@@ -173,10 +173,18 @@ TEST_F(RiscVSstcTest, TestSstcStimecmpInterrupt) {
   // Natively evaluated at retirement! The PC should jump directly to the trap vector.
   EXPECT_EQ(top_->ReadRegister("pc").value(), trap_vector) << "Trap not taken at bounds!";
 
-  // Verify Architectural Vector Output
   auto scause_res = state_->csr_set()->GetCsr(0x142); // scause
   ASSERT_TRUE(scause_res.ok());
   EXPECT_EQ(scause_res.value()->AsUint64(), (1ULL << 63) | 5ULL);
+
+  // Verify Architectural Vector Output
+  auto stval_res = state_->csr_set()->GetCsr(0x143); // stval
+  ASSERT_TRUE(stval_res.ok());
+  EXPECT_EQ(stval_res.value()->AsUint64(), 0ULL);
+
+  auto mtval_res = state_->csr_set()->GetCsr(0x343); // mtval
+  ASSERT_TRUE(mtval_res.ok());
+  EXPECT_EQ(mtval_res.value()->AsUint64(), 0ULL);
 }
 
 }  // namespace
