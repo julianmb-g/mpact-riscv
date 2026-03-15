@@ -34,3 +34,4 @@
 - **Evisceration of Asynchronous Interrupt Simulation:** Tests for Sstc (e.g., `riscv_sstc_test`) must organically execute a `csrw stimecmp` instruction and verify an architectural interrupt is pended after realistic delayed steps, rather than using a static constant (`simulated_clock = 5`) to force an instant trigger.
 
 - **Evisceration of Asynchronous Interrupt Simulation:** Sstc interrupt tests (e.g., `riscv_sstc_test`) must organically execute `csrw stimecmp` and verify that an architectural interrupt is pended after a realistic sequence of delayed steps, rather than forcing an instant trigger with static constants (`simulated_clock = 5`).
+- **Evisceration of Asynchronous Interrupt Simulation:** Tests must organically execute instructions like `csrw stimecmp` through the simulator pipeline and verify that an architectural interrupt is pended after delayed steps, instead of forcing instant triggers or manually setting `STIP`.
