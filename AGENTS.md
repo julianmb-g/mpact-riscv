@@ -31,3 +31,7 @@
 - **Test Invariance & Environment Instantiation**:: Tests for top-level binary simulators like `rva23u64_sim` must not be trivial `EXPECT_TRUE(true)` assertions. They must definitively link `_decoder`, `_top`, `_state`, `fp_state`, `vector_state` and allocate registers to mathematically prove the architectural environment initializes correctly without segfaulting.
 - **Zero-Coverage MMIO Exemption Illusion**:: When testing memory boundary conditions (like MMIO exemptions during unaligned RMW cycles), setting up the boundary is insufficient. The test MUST organically execute an access instruction *inside* the mapped boundary to actually trigger and prove the exemption logic. Executing addresses outside the MMIO region provides fraudulent coverage and completely misses the exemption logic.
 
+
+### Memory Map & Emulation Constraints
+- **Hardware Interrupt Mapping**: CLINT is mapped at `0x0200_0000` (64KB) and PLIC at `0x0C00_0000` (16MB). Tests attempting to assert Machine/Supervisor timer interrupts or external interrupts must definitively write to these mapped hardware regions rather than injecting mock events.
+- **Zawrs Emulation strictness**: Spin-wait loops using instructions like `WRS.NTO` must organically call `std::this_thread::yield()` to prevent CI CPU lockups during out-of-band proxy test execution.
