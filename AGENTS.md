@@ -3,6 +3,9 @@
 
 ## Lessons Learned
 
+### Git & Environment Management
+- **Worktree Extraction for Zero-Trust Validation::** When orchestrating Just-In-Time (JIT) upstream validations, temporary git worktrees MUST be created exclusively in the `/tmp/` directory (e.g., `/tmp/upstream_verify_mpact_riscv`) to prevent polluting the local repository structure, and MUST explicitly use `origin/main` to ensure a pristine tracking branch.
+
 ### Architecture Quirks
 - **Instruction Decoders::** Generated from `.isa` and `.bin_fmt` files, translating binary opcodes into executable instructions.
 - **Instruction Set & Decoder Generation namespaces (`.isa` files)::** When implementing new ISA profiles (e.g., RVA23) and modifying `.isa` decoder logic, explicitly qualify the `RV32` or `RV64` namespaces for semantic functions. Be careful when overriding opcodes from base `.isa` files; ensure the functions like `RiscVZextw` or `RiscVNot` exist in the expected namespace or the resulting decoder C++ files will fail to compile.
