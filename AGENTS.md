@@ -1,7 +1,5 @@
 # mpact-riscv Agent Instructions
 
-
-
 ## Lessons Learned
 
 ### Architecture Quirks
@@ -21,6 +19,13 @@
 ### Git & Environment Management
 - **Worktree Extraction for Zero-Trust Validation**:: When orchestrating Just-In-Time (JIT) upstream validations, temporary git worktrees MUST be created exclusively in the `/tmp/` directory (e.g., `/tmp/upstream_verify_mpact_riscv`) to prevent polluting the local repository structure, and MUST explicitly use `origin/main` to ensure a pristine tracking branch.
 
+### Memory Map & Emulation Constraints
+- **Hardware Interrupt Mapping**:: CLINT is mapped at `0x0200_0000` (64KB) and PLIC at `0x0C00_0000` (16MB). Tests attempting to assert Machine/Supervisor timer interrupts or external interrupts must definitively write to these mapped hardware regions rather than injecting mock events.
+- **Zawrs Emulation strictness**:: Spin-wait loops using instructions like `WRS.NTO` must organically call `std::this_thread::yield()` to prevent CI CPU lockups during out-of-band proxy test execution.
+
+### Miscellaneous
+- **RVA23 Privilege Enforcement**:: `cbo.zero` must strictly enforce PTE permissions to prevent U-mode privilege escalation. Pointer masking (Ssnpm) must only apply to data accesses, not instruction fetches (to preserve CFI).
+
 ### Testing Gotchas
 - **Architectural Bounds Degradation**:: When testing organic target execution, enforce precise architectural step bounds with strict equality assertions (e.g., `EXPECT_EQ(pc, entry_point + 4)`) instead of trivial inequality bounds checks (`EXPECT_NE(pc, entry_point)`), which provide no guarantee of correct instruction advancement.
 - **Custom CSR Write Constraints (`satp`)**:: When adding new CSRs like `satp` that require custom write constraints (e.g. ignoring writes with unsupported modes like Sv48), define them as a templated subclass of `RiscVSimpleCsr` directly inside `riscv_xstatus.h` (or similar header) rather than relying on inline validation. Ensure the overridden `Write` method completely ignores the operation if the attempted `MODE` value is unsupported, leaving the entire register unmodified.
@@ -30,7 +35,3 @@
 - **Strict Aliasing Violation (reinterpret_cast)**:: Reinterpreting the address of an integer (`kCanonicalNaN`) as a float pointer (`*reinterpret_cast<T*>(&val)`) is a strict aliasing violation and invokes Undefined Behavior. Use `std::memcpy` or `std::bit_cast`.
 - **Test Invariance & Environment Instantiation**:: Tests for top-level binary simulators like `rva23u64_sim` must not be trivial `EXPECT_TRUE(true)` assertions. They must definitively link `_decoder`, `_top`, `_state`, `fp_state`, `vector_state` and allocate registers to mathematically prove the architectural environment initializes correctly without segfaulting.
 - **Zero-Coverage MMIO Exemption Illusion**:: When testing memory boundary conditions (like MMIO exemptions during unaligned RMW cycles), setting up the boundary is insufficient. The test MUST organically execute an access instruction *inside* the mapped boundary to actually trigger and prove the exemption logic. Executing addresses outside the MMIO region provides fraudulent coverage and completely misses the exemption logic.
-
-### Memory Map & Emulation Constraints
-- **Hardware Interrupt Mapping**: CLINT is mapped at `0x0200_0000` (64KB) and PLIC at `0x0C00_0000` (16MB). Tests attempting to assert Machine/Supervisor timer interrupts or external interrupts must definitively write to these mapped hardware regions rather than injecting mock events.
-- **Zawrs Emulation strictness**: Spin-wait loops using instructions like `WRS.NTO` must organically call `std::this_thread::yield()` to prevent CI CPU lockups during out-of-band proxy test execution.
