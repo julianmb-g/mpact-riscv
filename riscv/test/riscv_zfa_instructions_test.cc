@@ -110,6 +110,55 @@ TEST_F(RiscVZfaInstructionsTest, FminmS_NaNs) {
   EXPECT_EQ(uval, 0x7fc00000);
 }
 
+
+
+TEST_F(RiscVZfaInstructionsTest, TestZfaFminmFmaxmSemantics) {
+  // Test FminmS with equal magnitudes
+  float a = -2.0f;
+  float b = 2.0f;
+  uint32_t a_bits, b_bits;
+  std::memcpy(&a_bits, &a, sizeof(float));
+  std::memcpy(&b_bits, &b, sizeof(float));
+  uint64_t nan_boxed_a = 0xffffffff00000000ULL | a_bits;
+  uint64_t nan_boxed_b = 0xffffffff00000000ULL | b_bits;
+  
+  auto src_op_a = new generic::ImmediateOperand<uint64_t>(nan_boxed_a, "rs1");
+  auto src_op_b = new generic::ImmediateOperand<uint64_t>(nan_boxed_b, "rs2");
+  instruction_->AppendSource(src_op_a);
+  instruction_->AppendSource(src_op_b);
+  
+  RiscVFMinmS(instruction_);
+  
+  float result;
+  auto val = dest_reg_->data_buffer()->Get<RVFpRegister::ValueType>(0);
+  uint32_t uval = static_cast<uint32_t>(val);
+  std::memcpy(&result, &uval, sizeof(float));
+  EXPECT_EQ(result, -2.0f); // Minimum magnitude with same absolute value is the negative one
+  
+  // Create a new instruction for FMaxmS to avoid reusing the state
+  auto instruction2_ = new generic::Instruction(0, state_);
+  instruction2_->set_size(4);
+  auto dest_op2 = new generic::RegisterDestinationOperand<RVFpRegister::ValueType>(dest_reg_, 0);
+  instruction2_->AppendDestination(dest_op2);
+  
+  auto fflags_op2 = new generic::RegisterDestinationOperand<RV32Register::ValueType>(flag_reg_, 0);
+  instruction2_->AppendDestination(fflags_op2);
+  
+  auto src_op_a2 = new generic::ImmediateOperand<uint64_t>(nan_boxed_a, "rs1");
+  auto src_op_b2 = new generic::ImmediateOperand<uint64_t>(nan_boxed_b, "rs2");
+  instruction2_->AppendSource(src_op_a2);
+  instruction2_->AppendSource(src_op_b2);
+  
+  RiscVFMaxmS(instruction2_);
+  
+  val = dest_reg_->data_buffer()->Get<RVFpRegister::ValueType>(0);
+  uval = static_cast<uint32_t>(val);
+  std::memcpy(&result, &uval, sizeof(float));
+  EXPECT_EQ(result, 2.0f); // Maximum magnitude is the positive one
+  
+  instruction2_->DecRef();
+}
+
 }  // namespace test
 }  // namespace riscv
 }  // namespace sim
