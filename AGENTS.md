@@ -8,7 +8,6 @@
 - **RISC-V Architecture**:: Specifications for the unprivileged ISA, privileged architecture, scalable Vector (V) extension, and standard profiles (RVA23).
 - **Vector Masking Separation**:: Vector operations in `.isa` and `.bin_fmt` are duplicated to isolate masked (`vm=0`) and unmasked (`vm=1`) variants, resolving decoding ambiguity.
 
-
 ### Build Dependencies
 - **Bazel Decoder Architecture Dependencies**:: When implementing new instruction extensions (e.g., Zfa), ensure base architectural dependencies like `:riscv_g` are not accidentally removed from top-level `cc_library` targets in `riscv/BUILD`, as this causes silent missing symbol link errors.
 - **Bazel Decoder Dependencies**:: When a new `mpact_isa_decoder` macro relies on functionality, ensure the associated `cc_library` directly `deps` on the `.cc`/`.h` files implementing those semantic actions (like `riscv_bitmanip_instructions`), or compilation errors about unknown types (`Instruction`, `RegisterType`) will occur.
@@ -18,19 +17,16 @@
 - **Linker Duplicate Symbols**:: When adding support for disjoint instruction extensions (e.g. `Zfh` and `Vector`), do not reuse generic, un-namespaced helper functions (like `RV32VUnimplementedInstruction`) in different translation units. This causes `duplicate symbol` linker errors in the top-level `cc_binary` simulator. Either mark them `inline` in the header or uniquely namespace/prefix them (e.g. `RV32ZfhUnimplementedInstruction`).
 - **Worktree Extraction for Zero-Trust Validation**:: When orchestrating Just-In-Time (JIT) upstream validations, temporary git worktrees MUST be created exclusively in the `/tmp/` directory (e.g., `/tmp/upstream_verify_mpact_riscv`) to prevent polluting the local repository structure, and MUST explicitly use `origin/main` to ensure a pristine tracking branch.
 
-
 ### Miscellaneous
 - **Custom CSR Write Constraints (`satp`)**:: When adding new CSRs like `satp` that require custom write constraints (e.g. ignoring writes with unsupported modes like Sv48), define them as a templated subclass of `RiscVSimpleCsr` directly inside `riscv_xstatus.h` (or similar header) rather than relying on inline validation. Ensure the overridden `Write` method completely ignores the operation if the attempted `MODE` value is unsupported, leaving the entire register unmodified.
 - **Non-Atomic RMW Data Races**:: 64-bit Read-Modify-Write (RMW) abstraction cycles in the simulator must implement an explicit reservation lock or fail-state mechanism to guarantee atomicity against concurrent bus agents.
 - **RVA23 Privilege Enforcement**:: `cbo.zero` must strictly enforce PTE permissions to prevent U-mode privilege escalation. Pointer masking (Ssnpm) must only apply to data accesses, not instruction fetches (to preserve CFI).
-
 - **RVA23 Ssnpm Pointer Masking Execution Flaw**:: Pointer masking only applies to data loads/stores. Instruction fetches must fault if upper bits are not canonical to prevent severe security loopholes.
 - **RVVI SPSC Ring Buffer Initialization**:: When implementing the RVVI telemetry hooks (e.g., `ClearTransientInstructionBuffer`), the `SpscRingBuffer` should strictly enforce explicit backpressure handling using `std::this_thread::yield()` when full, avoiding dropping trace packets while seamlessly integrating with C-API callbacks.
 - **Ssnpm Pointer Masking Constraint**:: Tag stripping is explicitly forbidden on Instruction Fetches to maintain Control Flow Integrity (CFI). Pointer masking must only apply to data loads and stores.
 - **Strict Aliasing Violation (reinterpret_cast)**:: Reinterpreting the address of an integer (`kCanonicalNaN`) as a float pointer (`*reinterpret_cast<T*>(&val)`) is a strict aliasing violation and invokes Undefined Behavior. Use `std::memcpy` or `std::bit_cast`.
 - **The SPSC Ring Buffer Backpressure Trap**:: The fast ISS will outpace disk I/O. Explicitly define backpressure handling (e.g., blocking yield or heap spill-over) and forbid silent packet dropping.
 - **Zawrs Polling Yield (mpause)**:: When simulating spin-wait loops (e.g., `WRS.NTO` in the `Zawrs` extension), use `std::this_thread::yield()` within the instruction semantic function (like `RiscVPause`) to yield the host simulator thread to the OS. This prevents the simulator from spinning at 100% CPU.
-
 - **cbo.zero Privilege Check**:: `cbo.zero` is explicitly part of `Zicboz` (Cache-Block Zeroing), not `Zicbom`. Privilege checks must evaluate `Zicboz`.
 
 ### Testing Gotchas
@@ -42,6 +38,4 @@
 - **Negative PTE Fault Tests**:: Distinct MMU page fault scenarios (like Store to Read-Only vs Invalid PTE) must be cleanly separated into distinct, targeted tests rather than bundled into a single negative test case. Each test must explicitly assert `mcause` and `mtval`.
 - **Test Invariance & Environment Instantiation**:: Tests for top-level binary simulators like `rva23u64_sim` must not be trivial `EXPECT_TRUE(true)` assertions. They must definitively link `_decoder`, `_top`, `_state`, `fp_state`, `vector_state` and allocate registers to mathematically prove the architectural environment initializes correctly without segfaulting.
 - **Zawrs Emulation strictness**:: Spin-wait loops using instructions like `WRS.NTO` must organically call `std::this_thread::yield()` to prevent CI CPU lockups during out-of-band proxy test execution.
-
 - **Zero-Coverage MMIO Exemption Illusion**:: When testing memory boundary conditions (like MMIO exemptions during unaligned RMW cycles), setting up the boundary is insufficient. The test MUST organically execute an access instruction *inside* the mapped boundary to actually trigger and prove the exemption logic. Executing addresses outside the MMIO region provides fraudulent coverage and completely misses the exemption logic.
-
