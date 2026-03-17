@@ -1131,3 +1131,16 @@ cc_test(
         "//riscv:riscv_fp_state",
     ],
 )
+
+cc_test(
+    name = "riscv_zawrs_instructions_test",
+    size = "small",
+    srcs = ["riscv_zawrs_instructions_test.cc"],
+    deps = [
+        "//riscv:riscv_state",
+        "//riscv:rvm23_instructions",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+    ],
+)
