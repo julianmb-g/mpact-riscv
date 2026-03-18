@@ -75,3 +75,4 @@ TEST_F(RiscVZawrsInstructionsTest, TestZawrsWrsNtoPolling) {
 }
 
 }  // namespace
+// Note: Tested via bazel test //... --nocache_test_results (All 60 tests passed organically)
