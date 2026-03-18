@@ -21,6 +21,7 @@
 #include "mpact/sim/generic/immediate_operand.h"
 #include "mpact/sim/generic/instruction.h"
 #include "mpact/sim/util/memory/flat_demand_memory.h"
+#include "riscv/riscv_csr.h"
 #include "riscv/riscv_state.h"
 
 namespace {
@@ -97,6 +98,73 @@ TEST_F(RiscVZicboInstructionsTest, CboFlush) {
   instruction_->set_semantic_function(&mpact::sim::riscv::RiscVCboFlush);
   instruction_->Execute(nullptr);
   SUCCEED();
+}
+
+TEST_F(RiscVZicboInstructionsTest, TestZicbozPrivilegeEscalation) {
+  // cbo.zero requires rs1.
+  instruction_->AppendSource(new ImmediateOperand<uint64_t>(0x1000));
+  instruction_->set_semantic_function(&mpact::sim::riscv::RiscVCboZero);
+
+  bool trap_taken = false;
+  state_->set_on_trap(
+      [&trap_taken](bool is_interrupt, uint64_t trap_value,
+                    uint64_t exception_code, uint64_t epc,
+                    const mpact::sim::riscv::Instruction* inst) -> bool {
+        if (exception_code == static_cast<uint64_t>(
+                mpact::sim::riscv::ExceptionCode::kIllegalInstruction)) {
+          trap_taken = true;
+          return true;
+        }
+        return false;
+      });
+
+  auto res_m = state_->csr_set()->GetCsr(
+      static_cast<uint64_t>(mpact::sim::riscv::RiscVCsrEnum::kMenvcfg));
+  ASSERT_TRUE(res_m.ok());
+  auto* menvcfg = res_m.value();
+
+  auto res_s = state_->csr_set()->GetCsr(
+      static_cast<uint64_t>(mpact::sim::riscv::RiscVCsrEnum::kSenvcfg));
+  ASSERT_TRUE(res_s.ok());
+  auto* senvcfg = res_s.value();
+
+  // Test 1: Machine mode, CBZE = 0 (Should NOT trap, Machine mode ignores CBZE)
+  menvcfg->Write(static_cast<uint64_t>(0));
+  senvcfg->Write(static_cast<uint64_t>(0));
+  state_->set_privilege_mode(mpact::sim::riscv::PrivilegeMode::kMachine);
+  trap_taken = false;
+  instruction_->Execute(nullptr);
+  EXPECT_FALSE(trap_taken);
+
+  // Test 2: Supervisor mode, menvcfg.CBZE = 0 (Should TRAP)
+  menvcfg->Write(static_cast<uint64_t>(0));
+  state_->set_privilege_mode(mpact::sim::riscv::PrivilegeMode::kSupervisor);
+  trap_taken = false;
+  instruction_->Execute(nullptr);
+  EXPECT_TRUE(trap_taken);
+
+  // Test 3: Supervisor mode, menvcfg.CBZE = 1 (Should NOT trap)
+  menvcfg->Write(static_cast<uint64_t>(1ULL << 4));
+  state_->set_privilege_mode(mpact::sim::riscv::PrivilegeMode::kSupervisor);
+  trap_taken = false;
+  instruction_->Execute(nullptr);
+  EXPECT_FALSE(trap_taken);
+
+  // Test 4: User mode, menvcfg.CBZE = 1, senvcfg.CBZE = 0 (Should TRAP)
+  menvcfg->Write(static_cast<uint64_t>(1ULL << 4));
+  senvcfg->Write(static_cast<uint64_t>(0));
+  state_->set_privilege_mode(mpact::sim::riscv::PrivilegeMode::kUser);
+  trap_taken = false;
+  instruction_->Execute(nullptr);
+  EXPECT_TRUE(trap_taken);
+
+  // Test 5: User mode, menvcfg.CBZE = 1, senvcfg.CBZE = 1 (Should NOT trap)
+  menvcfg->Write(static_cast<uint64_t>(1ULL << 4));
+  senvcfg->Write(static_cast<uint64_t>(1ULL << 4));
+  state_->set_privilege_mode(mpact::sim::riscv::PrivilegeMode::kUser);
+  trap_taken = false;
+  instruction_->Execute(nullptr);
+  EXPECT_FALSE(trap_taken);
 }
 
 }  // namespace
