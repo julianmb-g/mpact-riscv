@@ -280,6 +280,7 @@ cc_library(
 cc_library(
     name = "rvm23_instructions",
     srcs = [
+        "riscv_zawrs_instructions.cc",
         "riscv_zc_instructions.cc",
         "riscv_zhintpause_instructions.cc",
         "riscv_zicbop_instructions.cc",
@@ -288,6 +289,7 @@ cc_library(
         "riscv_zimop_instructions.cc",
     ],
     hdrs = [
+        "riscv_zawrs_instructions.h",
         "riscv_zc_instructions.h",
         "riscv_zhintpause_instructions.h",
         "riscv_zicbop_instructions.h",

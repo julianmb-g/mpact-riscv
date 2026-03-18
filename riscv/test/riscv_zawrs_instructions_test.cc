@@ -5,13 +5,13 @@
 #include "gtest/gtest.h"
 #include "riscv/riscv_state.h"
 #include "mpact/sim/generic/instruction.h"
-#include "riscv/riscv_zhintpause_instructions.h"
+#include "riscv/riscv_zawrs_instructions.h"
 
 namespace {
 
 using ::mpact::sim::riscv::RiscVState;
+using ::mpact::sim::riscv::RiscVWrsNto;
 using ::mpact::sim::riscv::RiscVXlen;
-using ::mpact::sim::riscv::RiscVPause;
 
 class RiscVZawrsInstructionsTest : public ::testing::Test {
  protected:
@@ -31,7 +31,7 @@ class RiscVZawrsInstructionsTest : public ::testing::Test {
 };
 
 TEST_F(RiscVZawrsInstructionsTest, TestZawrsWrsNtoPolling) {
-  // WRS.NTO uses RiscVPause which calls std::this_thread::yield()
+  // WRS.NTO uses RiscVWrsNto which calls std::this_thread::yield()
   // Test it organically by running a concurrent task that advances a state machine.
   // We compare the number of iterations of a tight spin loop vs a yielded loop
   // against a deterministic state-machine target (rather than a brittle timer)
@@ -51,7 +51,7 @@ TEST_F(RiscVZawrsInstructionsTest, TestZawrsWrsNtoPolling) {
     int loops = 0;
     while (bg_state.load(std::memory_order_relaxed) < kTargetState) {
       if (use_pause) {
-        RiscVPause(this->instruction_);
+        RiscVWrsNto(this->instruction_);
       } else {
         // Just do some dummy work to prevent compiler optimizing away the loop
         __asm__ volatile("nop");

@@ -12,21 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-includes {
-  #include "riscv/riscv_zawrs_instructions.h"
-}
+#ifndef THIRD_PARTY_MPACT_RISCV_RISCV_ZAWRS_INSTRUCTIONS_H_
+#define THIRD_PARTY_MPACT_RISCV_RISCV_ZAWRS_INSTRUCTIONS_H_
 
-slot riscv_zawrs {
-  resources ZawrsOp = {next_pc};
-  opcodes {
-    wrs_nto{},
-    resources: ZawrsOp,
-    disasm: "wrs.nto",
-    semfunc: "&RiscVWrsNto";
+#include "mpact/sim/generic/instruction.h"
 
-    wrs_sto{},
-    resources: ZawrsOp,
-    disasm: "wrs.sto",
-    semfunc: "&RiscVWrsSto";
-  }
-}
+namespace mpact::sim::riscv {
+
+using ::mpact::sim::generic::Instruction;
+
+// Semantic function for Wait-on-Reservation-Set (WRS.NTO and WRS.STO).
+void RiscVWrsNto(const Instruction* inst);
+void RiscVWrsSto(const Instruction* inst);
+
+}  // namespace mpact::sim::riscv
+
+#endif  // THIRD_PARTY_MPACT_RISCV_RISCV_ZAWRS_INSTRUCTIONS_H_
