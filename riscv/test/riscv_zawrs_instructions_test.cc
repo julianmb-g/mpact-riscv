@@ -32,19 +32,24 @@ class RiscVZawrsInstructionsTest : public ::testing::Test {
 
 TEST_F(RiscVZawrsInstructionsTest, TestZawrsWrsNtoPolling) {
   // WRS.NTO uses RiscVPause which calls std::this_thread::yield()
-  // Test it organically by running a concurrent task that changes a flag.
+  // Test it organically by running a concurrent task that advances a state machine.
   // We compare the number of iterations of a tight spin loop vs a yielded loop
-  // to prove the yield mitigates CPU starvation.
+  // against a deterministic state-machine target (rather than a brittle timer)
+  // to organically prove the yield mitigates CPU starvation.
   
   auto run_loop = [&](bool use_pause) -> int {
-    std::atomic<bool> flag{false};
-    std::thread t([&flag]() {
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
-      flag.store(true);
+    std::atomic<int> bg_state{0};
+    const int kTargetState = 5000000;
+
+    std::thread t([&bg_state, kTargetState]() {
+      for (int i = 1; i <= kTargetState; i++) {
+        // Deterministically advance state without sleep_for
+        bg_state.store(i, std::memory_order_relaxed);
+      }
     });
 
     int loops = 0;
-    while (!flag.load()) {
+    while (bg_state.load(std::memory_order_relaxed) < kTargetState) {
       if (use_pause) {
         RiscVPause(this->instruction_);
       } else {
@@ -61,7 +66,7 @@ TEST_F(RiscVZawrsInstructionsTest, TestZawrsWrsNtoPolling) {
   int paused_loops = run_loop(true);
 
   // Organically verify that the yielded loop executed significantly fewer times
-  // than the tight baseline loop, proving CPU slice give-up.
+  // than the tight baseline loop, proving CPU slice give-up and syscall overhead.
   EXPECT_GT(baseline_loops, 0);
   EXPECT_GT(paused_loops, 0);
   EXPECT_LT(paused_loops, baseline_loops / 2) 
