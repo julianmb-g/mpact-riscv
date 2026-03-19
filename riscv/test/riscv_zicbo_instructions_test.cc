@@ -81,23 +81,52 @@ TEST_F(RiscVZicboInstructionsTest, CboZero) {
 TEST_F(RiscVZicboInstructionsTest, CboInval) {
   instruction_->AppendSource(new ImmediateOperand<uint64_t>(0x1000));
   instruction_->set_semantic_function(&mpact::sim::riscv::RiscVCboInval);
+
+  bool trap_taken = false;
+  state_->set_on_trap(
+      [&trap_taken](bool is_interrupt, uint64_t trap_value,
+                    uint64_t exception_code, uint64_t epc,
+                    const mpact::sim::riscv::Instruction* inst) -> bool {
+        trap_taken = true;
+        return true;
+      });
+
   instruction_->Execute(nullptr);
-  // No-op, just make sure it doesn't crash.
-  SUCCEED();
+  EXPECT_FALSE(trap_taken);
 }
 
 TEST_F(RiscVZicboInstructionsTest, CboClean) {
   instruction_->AppendSource(new ImmediateOperand<uint64_t>(0x1000));
   instruction_->set_semantic_function(&mpact::sim::riscv::RiscVCboClean);
+
+  bool trap_taken = false;
+  state_->set_on_trap(
+      [&trap_taken](bool is_interrupt, uint64_t trap_value,
+                    uint64_t exception_code, uint64_t epc,
+                    const mpact::sim::riscv::Instruction* inst) -> bool {
+        trap_taken = true;
+        return true;
+      });
+
   instruction_->Execute(nullptr);
-  SUCCEED();
+  EXPECT_FALSE(trap_taken);
 }
 
 TEST_F(RiscVZicboInstructionsTest, CboFlush) {
   instruction_->AppendSource(new ImmediateOperand<uint64_t>(0x1000));
   instruction_->set_semantic_function(&mpact::sim::riscv::RiscVCboFlush);
+
+  bool trap_taken = false;
+  state_->set_on_trap(
+      [&trap_taken](bool is_interrupt, uint64_t trap_value,
+                    uint64_t exception_code, uint64_t epc,
+                    const mpact::sim::riscv::Instruction* inst) -> bool {
+        trap_taken = true;
+        return true;
+      });
+
   instruction_->Execute(nullptr);
-  SUCCEED();
+  EXPECT_FALSE(trap_taken);
 }
 
 TEST_F(RiscVZicboInstructionsTest, TestZicbozPrivilegeEscalation) {

@@ -25,7 +25,7 @@ load("@com_google_mpact-riscv//:dep_repos.bzl", "mpact_riscv_dep_repos")
 mpact_riscv_dep_repos()
 
 # Call the deps function. It will call any other dependent deps functions.
-load("@com_google_mpact-riscv//:deps.bzl", "mpact_riscv_deps");
+load("@com_google_mpact-riscv//:deps.bzl", "mpact_riscv_deps")
 
 mpact_riscv_deps()
 
@@ -33,4 +33,3 @@ mpact_riscv_deps()
 load("@com_google_mpact-sim//:protobuf_deps.bzl", "mpact_sim_protobuf_deps")
 
 mpact_sim_protobuf_deps()
-

@@ -1028,13 +1028,13 @@ cc_test(
     data = ["testfiles/hello_world_64.elf"],
     deps = [
         "//riscv:riscv_fp_state",
-        "@com_google_mpact-sim//mpact/sim/util/memory",
-        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
-        "//riscv:rva23u64_decoder",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
+        "//riscv:rva23u64_decoder",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
     ],
 )
 
@@ -1056,12 +1056,12 @@ cc_test(
     name = "riscv_boot_test",
     srcs = ["riscv_boot_test.cc"],
     deps = [
-        "//riscv:riscv_top",
-        "//riscv:riscv_state",
         "//riscv:riscv32g_decoder",
+        "//riscv:riscv_state",
+        "//riscv:riscv_top",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
-        "@com_google_absl//absl/strings",
         "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
@@ -1073,13 +1073,13 @@ cc_test(
     data = ["testfiles/hello_world_64.elf"],
     deps = [
         "//riscv:riscv_fp_state",
-        "@com_google_mpact-sim//mpact/sim/util/memory",
-        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
-        "//riscv:rva23s64_decoder",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
+        "//riscv:rva23s64_decoder",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
     ],
 )
 
@@ -1088,9 +1088,9 @@ cc_test(
     srcs = ["rvvi_sim_test.cc"],
     deps = [
         "//riscv:rvvi_sim",
-        "@com_google_mpact-sim//mpact/sim/util/memory",
-        "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
 
@@ -1099,9 +1099,9 @@ cc_test(
     srcs = ["rvvi_formatting_daemon_test.cc"],
     deps = [
         "//riscv:rvvi_sim",
-        "@com_google_mpact-sim//mpact/sim/util/memory",
-        "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
 
@@ -1112,8 +1112,8 @@ cc_test(
         "//riscv:mmu_sv39",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
-        "@com_google_mpact-sim//mpact/sim/util/memory",
         "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
 
@@ -1122,13 +1122,13 @@ cc_test(
     srcs = ["riscv_sstc_test.cc"],
     deps = [
         "//riscv:riscv_clint",
+        "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
+        "//riscv:riscv_top",
+        "//riscv:rva23s64_decoder",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
         "@com_google_mpact-sim//mpact/sim/util/memory",
-        "//riscv:riscv_top",
-        "//riscv:rva23s64_decoder",
-        "//riscv:riscv_fp_state",
     ],
 )
 
