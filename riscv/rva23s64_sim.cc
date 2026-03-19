@@ -254,11 +254,14 @@ int main(int argc, char** argv) {
   if (memory_watcher != nullptr) {
     memory_interface = memory_watcher;
   }
-  auto* rvvi_mapper = new mpact::sim::riscv::rvvi::RvviMemoryMapper(memory_interface);
-  rvvi_mapper->AddMmioRange(0x10000000, 0x10001000); // UART
-  rvvi_mapper->AddMmioRange(0x02000000, 0x02010000); // CLINT
-  rvvi_mapper->AddMmioRange(0x0C000000, 0x10000000); // PLIC
-  memory_interface = rvvi_mapper;
+  std::unique_ptr<mpact::sim::riscv::rvvi::RvviMemoryMapper> rvvi_mapper = nullptr;
+  if (absl::GetFlag(FLAGS_rvvi_trace)) {
+    rvvi_mapper = std::make_unique<mpact::sim::riscv::rvvi::RvviMemoryMapper>(memory_interface);
+    rvvi_mapper->AddMmioRange(0x10000000, 0x10001000); // UART
+    rvvi_mapper->AddMmioRange(0x02000000, 0x02010000); // CLINT
+    rvvi_mapper->AddMmioRange(0x0C000000, 0x10000000); // PLIC
+    memory_interface = rvvi_mapper.get();
+  }
   // Set up architectural state and decoder.
   RiscVState rv_state("RVA23S64", RiscVXlen::RV64, memory_interface,
                       atomic_memory);
