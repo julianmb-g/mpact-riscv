@@ -1158,3 +1158,39 @@ cc_test(
         "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
+
+cc_test(
+    name = "rva23_decoder_test",
+    size = "small",
+    srcs = [
+        "rva23_decoder_test.cc",
+    ],
+    deps = [
+        "//riscv:rva23u64_decoder",
+        "//riscv:rva23s64_decoder",
+        "//riscv:riscv_state",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:log_sink_registry",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/generic:instruction",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
+
+cc_test(
+    name = "rvvi_cli_integration_test",
+    size = "small",
+    srcs = [
+        "rvvi_cli_integration_test.cc",
+    ],
+    data = [
+        "//riscv:rva23s64_sim",
+        "testfiles/hello_world_64.elf",
+    ],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+    ],
+)

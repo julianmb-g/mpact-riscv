@@ -80,6 +80,7 @@ using AddressRange = mpact::sim::util::MemoryWatcher::AddressRange;
 // Flags for specifying interactive mode.
 ABSL_FLAG(bool, i, false, "Interactive mode");
 ABSL_FLAG(bool, interactive, false, "Interactive mode");
+ABSL_FLAG(bool, rvvi_trace, false, "Enable RVVI tracing");
 // Flag for destination directory of proto file.
 ABSL_FLAG(std::string, output_dir, "", "Output directory");
 ABSL_FLAG(bool, semihost_htif, false, "HTIF semihosting");
@@ -450,6 +451,15 @@ int main(int argc, char** argv) {
   sigaddset(&sa.sa_mask, SIGINT);
   sa.sa_handler = &sim_sigint_handler;
   sigaction(SIGINT, &sa, nullptr);
+
+
+  // Set up RVVI trace formatting daemon if requested.
+  std::unique_ptr<mpact::sim::riscv::rvvi::AsyncFormattingDaemon> rvvi_daemon = nullptr;
+  if (absl::GetFlag(FLAGS_rvvi_trace)) {
+    // 10 second timeout for the daemon loop.
+    rvvi_daemon = std::make_unique<mpact::sim::riscv::rvvi::AsyncFormattingDaemon>(10);
+    rvvi_daemon->Start();
+  }
 
   // Determine if this is being run interactively or as a batch job.
   bool interactive = absl::GetFlag(FLAGS_i) || absl::GetFlag(FLAGS_interactive);

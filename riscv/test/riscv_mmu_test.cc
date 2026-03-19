@@ -479,7 +479,92 @@ TEST(RiscVMmuTest, Sv57PageWalkTranslation) {
   delete physical_memory;
 }
 
+
+class RiscVMmuSv48TranslationTest : public ::testing::Test {
+ protected:
+  RiscVMmuSv48TranslationTest() {
+    physical_memory = new mpact::sim::util::FlatDemandMemory();
+    state = new RiscVState("test_sv48", RiscVXlen::RV64, physical_memory);
+    mmu = new RiscVMmu(state, physical_memory);
+  }
+
+  ~RiscVMmuSv48TranslationTest() override {
+    delete mmu;
+    delete state;
+    delete physical_memory;
+  }
+
+  mpact::sim::util::FlatDemandMemory* physical_memory;
+  RiscVState* state;
+  RiscVMmu* mmu;
+};
+
+TEST_F(RiscVMmuSv48TranslationTest, Sv48PageWalkTranslationOrganic) {
+  uint64_t mode = 9; // Sv48
+  uint64_t ppn = 0x123;
+  uint64_t satp_val = (mode << 60) | ppn;
+  auto satp_csr = state->csr_set()->GetCsr("satp").value();
+  satp_csr->Write(satp_val);
+
+  uint64_t vaddr = 0x0000123456789ABCULL;
+  
+  // Set up dummy page tables
+  uint64_t a = ppn * 4096;
+  uint64_t vpn_3 = (vaddr >> 39) & 0x1FF;
+  uint64_t pte3_addr = a + vpn_3 * 8;
+  uint64_t pte3_ppn = 0x200;
+  uint64_t pte3_val = (pte3_ppn << 10) | 0x1; // Valid, points to next level
+  
+  auto* db_factory = state->db_factory();
+  auto* write_db = db_factory->Allocate<uint64_t>(1);
+  write_db->Set<uint64_t>(0, pte3_val);
+  physical_memory->Store(pte3_addr, write_db);
+  write_db->DecRef();
+
+  // Next level (level 2)
+  uint64_t pte2_addr = pte3_ppn * 4096 + ((vaddr >> 30) & 0x1FF) * 8;
+  uint64_t pte2_ppn = 0x300;
+  uint64_t pte2_val = (pte2_ppn << 10) | 0x1;
+  write_db = db_factory->Allocate<uint64_t>(1);
+  write_db->Set<uint64_t>(0, pte2_val);
+  physical_memory->Store(pte2_addr, write_db);
+  write_db->DecRef();
+
+  // Next level (level 1)
+  uint64_t pte1_addr = pte2_ppn * 4096 + ((vaddr >> 21) & 0x1FF) * 8;
+  uint64_t pte1_ppn = 0x400;
+  uint64_t pte1_val = (pte1_ppn << 10) | 0x1;
+  write_db = db_factory->Allocate<uint64_t>(1);
+  write_db->Set<uint64_t>(0, pte1_val);
+  physical_memory->Store(pte1_addr, write_db);
+  write_db->DecRef();
+
+  // Leaf level (level 0)
+  uint64_t pte0_addr = pte1_ppn * 4096 + ((vaddr >> 12) & 0x1FF) * 8;
+  uint64_t pte0_ppn = 0x500;
+  uint64_t pte0_val = (pte0_ppn << 10) | 0xF; // Valid + R/W/X
+  write_db = db_factory->Allocate<uint64_t>(1);
+  write_db->Set<uint64_t>(0, pte0_val);
+  physical_memory->Store(pte0_addr, write_db);
+  write_db->DecRef();
+
+  uint64_t expected_paddr = (pte0_ppn * 4096) | (vaddr & 0xFFF);
+  auto golden_db = db_factory->Allocate<uint64_t>(1);
+  golden_db->Set<uint64_t>(0, 0xDEADBEEFCAFEBABELL);
+  physical_memory->Store(expected_paddr, golden_db);
+  golden_db->DecRef();
+
+  // Load to trigger Translate
+  auto out_db = db_factory->Allocate<uint64_t>(1);
+  mmu->Load(vaddr, out_db, nullptr, nullptr);
+  
+  // Assert translation fetched the golden data
+  EXPECT_EQ(out_db->Get<uint64_t>(0), 0xDEADBEEFCAFEBABELL) << "Failed at Sv48! expected_paddr=" << expected_paddr;
+  out_db->DecRef();
+}
+
 }  // namespace
 }  // namespace riscv
 }  // namespace sim
 }  // namespace mpact
+

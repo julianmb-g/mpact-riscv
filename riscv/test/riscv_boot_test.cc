@@ -115,6 +115,7 @@ TEST_F(RiscVBootTest, TestLinuxBootProtocol) {
   EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates t1 must contain .dtb pointer in actual memory state";
 }
 
+
 TEST_F(RiscVBootTest, TestOpenSbiFirmwareLoader) {
   uint64_t expected_hartid = 0x87654321ULL;
   uint64_t expected_dtb = 0x12345678ULL;
@@ -145,7 +146,38 @@ TEST_F(RiscVBootTest, TestOpenSbiFirmwareLoader) {
   EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates t1 must contain .dtb pointer in actual memory state";
 }
 
+
+
+
+class OpenSbiLinuxBootloaderTest : public RiscVBootTest {};
+
+TEST_F(OpenSbiLinuxBootloaderTest, OrganicBootProtocolTesting) {
+  uint64_t expected_hartid = 0x11223344ULL;
+  uint64_t expected_dtb = 0x55667788ULL;
+  
+  auto status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
+  EXPECT_TRUE(status.ok()) << status.message();
+
+  uint32_t instructions[2] = {0x00050293, 0x00058313};
+  top_->WriteMemory(0x1000, instructions, sizeof(instructions));
+  auto pc_write = top_->WriteRegister("pc", 0x1000);
+  EXPECT_TRUE(pc_write.ok());
+
+  auto step_result = top_->Step(2);
+  EXPECT_TRUE(step_result.ok());
+
+  auto t0 = state_->GetRegister<RV32Register>("t0").first;
+  EXPECT_EQ(t0->data_buffer()->Get<uint32_t>(0), expected_hartid);
+
+  auto t1 = state_->GetRegister<RV32Register>("t1").first;
+  EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb);
+}
+
 }  // namespace
 }  // namespace riscv
 }  // namespace sim
 }  // namespace mpact
+
+
+
+
