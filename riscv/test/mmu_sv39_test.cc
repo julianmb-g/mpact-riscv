@@ -259,6 +259,87 @@ TEST(MmuSv39Test, Sv39PageWalkTranslation) {
   delete physical_memory;
 }
 
+TEST(MmuSv39Test, TestSsnpmPointerMaskingExemption) {
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
+  
+  auto satp_res = state.csr_set()->GetCsr("satp");
+  EXPECT_TRUE(satp_res.ok());
+  auto* satp_csr = satp_res.value();
+  
+  auto senvcfg_res = state.csr_set()->GetCsr("senvcfg");
+  EXPECT_TRUE(senvcfg_res.ok());
+  auto* senvcfg_csr = senvcfg_res.value();
+
+  MmuSv39 mmu(&state, physical_memory);
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  
+  // Set satp.MODE = 8 (Sv39), PPN = 1 (Page at physical 0x1000)
+  uint64_t satp_val = (8ULL << 60) | 1ULL;
+  satp_csr->Write(satp_val);
+
+  // Set senvcfg.PMM = 2 (PMLEN=54, strip top 10 bits)
+  uint64_t pmm = 2ULL;
+  senvcfg_csr->Write(pmm << 32);
+
+  // Setup L2 PTE (vpn[2]=1) pointing to L1 at PPN 2
+  auto pte2_db = db_factory.Allocate<uint64_t>(1);
+  pte2_db->Set<uint64_t>(0, (2ULL << 10) | 0x1);
+  physical_memory->Store(0x1008, pte2_db);
+
+  // Setup L1 PTE (vpn[1]=0) pointing to L0 at PPN 3
+  auto pte1_db = db_factory.Allocate<uint64_t>(1);
+  pte1_db->Set<uint64_t>(0, (3ULL << 10) | 0x1);
+  physical_memory->Store(0x2000, pte1_db);
+
+  // L0 PTE at PPN 4. Valid, Readable, Writable, Executable.
+  auto pte0 = db_factory.Allocate<uint64_t>(1);
+  pte0->Set<uint64_t>(0, (4ULL << 10) | 0xF); // V=1, R=1, W=1, X=1
+  physical_memory->Store(0x3000, pte0);
+
+  // Base virtual address 0x40000000 (canonical)
+  // Masked virtual address: add some non-canonical tag in top 10 bits
+  // e.g. set bit 60 to 1 -> 0x1000000040000000
+  uint64_t tagged_vaddr = 0x1000000040000000ULL;
+
+  auto mcause_res = state.csr_set()->GetCsr("mcause");
+  EXPECT_TRUE(mcause_res.ok());
+  auto* mcause_csr = mcause_res.value();
+  
+  auto mtval_res = state.csr_set()->GetCsr("mtval");
+  EXPECT_TRUE(mtval_res.ok());
+  auto* mtval_csr = mtval_res.value();
+
+  // Test 1: Data Load MUST succeed because pointer masking is enabled and strips the tag.
+  auto read_db = db_factory.Allocate<uint32_t>(1);
+  mcause_csr->Write(static_cast<uint64_t>(0));
+  mmu.Load(tagged_vaddr, read_db, nullptr, nullptr);
+  EXPECT_EQ(mcause_csr->AsUint64(), 0) << "Data load with pointer masking should not trap";
+
+  // Test 2: Data Store MUST succeed for the same reason.
+  auto write_db = db_factory.Allocate<uint32_t>(1);
+  mcause_csr->Write(static_cast<uint64_t>(0));
+  mmu.Store(tagged_vaddr, write_db);
+  EXPECT_EQ(mcause_csr->AsUint64(), 0) << "Data store with pointer masking should not trap";
+
+  // Test 3: Instruction Fetch MUST trap (kInstructionPageFault) because tag stripping is FORBIDDEN on inst fetch.
+  mcause_csr->Write(static_cast<uint64_t>(0));
+  mtval_csr->Write(static_cast<uint64_t>(0));
+  state.set_is_fetching(true);
+  mmu.Load(tagged_vaddr, read_db, nullptr, nullptr);
+  state.set_is_fetching(false);
+  EXPECT_EQ(mcause_csr->AsUint64(), static_cast<uint64_t>(ExceptionCode::kInstructionPageFault)) 
+      << "Instruction fetch with non-canonical tagged address MUST trap even if pointer masking is enabled";
+  EXPECT_EQ(mtval_csr->AsUint64(), tagged_vaddr);
+
+  pte2_db->DecRef();
+  pte1_db->DecRef();
+  pte0->DecRef();
+  read_db->DecRef();
+  write_db->DecRef();
+  delete physical_memory;
+}
+
 }  // namespace
 }  // namespace riscv
 }  // namespace sim

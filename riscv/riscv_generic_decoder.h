@@ -66,7 +66,10 @@ class RiscVGenericDecoder {
 
     // Read the instruction word from memory and parse it in the encoding
     // parser.
+    state_->set_is_fetching(true);
     memory_->Load(address, inst_db_, nullptr, nullptr);
+    state_->set_is_fetching(false);
+
     uint32_t iword = inst_db_->Get<uint32_t>(0);
     encoding_->ParseInstruction(iword);
 

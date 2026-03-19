@@ -390,6 +390,9 @@ class RiscVState : public ArchState {
     is_interrupt_available_ = false;
   }
 
+  void set_is_fetching(bool value) { is_fetching_ = value; }
+  bool is_fetching() const { return is_fetching_; }
+
   void set_branch(bool value) { branch_ = value; }
   bool branch() const { return branch_; }
 
@@ -442,6 +445,7 @@ class RiscVState : public ArchState {
   // For interrupt handling.
   bool is_interrupt_available_ = false;
   InterruptCode available_interrupt_code_ = InterruptCode::kNone;
+  bool is_fetching_ = false;
   // By default, execute in machine mode.
   PrivilegeMode privilege_mode_ = PrivilegeMode::kMachine;
   // Flag set on branch instructions.

@@ -29,7 +29,7 @@ MmuSv39::MmuSv39(RiscVState* state, mpact::sim::util::MemoryInterface* physical_
 
 MmuSv39::~MmuSv39() {}
 
-bool MmuSv39::Translate(uint64_t vaddr, bool is_store, uint64_t* paddr) {
+bool MmuSv39::Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint64_t* paddr) {
   auto satp_csr_status = state_->csr_set()->GetCsr("satp");
   CHECK(satp_csr_status.ok() && satp_csr_status.value() != nullptr) 
       << "satp CSR not found in RiscVState";
@@ -44,6 +44,32 @@ bool MmuSv39::Translate(uint64_t vaddr, bool is_store, uint64_t* paddr) {
   
   if (mode != 8) { // Only Sv39 (8) is supported.
     return false;
+  }
+
+  // Pointer Masking logic (Ssnpm)
+  if (!is_inst_fetch) {
+    auto senvcfg_status = state_->csr_set()->GetCsr("senvcfg");
+    if (senvcfg_status.ok() && senvcfg_status.value() != nullptr) {
+      uint64_t senvcfg = senvcfg_status.value()->AsUint64();
+      uint64_t pmm = (senvcfg >> 32) & 0x3;
+      if (pmm == 2) { // PMLEN=54 (strip top 10 bits: 63:54)
+        uint64_t sign_bit = (vaddr >> 53) & 1;
+        uint64_t extension = sign_bit ? 0xFFC0000000000000ULL : 0;
+        vaddr = (vaddr & 0x003FFFFFFFFFFFFFULL) | extension;
+      } else if (pmm == 3) { // PMLEN=48 (strip top 16 bits: 63:48)
+        uint64_t sign_bit = (vaddr >> 47) & 1;
+        uint64_t extension = sign_bit ? 0xFFFF000000000000ULL : 0;
+        vaddr = (vaddr & 0x0000FFFFFFFFFFFFULL) | extension;
+      }
+    }
+  }
+
+  // Canonical address check for Sv39 (bits 63:39 must equal bit 38)
+  uint64_t sign_bit_38 = (vaddr >> 38) & 1;
+  uint64_t upper_bits = vaddr >> 39;
+  uint64_t expected_upper = sign_bit_38 ? 0x1FFFFFF : 0;
+  if (upper_bits != expected_upper) {
+    return false; // Instruction/Load/Store Page Fault
   }
 
   uint64_t ppn = satp & 0xFFFFFFFFFFF;
@@ -72,6 +98,7 @@ bool MmuSv39::Translate(uint64_t vaddr, bool is_store, uint64_t* paddr) {
     
     if (r == 1 || x == 1) {
       if (is_store && w == 0) return false; // Fault on write to read/exec only page
+      if (is_inst_fetch && x == 0) return false; // Fault on execute from non-exec page
       
       // Leaf PTE found
       uint64_t pte_ppn = (pte >> 10) & 0xFFFFFFFFFFF;
@@ -101,11 +128,13 @@ void MmuSv39::Load(uint64_t address, mpact::sim::generic::DataBuffer* db,
                    mpact::sim::generic::Instruction* inst,
                    mpact::sim::generic::ReferenceCount* context) {
   uint64_t paddr = 0;
-  if (Translate(address, /*is_store=*/false, &paddr)) {
+  bool is_fetch = state_->is_fetching();
+  if (Translate(address, /*is_store=*/false, is_fetch, &paddr)) {
     physical_memory_->Load(paddr, db, inst, context);
   } else {
     uint64_t epc = inst != nullptr ? inst->address() : 0;
-    state_->Trap(/*is_interrupt=*/false, address, static_cast<uint64_t>(ExceptionCode::kLoadPageFault), epc, inst);
+    ExceptionCode fault = is_fetch ? ExceptionCode::kInstructionPageFault : ExceptionCode::kLoadPageFault;
+    state_->Trap(/*is_interrupt=*/false, address, static_cast<uint64_t>(fault), epc, inst);
   }
 }
 
@@ -119,11 +148,10 @@ void MmuSv39::Load(mpact::sim::generic::DataBuffer* address_db,
 
 void MmuSv39::Store(uint64_t address, mpact::sim::generic::DataBuffer* db) {
   uint64_t paddr = 0;
-  if (Translate(address, /*is_store=*/true, &paddr)) {
+  if (Translate(address, /*is_store=*/true, /*is_inst_fetch=*/false, &paddr)) {
     physical_memory_->Store(paddr, db);
   } else {
     // Determine instruction context implicitly if needed, or trap contextless.
-    // For scaffolding, we pass 0 as epc if we don't have the inst.
     state_->Trap(/*is_interrupt=*/false, address, static_cast<uint64_t>(ExceptionCode::kStorePageFault), 0, nullptr);
   }
 }

@@ -50,7 +50,7 @@ class MmuSv39 : public mpact::sim::util::MemoryInterface {
              mpact::sim::generic::DataBuffer* db) override;
 
  private:
-  bool Translate(uint64_t vaddr, bool is_store, uint64_t* paddr);
+  bool Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint64_t* paddr);
 
   RiscVState* state_;
   mpact::sim::util::MemoryInterface* physical_memory_;
