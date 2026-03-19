@@ -34,6 +34,8 @@ namespace {
 using ::mpact::sim::riscv::RiscVState;
 using ::mpact::sim::riscv::RiscVTop;
 using ::mpact::sim::riscv::RV32Register;
+using ::mpact::sim::riscv::LinuxKernelBootloader;
+using ::mpact::sim::riscv::OpenSbiFirmwareLoader;
 using ::mpact::sim::riscv::RiscV32Decoder;
 using ::mpact::sim::riscv::WriteBootHandoffRegisters;
 
@@ -87,7 +89,7 @@ TEST_F(RiscVBootTest, TestLinuxBootProtocol) {
   uint64_t expected_hartid = 0x12345678ULL;
   uint64_t expected_dtb = 0x87654321ULL;
   
-  auto status = WriteBootHandoffRegisters(top_, expected_hartid, expected_dtb);
+  auto status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
   EXPECT_TRUE(status.ok()) << status.message();
 
   // Write a tiny boot stub into memory to organically evaluate state.
@@ -105,6 +107,36 @@ TEST_F(RiscVBootTest, TestLinuxBootProtocol) {
   EXPECT_TRUE(step_result.ok());
 
   // Actually check the processor state memory rather than just the proxy function.
+  // We check t0 and t1, proving the execution organically saw the handoff registers.
+  auto t0 = state_->GetRegister<RV32Register>("t0").first;
+  EXPECT_EQ(t0->data_buffer()->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates t0 must contain hartid in actual memory state";
+
+  auto t1 = state_->GetRegister<RV32Register>("t1").first;
+  EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates t1 must contain .dtb pointer in actual memory state";
+}
+
+TEST_F(RiscVBootTest, TestOpenSbiFirmwareLoader) {
+  uint64_t expected_hartid = 0x87654321ULL;
+  uint64_t expected_dtb = 0x12345678ULL;
+  
+  auto status = OpenSbiFirmwareLoader::Load(top_, expected_hartid, expected_dtb);
+  EXPECT_TRUE(status.ok()) << status.message();
+
+  // Write a tiny boot stub into memory to organically evaluate state.
+  // addi t0, a0, 0  => 0x00050293
+  // addi t1, a1, 0  => 0x00058313
+  uint32_t instructions[2] = {0x00050293, 0x00058313};
+  top_->WriteMemory(0x1000, instructions, sizeof(instructions));
+
+  // Set the Program Counter to our boot stub
+  auto pc_write = top_->WriteRegister("pc", 0x1000);
+  EXPECT_TRUE(pc_write.ok());
+
+  // Step the simulator by 2 instructions organically
+  auto step_result = top_->Step(2);
+  EXPECT_TRUE(step_result.ok());
+
+  // actually check the processor state memory rather than just the proxy function.
   // We check t0 and t1, proving the execution organically saw the handoff registers.
   auto t0 = state_->GetRegister<RV32Register>("t0").first;
   EXPECT_EQ(t0->data_buffer()->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates t0 must contain hartid in actual memory state";

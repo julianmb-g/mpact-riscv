@@ -33,6 +33,14 @@ absl::Status WriteBootHandoffRegisters(RiscVTop* riscv_top, uint64_t hartid, uin
   return absl::OkStatus();
 }
 
+absl::Status LinuxKernelBootloader::Load(RiscVTop* riscv_top, uint64_t hartid, uint64_t dtb) {
+  return WriteBootHandoffRegisters(riscv_top, hartid, dtb);
+}
+
+absl::Status OpenSbiFirmwareLoader::Load(RiscVTop* riscv_top, uint64_t hartid, uint64_t dtb) {
+  return WriteBootHandoffRegisters(riscv_top, hartid, dtb);
+}
+
 }  // namespace riscv
 }  // namespace sim
 }  // namespace mpact

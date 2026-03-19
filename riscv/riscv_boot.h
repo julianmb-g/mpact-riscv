@@ -28,6 +28,16 @@ namespace riscv {
 // when passing the .dtb address in a1, or firmware (e.g., OpenSBI) will panic.
 absl::Status WriteBootHandoffRegisters(RiscVTop* riscv_top, uint64_t hartid, uint64_t dtb);
 
+class LinuxKernelBootloader {
+ public:
+  static absl::Status Load(RiscVTop* riscv_top, uint64_t hartid, uint64_t dtb);
+};
+
+class OpenSbiFirmwareLoader {
+ public:
+  static absl::Status Load(RiscVTop* riscv_top, uint64_t hartid, uint64_t dtb);
+};
+
 }  // namespace riscv
 }  // namespace sim
 }  // namespace mpact
