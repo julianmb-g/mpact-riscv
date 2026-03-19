@@ -1986,9 +1986,9 @@ cc_library(
 )
 
 cc_library(
-    name = "mmu_sv39",
-    srcs = ["mmu_sv39.cc"],
-    hdrs = ["mmu_sv39.h"],
+    name = "riscv_mmu",
+    srcs = ["riscv_mmu.cc"],
+    hdrs = ["riscv_mmu.h"],
     deps = [
         ":riscv_state",
         "@com_google_absl//absl/log:check",

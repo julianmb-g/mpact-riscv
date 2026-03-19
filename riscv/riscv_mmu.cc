@@ -14,22 +14,22 @@
 
 #include "absl/log/log.h"
 #include "absl/log/check.h"
-#include "riscv/mmu_sv39.h"
+#include "riscv/riscv_mmu.h"
 #include "riscv/riscv_state.h"
 
 namespace mpact {
 namespace sim {
 namespace riscv {
 
-MmuSv39::MmuSv39(RiscVState* state, mpact::sim::util::MemoryInterface* physical_memory)
+RiscVMmu::RiscVMmu(RiscVState* state, mpact::sim::util::MemoryInterface* physical_memory)
     : state_(state), physical_memory_(physical_memory) {
   CHECK(physical_memory_ != nullptr) << "physical_memory must not be null";
   CHECK(state_ != nullptr) << "state must not be null";
 }
 
-MmuSv39::~MmuSv39() {}
+RiscVMmu::~RiscVMmu() {}
 
-bool MmuSv39::Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint64_t* paddr) {
+bool RiscVMmu::Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint64_t* paddr) {
   auto satp_csr_status = state_->csr_set()->GetCsr("satp");
   CHECK(satp_csr_status.ok() && satp_csr_status.value() != nullptr) 
       << "satp CSR not found in RiscVState";
@@ -42,9 +42,11 @@ bool MmuSv39::Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint6
     return true;
   }
   
-  if (mode != 8) { // Only Sv39 (8) is supported.
-    return false;
-  }
+  int levels = 0;
+  if (mode == 8) levels = 3;       // Sv39
+  else if (mode == 9) levels = 4;  // Sv48
+  else if (mode == 10) levels = 5; // Sv57
+  else return false;
 
   // Pointer Masking logic (Ssnpm)
   if (!is_inst_fetch) {
@@ -64,17 +66,18 @@ bool MmuSv39::Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint6
     }
   }
 
-  // Canonical address check for Sv39 (bits 63:39 must equal bit 38)
-  uint64_t sign_bit_38 = (vaddr >> 38) & 1;
-  uint64_t upper_bits = vaddr >> 39;
-  uint64_t expected_upper = sign_bit_38 ? 0x1FFFFFF : 0;
+  // Canonical address check
+  int vaddr_bits = 12 + 9 * levels;
+  uint64_t sign_bit = (vaddr >> (vaddr_bits - 1)) & 1;
+  uint64_t upper_bits = vaddr >> vaddr_bits;
+  uint64_t expected_upper = sign_bit ? ((1ULL << (64 - vaddr_bits)) - 1) : 0;
   if (upper_bits != expected_upper) {
     return false; // Instruction/Load/Store Page Fault
   }
 
   uint64_t ppn = satp & 0xFFFFFFFFFFF;
   uint64_t a = ppn * 4096;
-  int i = 2; // LEVELS - 1 (Sv39 has 3 levels)
+  int i = levels - 1;
   
   while (i >= 0) {
     uint64_t vpn_i = (vaddr >> (12 + 9 * i)) & 0x1FF;
@@ -124,7 +127,7 @@ bool MmuSv39::Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint6
   return false;
 }
 
-void MmuSv39::Load(uint64_t address, mpact::sim::generic::DataBuffer* db,
+void RiscVMmu::Load(uint64_t address, mpact::sim::generic::DataBuffer* db,
                    mpact::sim::generic::Instruction* inst,
                    mpact::sim::generic::ReferenceCount* context) {
   uint64_t paddr = 0;
@@ -138,15 +141,15 @@ void MmuSv39::Load(uint64_t address, mpact::sim::generic::DataBuffer* db,
   }
 }
 
-void MmuSv39::Load(mpact::sim::generic::DataBuffer* address_db,
+void RiscVMmu::Load(mpact::sim::generic::DataBuffer* address_db,
                    mpact::sim::generic::DataBuffer* mask_db, int el_size,
                    mpact::sim::generic::DataBuffer* db,
                    mpact::sim::generic::Instruction* inst,
                    mpact::sim::generic::ReferenceCount* context) {
-  LOG(FATAL) << "Vectorized loads not supported by MmuSv39 yet";
+  LOG(FATAL) << "Vectorized loads not supported by RiscVMmu yet";
 }
 
-void MmuSv39::Store(uint64_t address, mpact::sim::generic::DataBuffer* db) {
+void RiscVMmu::Store(uint64_t address, mpact::sim::generic::DataBuffer* db) {
   uint64_t paddr = 0;
   if (Translate(address, /*is_store=*/true, /*is_inst_fetch=*/false, &paddr)) {
     physical_memory_->Store(paddr, db);
@@ -156,10 +159,10 @@ void MmuSv39::Store(uint64_t address, mpact::sim::generic::DataBuffer* db) {
   }
 }
 
-void MmuSv39::Store(mpact::sim::generic::DataBuffer* address_db,
+void RiscVMmu::Store(mpact::sim::generic::DataBuffer* address_db,
                     mpact::sim::generic::DataBuffer* mask_db, int el_size,
                     mpact::sim::generic::DataBuffer* db) {
-  LOG(FATAL) << "Vectorized stores not supported by MmuSv39 yet";
+  LOG(FATAL) << "Vectorized stores not supported by RiscVMmu yet";
 }
 
 }  // namespace riscv

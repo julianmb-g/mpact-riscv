@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "riscv/mmu_sv39.h"
+#include "riscv/riscv_mmu.h"
 
-#include "riscv/mmu_sv39.h"
+#include "riscv/riscv_mmu.h"
 #include "riscv/riscv_state.h"
 #include "riscv/riscv_csr.h"
 #include "gtest/gtest.h"
@@ -27,20 +27,20 @@ namespace sim {
 namespace riscv {
 namespace {
 
-TEST(MmuSv39Test, ConstructorRequiresPhysicalMemory) {
+TEST(RiscVMmuTest, ConstructorRequiresPhysicalMemory) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
   RiscVState state("test", RiscVXlen::RV64, physical_memory);
-  EXPECT_DEATH(MmuSv39(&state, nullptr), "physical_memory must not be null");
+  EXPECT_DEATH(RiscVMmu(&state, nullptr), "physical_memory must not be null");
   delete physical_memory;
 }
 
-TEST(MmuSv39Test, ConstructorRequiresState) {
+TEST(RiscVMmuTest, ConstructorRequiresState) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
-  EXPECT_DEATH(MmuSv39(nullptr, physical_memory), "state must not be null");
+  EXPECT_DEATH(RiscVMmu(nullptr, physical_memory), "state must not be null");
   delete physical_memory;
 }
 
-TEST(MmuSv39Test, TestUnsupportedSatpModeFallback) {
+TEST(RiscVMmuTest, TestUnsupportedSatpModeFallback) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
   RiscVState state("test", RiscVXlen::RV64, physical_memory);
   
@@ -51,7 +51,7 @@ TEST(MmuSv39Test, TestUnsupportedSatpModeFallback) {
   uint64_t initial_satp = satp_csr->AsUint64();
   
   // Test multiple unsupported modes (For RV64, only 0 and 8 are valid)
-  uint64_t unsupported_modes[] = {1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15};
+  uint64_t unsupported_modes[] = {1, 2, 3, 4, 5, 6, 7, 11, 12, 13, 14, 15};
   for (uint64_t mode : unsupported_modes) {
     satp_csr->Write(static_cast<uint64_t>(mode << 60));
     EXPECT_EQ(satp_csr->AsUint64(), initial_satp) << "Mode " << mode << " write should be ignored";
@@ -60,7 +60,7 @@ TEST(MmuSv39Test, TestUnsupportedSatpModeFallback) {
   delete physical_memory;
 }
 
-TEST(MmuSv39Test, TestMmuBareModeBypass) {
+TEST(RiscVMmuTest, TestMmuBareModeBypass) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
   RiscVState state("test", RiscVXlen::RV64, physical_memory);
   
@@ -69,7 +69,7 @@ TEST(MmuSv39Test, TestMmuBareModeBypass) {
   auto* satp_csr = satp_res.value();
   satp_csr->Write(static_cast<uint64_t>(0)); // Bare mode
 
-  MmuSv39 mmu(&state, physical_memory);
+  RiscVMmu mmu(&state, physical_memory);
   auto db_factory = mpact::sim::generic::DataBufferFactory();
   
   auto write_db = db_factory.Allocate<uint32_t>(1);
@@ -85,7 +85,7 @@ TEST(MmuSv39Test, TestMmuBareModeBypass) {
   delete physical_memory;
 }
 
-TEST(MmuSv39Test, TestMmuReadOnlyPageStoreViolation) {
+TEST(RiscVMmuTest, TestMmuReadOnlyPageStoreViolation) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
   RiscVState state("test", RiscVXlen::RV64, physical_memory);
   
@@ -93,7 +93,7 @@ TEST(MmuSv39Test, TestMmuReadOnlyPageStoreViolation) {
   EXPECT_TRUE(satp_res.ok());
   auto* satp_csr = satp_res.value();
 
-  MmuSv39 mmu(&state, physical_memory);
+  RiscVMmu mmu(&state, physical_memory);
   auto db_factory = mpact::sim::generic::DataBufferFactory();
   
   // Set satp.MODE = 8 (Sv39), PPN = 1 (Page at physical 0x1000)
@@ -140,7 +140,7 @@ TEST(MmuSv39Test, TestMmuReadOnlyPageStoreViolation) {
   delete physical_memory;
 }
 
-TEST(MmuSv39Test, TestMmuInvalidPteTrap) {
+TEST(RiscVMmuTest, TestMmuInvalidPteTrap) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
   RiscVState state("test", RiscVXlen::RV64, physical_memory);
   
@@ -148,7 +148,7 @@ TEST(MmuSv39Test, TestMmuInvalidPteTrap) {
   EXPECT_TRUE(satp_res.ok());
   auto* satp_csr = satp_res.value();
 
-  MmuSv39 mmu(&state, physical_memory);
+  RiscVMmu mmu(&state, physical_memory);
   auto db_factory = mpact::sim::generic::DataBufferFactory();
   
   // Set satp.MODE = 8 (Sv39), PPN = 1 (Page at physical 0x1000)
@@ -195,7 +195,7 @@ TEST(MmuSv39Test, TestMmuInvalidPteTrap) {
   delete physical_memory;
 }
 
-TEST(MmuSv39Test, Sv39PageWalkTranslation) {
+TEST(RiscVMmuTest, Sv39PageWalkTranslation) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
   RiscVState state("test", RiscVXlen::RV64, physical_memory);
   
@@ -205,14 +205,12 @@ TEST(MmuSv39Test, Sv39PageWalkTranslation) {
   auto* satp_csr = satp_res.value();
 
   // Test negative constraint: unsupported modes must be ignored.
-  // 9 is Sv48, 10 is Sv57. Both should be ignored.
+  // 11 is unsupported.
   uint64_t initial_satp = satp_csr->AsUint64();
-  satp_csr->Write(static_cast<uint64_t>(9ULL << 60));
-  EXPECT_EQ(satp_csr->AsUint64(), initial_satp) << "Sv48 mode write should be ignored";
-  satp_csr->Write(static_cast<uint64_t>(10ULL << 60));
-  EXPECT_EQ(satp_csr->AsUint64(), initial_satp) << "Sv57 mode write should be ignored";
+  satp_csr->Write(static_cast<uint64_t>(11ULL << 60));
+  EXPECT_EQ(satp_csr->AsUint64(), initial_satp) << "Mode 11 write should be ignored";
 
-  MmuSv39 mmu(&state, physical_memory);
+  RiscVMmu mmu(&state, physical_memory);
   auto db_factory = mpact::sim::generic::DataBufferFactory();
   
   // Set satp.MODE = 8 (Sv39), PPN = 1 (Page at physical 0x1000)
@@ -259,7 +257,7 @@ TEST(MmuSv39Test, Sv39PageWalkTranslation) {
   delete physical_memory;
 }
 
-TEST(MmuSv39Test, TestSsnpmPointerMaskingExemption) {
+TEST(RiscVMmuTest, TestSsnpmPointerMaskingExemption) {
   auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
   RiscVState state("test", RiscVXlen::RV64, physical_memory);
   
@@ -271,7 +269,7 @@ TEST(MmuSv39Test, TestSsnpmPointerMaskingExemption) {
   EXPECT_TRUE(senvcfg_res.ok());
   auto* senvcfg_csr = senvcfg_res.value();
 
-  MmuSv39 mmu(&state, physical_memory);
+  RiscVMmu mmu(&state, physical_memory);
   auto db_factory = mpact::sim::generic::DataBufferFactory();
   
   // Set satp.MODE = 8 (Sv39), PPN = 1 (Page at physical 0x1000)
@@ -337,6 +335,147 @@ TEST(MmuSv39Test, TestSsnpmPointerMaskingExemption) {
   pte0->DecRef();
   read_db->DecRef();
   write_db->DecRef();
+  delete physical_memory;
+}
+
+TEST(RiscVMmuTest, Sv48PageWalkTranslation) {
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
+  RiscVMmu mmu(&state, physical_memory);
+
+  // Set satp to mode 9 (Sv48), ASID 0, PPN 0x123.
+  uint64_t mode = 9;
+  uint64_t ppn = 0x123;
+  uint64_t satp_val = (mode << 60) | ppn;
+  auto satp_csr = state.csr_set()->GetCsr("satp").value();
+  satp_csr->Write(satp_val);
+
+  // Vaddr with 4 levels.
+  uint64_t vaddr = 0x0000123456789ABCULL;
+  
+  // Create a valid leaf PTE at level 0 (after walking levels 3, 2, 1).
+  // Root PTE (level 3)
+  uint64_t a = ppn * 4096;
+  uint64_t vpn_3 = (vaddr >> (12 + 27)) & 0x1FF;
+  uint64_t pte3_addr = a + vpn_3 * 8;
+  uint64_t pte3_ppn = 0x200;
+  uint64_t pte3_val = (pte3_ppn << 10) | 0x1; // V=1, non-leaf
+
+  // Level 2 PTE
+  uint64_t vpn_2 = (vaddr >> (12 + 18)) & 0x1FF;
+  uint64_t pte2_addr = pte3_ppn * 4096 + vpn_2 * 8;
+  uint64_t pte2_ppn = 0x300;
+  uint64_t pte2_val = (pte2_ppn << 10) | 0x1; // V=1, non-leaf
+
+  // Level 1 PTE
+  uint64_t vpn_1 = (vaddr >> (12 + 9)) & 0x1FF;
+  uint64_t pte1_addr = pte2_ppn * 4096 + vpn_1 * 8;
+  uint64_t pte1_ppn = 0x400;
+  uint64_t pte1_val = (pte1_ppn << 10) | 0x1; // V=1, non-leaf
+
+  // Level 0 PTE
+  uint64_t vpn_0 = (vaddr >> 12) & 0x1FF;
+  uint64_t pte0_addr = pte1_ppn * 4096 + vpn_0 * 8;
+  uint64_t pte0_ppn = 0x500;
+  uint64_t pte0_val = (pte0_ppn << 10) | 0xF; // V=1, R=1, W=1, X=1 (leaf)
+
+  // Write all PTEs
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  auto db = db_factory.Allocate<uint64_t>(1);
+
+  db->Set<uint64_t>(0, pte3_val);
+  physical_memory->Store(pte3_addr, db);
+  
+  db->Set<uint64_t>(0, pte2_val);
+  physical_memory->Store(pte2_addr, db);
+
+  db->Set<uint64_t>(0, pte1_val);
+  physical_memory->Store(pte1_addr, db);
+
+  db->Set<uint64_t>(0, pte0_val);
+  physical_memory->Store(pte0_addr, db);
+  
+  db->DecRef();
+
+  // Store golden data at the expected physical address
+  uint64_t expected_paddr = (pte0_ppn * 4096) + (vaddr & 0xFFF);
+  auto golden_db = db_factory.Allocate<uint64_t>(1);
+  golden_db->Set<uint64_t>(0, 0xDEADBEEFCAFEBABELL);
+  physical_memory->Store(expected_paddr, golden_db);
+  golden_db->DecRef();
+
+  // Load to trigger Translate
+  auto out_db = db_factory.Allocate<uint64_t>(1);
+  mmu.Load(vaddr, out_db, nullptr, nullptr);
+  
+  // Assert translation fetched the golden data
+  EXPECT_EQ(out_db->Get<uint64_t>(0), 0xDEADBEEFCAFEBABELL) << "Failed at Sv48! expected_paddr=" << expected_paddr;
+
+  out_db->DecRef();
+  delete physical_memory;
+}
+
+TEST(RiscVMmuTest, Sv57PageWalkTranslation) {
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
+  RiscVMmu mmu(&state, physical_memory);
+
+  uint64_t mode = 10; // Sv57
+  uint64_t ppn = 0x123;
+  uint64_t satp_val = (mode << 60) | ppn;
+  auto satp_csr = state.csr_set()->GetCsr("satp").value();
+  satp_csr->Write(satp_val);
+
+  uint64_t vaddr = 0x00123456789ABCDEULL; // 57 bits canonical
+  
+  uint64_t a = ppn * 4096;
+  uint64_t vpn_4 = (vaddr >> (12 + 36)) & 0x1FF;
+  uint64_t pte4_addr = a + vpn_4 * 8;
+  uint64_t pte4_ppn = 0x200;
+  uint64_t pte4_val = (pte4_ppn << 10) | 0x1;
+
+  uint64_t vpn_3 = (vaddr >> (12 + 27)) & 0x1FF;
+  uint64_t pte3_addr = pte4_ppn * 4096 + vpn_3 * 8;
+  uint64_t pte3_ppn = 0x300;
+  uint64_t pte3_val = (pte3_ppn << 10) | 0x1;
+
+  uint64_t vpn_2 = (vaddr >> (12 + 18)) & 0x1FF;
+  uint64_t pte2_addr = pte3_ppn * 4096 + vpn_2 * 8;
+  uint64_t pte2_ppn = 0x400;
+  uint64_t pte2_val = (pte2_ppn << 10) | 0x1;
+
+  uint64_t vpn_1 = (vaddr >> (12 + 9)) & 0x1FF;
+  uint64_t pte1_addr = pte2_ppn * 4096 + vpn_1 * 8;
+  uint64_t pte1_ppn = 0x500;
+  uint64_t pte1_val = (pte1_ppn << 10) | 0x1;
+
+  uint64_t vpn_0 = (vaddr >> 12) & 0x1FF;
+  uint64_t pte0_addr = pte1_ppn * 4096 + vpn_0 * 8;
+  uint64_t pte0_ppn = 0x600;
+  uint64_t pte0_val = (pte0_ppn << 10) | 0xF;
+
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  auto db = db_factory.Allocate<uint64_t>(1);
+  db->Set<uint64_t>(0, pte4_val); physical_memory->Store(pte4_addr, db);
+  db->Set<uint64_t>(0, pte3_val); physical_memory->Store(pte3_addr, db);
+  db->Set<uint64_t>(0, pte2_val); physical_memory->Store(pte2_addr, db);
+  db->Set<uint64_t>(0, pte1_val); physical_memory->Store(pte1_addr, db);
+  db->Set<uint64_t>(0, pte0_val); physical_memory->Store(pte0_addr, db);
+  db->DecRef();
+
+  // Store golden data at the expected physical address
+  uint64_t expected_paddr = (pte0_ppn * 4096) + (vaddr & 0xFFF);
+  auto golden_db = db_factory.Allocate<uint64_t>(1);
+  golden_db->Set<uint64_t>(0, 0x1234567890ABCDEFULL);
+  physical_memory->Store(expected_paddr, golden_db);
+  golden_db->DecRef();
+
+  auto out_db = db_factory.Allocate<uint64_t>(1);
+  mmu.Load(vaddr, out_db, nullptr, nullptr);
+  
+  EXPECT_EQ(out_db->Get<uint64_t>(0), 0x1234567890ABCDEFULL);
+
+  out_db->DecRef();
   delete physical_memory;
 }
 

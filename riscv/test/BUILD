@@ -1106,10 +1106,10 @@ cc_test(
 )
 
 cc_test(
-    name = "mmu_sv39_test",
-    srcs = ["mmu_sv39_test.cc"],
+    name = "riscv_mmu_test",
+    srcs = ["riscv_mmu_test.cc"],
     deps = [
-        "//riscv:mmu_sv39",
+        "//riscv:riscv_mmu",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
         "@com_google_mpact-sim//mpact/sim/generic:core",

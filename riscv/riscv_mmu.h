@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MPACT_RISCV_RISCV_MMU_SV39_H_
-#define MPACT_RISCV_RISCV_MMU_SV39_H_
+#ifndef MPACT_RISCV_RISCV_RISCV_MMU_H_
+#define MPACT_RISCV_RISCV_RISCV_MMU_H_
 
 #include "mpact/sim/generic/data_buffer.h"
 #include "mpact/sim/generic/instruction.h"
@@ -24,13 +24,13 @@ namespace mpact {
 namespace sim {
 namespace riscv {
 
-// The MmuSv39 class scaffolds the RISC-V Sv39 Virtual Memory architecture.
+// The RiscVMmu class scaffolds the RISC-V Sv39, Sv48, and Sv57 Virtual Memory architectures.
 // It will implement page walking and address translation logic according
 // to the RISC-V Privileged Architecture specifications.
-class MmuSv39 : public mpact::sim::util::MemoryInterface {
+class RiscVMmu : public mpact::sim::util::MemoryInterface {
  public:
-  explicit MmuSv39(RiscVState* state, mpact::sim::util::MemoryInterface* physical_memory);
-  ~MmuSv39() override;
+  explicit RiscVMmu(RiscVState* state, mpact::sim::util::MemoryInterface* physical_memory);
+  ~RiscVMmu() override;
 
   // MemoryInterface methods.
   void Load(uint64_t address, mpact::sim::generic::DataBuffer* db,
@@ -60,4 +60,4 @@ class MmuSv39 : public mpact::sim::util::MemoryInterface {
 }  // namespace sim
 }  // namespace mpact
 
-#endif  // MPACT_RISCV_RISCV_MMU_SV39_H_
+#endif  // MPACT_RISCV_RISCV_RISCV_MMU_H_

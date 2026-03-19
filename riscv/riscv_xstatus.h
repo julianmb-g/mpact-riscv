@@ -254,8 +254,8 @@ class RiscVSAtp : public RiscVSimpleCsr<T> {
   void Write(uint64_t value) override {
     if constexpr (std::is_same_v<T, uint64_t>) {
       uint64_t mode = (value >> 60) & 0xF;
-      // For RV64, only 0 (Bare) and 8 (Sv39) are supported.
-      if (mode != 0 && mode != 8) {
+      // For RV64, 0 (Bare), 8 (Sv39), 9 (Sv48), and 10 (Sv57) are supported.
+      if (mode != 0 && mode != 8 && mode != 9 && mode != 10) {
         return; // strictly ignored
       }
     }
