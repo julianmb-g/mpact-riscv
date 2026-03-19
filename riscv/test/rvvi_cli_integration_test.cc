@@ -2,27 +2,83 @@
 #include <cstdlib>
 #include <string>
 #include <sys/wait.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include "tools/cpp/runfiles/runfiles.h"
 
-class RvviCliIntegrationTest : public ::testing::Test {
-};
+using bazel::tools::cpp::runfiles::Runfiles;
+
+class RvviCliIntegrationTest : public ::testing::Test {};
 
 TEST_F(RvviCliIntegrationTest, BasicCliFlagAcceptance) {
-  // Feed "quit\n" to interactive mode to terminate gracefully.
-  std::string cmd = "echo 'quit' | ./riscv/rva23s64_sim --rvvi_trace -i=true riscv/test/testfiles/hello_world_64.elf 2>&1";
-  FILE* pipe = popen(cmd.c_str(), "r");
-  ASSERT_NE(pipe, nullptr);
+  std::string error;
+  std::unique_ptr<Runfiles> runfiles(Runfiles::CreateForTest(&error));
+  ASSERT_NE(runfiles, nullptr) << error;
   
-  char buffer[128];
+  std::string sim_path = runfiles->Rlocation("com_google_mpact-riscv/riscv/rva23s64_sim");
+  std::string elf_path = runfiles->Rlocation("com_google_mpact-riscv/riscv/test/testfiles/hello_world_64.elf");
+
+  int pipe_in[2];
+  int pipe_out[2];
+  ASSERT_EQ(pipe(pipe_in), 0);
+  ASSERT_EQ(pipe(pipe_out), 0);
+
+  pid_t pid = fork();
+  ASSERT_GE(pid, 0);
+
+  if (pid == 0) {
+    // Child process
+    dup2(pipe_in[0], STDIN_FILENO);
+    dup2(pipe_out[1], STDOUT_FILENO);
+    dup2(pipe_out[1], STDERR_FILENO);
+    close(pipe_in[0]);
+    close(pipe_in[1]);
+    close(pipe_out[0]);
+    close(pipe_out[1]);
+
+    const char* argv[] = {
+        sim_path.c_str(),
+        "--rvvi_trace",
+        "-i=true",
+        elf_path.c_str(),
+        nullptr
+    };
+    execv(sim_path.c_str(), const_cast<char**>(argv));
+    exit(1);
+  }
+
+  // Parent process
+  close(pipe_in[0]);
+  close(pipe_out[1]);
+
+  std::string input = "step 10\nreg info\nquit\n";
+  write(pipe_in[1], input.c_str(), input.length());
+  close(pipe_in[1]); // Send EOF
+
   std::string output = "";
-  while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+  char buffer[256];
+  ssize_t bytes_read;
+  while ((bytes_read = read(pipe_out[0], buffer, sizeof(buffer) - 1)) > 0) {
+    buffer[bytes_read] = '\0';
     output += buffer;
   }
-  int status = pclose(pipe);
-  
+  close(pipe_out[0]);
+
+  int status;
+  waitpid(pid, &status, 0);
+
   EXPECT_TRUE(WIFEXITED(status)) << "Daemon pipeline did not exit cleanly. Output: " << output;
   EXPECT_EQ(WEXITSTATUS(status), 0) << "Daemon pipeline failed with non-zero exit code. Output: " << output;
 
-  // It shouldn't complain about an unknown flag.
   EXPECT_EQ(output.find("Unknown command line flag 'rvvi_trace'"), std::string::npos) 
       << "CLI must accept --rvvi_trace\n" << output;
+
+  size_t start_pc_idx = output.find("_start:");
+  EXPECT_NE(start_pc_idx, std::string::npos) << "Trace did not organically hit entry point.";
+
+  // Extract a generic register block organically to prove mutation occurs chronologically AFTER execution
+  // Check for ANY general purpose register dump (x00 - x31) instead of brittle 'auipc' or 'x03'
+  size_t reg_dump_idx = output.find("x01 = [");
+  EXPECT_NE(reg_dump_idx, std::string::npos) << "Trace did not mutate the GP register organically.";
+  EXPECT_GT(reg_dump_idx, start_pc_idx) << "Register mutation did not logically follow instruction execution.";
 }

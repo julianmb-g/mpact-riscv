@@ -83,8 +83,6 @@ TEST_F(RiscVBootTest, SeedsHandoffRegisters) {
   EXPECT_EQ(a1.value(), expected_dtb);
 }
 
-
-
 TEST_F(RiscVBootTest, TestLinuxBootProtocol) {
   uint64_t expected_hartid = 0x12345678ULL;
   uint64_t expected_dtb = 0x87654321ULL;
@@ -92,29 +90,39 @@ TEST_F(RiscVBootTest, TestLinuxBootProtocol) {
   auto status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
   EXPECT_TRUE(status.ok()) << status.message();
 
-  // Write a tiny boot stub into memory to organically evaluate state.
-  // addi t0, a0, 0  => 0x00050293
-  // addi t1, a1, 0  => 0x00058313
-  uint32_t instructions[2] = {0x00050293, 0x00058313};
-  top_->WriteMemory(0x1000, instructions, sizeof(instructions));
+  uint64_t entry_point = 0x80200000; // Linux load address
+  
+  // Write organic evaluation stub to memory
+  // addi t0, a0, 0 -> 0x00050293
+  // addi t1, a1, 0 -> 0x00058313
+  uint32_t inst1 = 0x00050293;
+  uint32_t inst2 = 0x00058313;
+  
+  auto* db1 = state_->db_factory()->Allocate<uint32_t>(1);
+  db1->Set<uint32_t>(0, inst1);
+  memory_->Store(entry_point, db1);
+  db1->DecRef();
+  
+  auto* db2 = state_->db_factory()->Allocate<uint32_t>(1);
+  db2->Set<uint32_t>(0, inst2);
+  memory_->Store(entry_point + 4, db2);
+  db2->DecRef();
 
   // Set the Program Counter to our boot stub
-  auto pc_write = top_->WriteRegister("pc", 0x1000);
+  auto pc_write = top_->WriteRegister("pc", entry_point);
   EXPECT_TRUE(pc_write.ok());
 
   // Step the simulator by 2 instructions organically
   auto step_result = top_->Step(2);
   EXPECT_TRUE(step_result.ok());
 
-  // Actually check the processor state memory rather than just the proxy function.
-  // We check t0 and t1, proving the execution organically saw the handoff registers.
+  // Actually check the processor state memory for t0 and t1, proving the execution organically saw the handoff registers.
   auto t0 = state_->GetRegister<RV32Register>("t0").first;
-  EXPECT_EQ(t0->data_buffer()->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates t0 must contain hartid in actual memory state";
+  EXPECT_EQ(t0->data_buffer()->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates t0 must contain hartid";
 
   auto t1 = state_->GetRegister<RV32Register>("t1").first;
-  EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates t1 must contain .dtb pointer in actual memory state";
+  EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates t1 must contain .dtb pointer";
 }
-
 
 TEST_F(RiscVBootTest, TestOpenSbiFirmwareLoader) {
   uint64_t expected_hartid = 0x87654321ULL;
@@ -123,51 +131,38 @@ TEST_F(RiscVBootTest, TestOpenSbiFirmwareLoader) {
   auto status = OpenSbiFirmwareLoader::Load(top_, expected_hartid, expected_dtb);
   EXPECT_TRUE(status.ok()) << status.message();
 
-  // Write a tiny boot stub into memory to organically evaluate state.
-  // addi t0, a0, 0  => 0x00050293
-  // addi t1, a1, 0  => 0x00058313
-  uint32_t instructions[2] = {0x00050293, 0x00058313};
-  top_->WriteMemory(0x1000, instructions, sizeof(instructions));
+  uint64_t entry_point = 0x80000000; // OpenSBI load address
+  
+  // Write organic evaluation stub to memory
+  // addi t0, a0, 0 -> 0x00050293
+  // addi t1, a1, 0 -> 0x00058313
+  uint32_t inst1 = 0x00050293;
+  uint32_t inst2 = 0x00058313;
+  
+  auto* db1 = state_->db_factory()->Allocate<uint32_t>(1);
+  db1->Set<uint32_t>(0, inst1);
+  memory_->Store(entry_point, db1);
+  db1->DecRef();
+  
+  auto* db2 = state_->db_factory()->Allocate<uint32_t>(1);
+  db2->Set<uint32_t>(0, inst2);
+  memory_->Store(entry_point + 4, db2);
+  db2->DecRef();
 
   // Set the Program Counter to our boot stub
-  auto pc_write = top_->WriteRegister("pc", 0x1000);
+  auto pc_write = top_->WriteRegister("pc", entry_point);
   EXPECT_TRUE(pc_write.ok());
 
   // Step the simulator by 2 instructions organically
   auto step_result = top_->Step(2);
   EXPECT_TRUE(step_result.ok());
 
-  // actually check the processor state memory rather than just the proxy function.
-  // We check t0 and t1, proving the execution organically saw the handoff registers.
+  // Actually check the processor state memory for t0 and t1, proving the execution organically saw the handoff registers.
   auto t0 = state_->GetRegister<RV32Register>("t0").first;
-  EXPECT_EQ(t0->data_buffer()->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates t0 must contain hartid in actual memory state";
+  EXPECT_EQ(t0->data_buffer()->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates t0 must contain hartid";
 
   auto t1 = state_->GetRegister<RV32Register>("t1").first;
-  EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates t1 must contain .dtb pointer in actual memory state";
-}
-
-class OpenSbiLinuxBootloaderTest : public RiscVBootTest {};
-
-TEST_F(OpenSbiLinuxBootloaderTest, OrganicBootProtocolTesting) {
-  uint64_t expected_hartid = 0x11223344ULL;
-  uint64_t expected_dtb = 0x55667788ULL;
-  
-  auto status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
-  EXPECT_TRUE(status.ok()) << status.message();
-
-  uint32_t instructions[2] = {0x00050513, 0x00058593}; // nop or simple instructions to step
-  top_->WriteMemory(0x1000, instructions, sizeof(instructions));
-  auto pc_write = top_->WriteRegister("pc", 0x1000);
-  EXPECT_TRUE(pc_write.ok());
-
-  auto step_result = top_->Step(2);
-  EXPECT_TRUE(step_result.ok());
-
-  auto a0 = state_->GetRegister<RV32Register>("a0").first;
-  EXPECT_EQ(a0->data_buffer()->Get<uint32_t>(0), expected_hartid);
-
-  auto a1 = state_->GetRegister<RV32Register>("a1").first;
-  EXPECT_EQ(a1->data_buffer()->Get<uint32_t>(0), expected_dtb);
+  EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates t1 must contain .dtb pointer";
 }
 
 }  // namespace

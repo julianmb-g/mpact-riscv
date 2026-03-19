@@ -1055,7 +1055,9 @@ cc_test(
 cc_test(
     name = "riscv_boot_test",
     srcs = ["riscv_boot_test.cc"],
+    data = ["testfiles/hello_world.elf"],
     deps = [
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
         "//riscv:riscv32g_decoder",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
@@ -1192,5 +1194,6 @@ cc_test(
     ],
     deps = [
         "@com_google_googletest//:gtest_main",
+        "@bazel_tools//tools/cpp/runfiles",
     ],
 )
