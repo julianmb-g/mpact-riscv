@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 #include <cstdlib>
-#include <string>
-#include <sys/wait.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
+#include <string>
+#include <sys/wait.h>
+#include <unistd.h>
 #include "tools/cpp/runfiles/runfiles.h"
 
 using bazel::tools::cpp::runfiles::Runfiles;
