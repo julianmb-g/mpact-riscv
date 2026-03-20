@@ -367,7 +367,7 @@ class RiscVState : public ArchState {
   int flen() const { return flen_; }
   RiscVXlen xlen() const { return xlen_; }
   
-  int GetVectorLength() const override {
+  int GetVectorLength() const {
     return rv_vector_ ? rv_vector_->vector_length() : 0;
   }
 

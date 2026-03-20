@@ -83,15 +83,28 @@ TEST_F(RiscVBootTest, SeedsHandoffRegisters) {
   EXPECT_EQ(a1.value(), expected_dtb);
 }
 
-TEST_F(RiscVBootTest, TestLinuxBootProtocol) {
-  uint64_t expected_hartid = 0x12345678ULL;
-  uint64_t expected_dtb = 0x87654321ULL;
+class RiscVBootProtocolTest : public RiscVBootTest,
+                              public ::testing::WithParamInterface<int> {};
+
+TEST_P(RiscVBootProtocolTest, TestBootProtocol) {
+  int index = GetParam();
+  uint64_t expected_hartid, expected_dtb, entry_point;
+  absl::Status status;
+
+  if (index == 0) {
+    expected_hartid = 0x12345678ULL;
+    expected_dtb = 0x87654321ULL;
+    entry_point = 0x80200000;
+    status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
+  } else {
+    expected_hartid = 0x87654321ULL;
+    expected_dtb = 0x12345678ULL;
+    entry_point = 0x80000000;
+    status = OpenSbiFirmwareLoader::Load(top_, expected_hartid, expected_dtb);
+  }
   
-  auto status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
   EXPECT_TRUE(status.ok()) << status.message();
 
-  uint64_t entry_point = 0x80200000; // Linux load address
-  
   // Write organic evaluation stub to memory
   // addi t0, a0, 0 -> 0x00050293
   // addi t1, a1, 0 -> 0x00058313
@@ -132,54 +145,12 @@ TEST_F(RiscVBootTest, TestLinuxBootProtocol) {
   EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates t1 must contain .dtb pointer";
 }
 
-TEST_F(RiscVBootTest, TestOpenSbiFirmwareLoader) {
-  uint64_t expected_hartid = 0x87654321ULL;
-  uint64_t expected_dtb = 0x12345678ULL;
-  
-  auto status = OpenSbiFirmwareLoader::Load(top_, expected_hartid, expected_dtb);
-  EXPECT_TRUE(status.ok()) << status.message();
-
-  uint64_t entry_point = 0x80000000; // OpenSBI load address
-  
-  // Write organic evaluation stub to memory
-  // addi t0, a0, 0 -> 0x00050293
-  // addi t1, a1, 0 -> 0x00058313
-  uint32_t inst1 = 0x00050293;
-  uint32_t inst2 = 0x00058313;
-  
-  auto* db1 = state_->db_factory()->Allocate<uint32_t>(1);
-  db1->Set<uint32_t>(0, inst1);
-  memory_->Store(entry_point, db1);
-  auto* check_db1 = state_->db_factory()->Allocate<uint32_t>(1);
-  memory_->Load(entry_point, check_db1, nullptr, nullptr);
-  EXPECT_EQ(check_db1->Get<uint32_t>(0), inst1);
-  check_db1->DecRef();
-  db1->DecRef();
-  
-  auto* db2 = state_->db_factory()->Allocate<uint32_t>(1);
-  db2->Set<uint32_t>(0, inst2);
-  memory_->Store(entry_point + 4, db2);
-  auto* check_db2 = state_->db_factory()->Allocate<uint32_t>(1);
-  memory_->Load(entry_point + 4, check_db2, nullptr, nullptr);
-  EXPECT_EQ(check_db2->Get<uint32_t>(0), inst2);
-  check_db2->DecRef();
-  db2->DecRef();
-
-  // Set the Program Counter to our boot stub
-  auto pc_write = top_->WriteRegister("pc", entry_point);
-  EXPECT_TRUE(pc_write.ok());
-
-  // Step the simulator by 2 instructions organically
-  auto step_result = top_->Step(2);
-  EXPECT_TRUE(step_result.ok());
-
-  // Actually check the processor state memory for t0 and t1, proving the execution organically saw the handoff registers.
-  auto t0 = state_->GetRegister<RV32Register>("t0").first;
-  EXPECT_EQ(t0->data_buffer()->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates t0 must contain hartid";
-
-  auto t1 = state_->GetRegister<RV32Register>("t1").first;
-  EXPECT_EQ(t1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates t1 must contain .dtb pointer";
-}
+INSTANTIATE_TEST_SUITE_P(
+    BootProtocols, RiscVBootProtocolTest,
+    ::testing::Values(0, 1),
+    [](const ::testing::TestParamInfo<int>& info) {
+      return info.param == 0 ? "LinuxKernel" : "OpenSbi";
+    });
 
 }  // namespace
 }  // namespace riscv
