@@ -1,6 +1,5 @@
 # mpact-riscv Agent Instructions
 
-
 ## Lessons Learned
 
 ### Architecture Quirks
@@ -11,4 +10,4 @@
 
 ### Testing Gotchas
 - **Fake Coverage via Unconditional SUCCEED()**: Tests must mathematically assert that the architectural state (e.g., PC advancement, `mcause`/`mtval` CSRs) remained valid and unaffected. Calling `SUCCEED()` without assertions is a severe violation of the "Happy-Path Padding" mandate.
-
+- **Rigid String Serialization Fragility**: When mathematically asserting structural trace mutations (e.g. executing interactive CLI wrappers), avoid hardcoding brittle, environmental hex bounds like specific PC addresses or register values. Organically assert trace output sequences (like opcode strings or generic register formatting) to prevent test failure upon compiler or libc updates.
