@@ -1057,7 +1057,6 @@ cc_test(
     srcs = ["riscv_boot_test.cc"],
     data = ["testfiles/hello_world.elf"],
     deps = [
-        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
         "//riscv:riscv32g_decoder",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
@@ -1065,6 +1064,7 @@ cc_test(
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
         "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
     ],
 )
 
@@ -1168,9 +1168,9 @@ cc_test(
         "rva23_decoder_test.cc",
     ],
     deps = [
-        "//riscv:rva23u64_decoder",
-        "//riscv:rva23s64_decoder",
         "//riscv:riscv_state",
+        "//riscv:rva23s64_decoder",
+        "//riscv:rva23u64_decoder",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:log_sink_registry",
@@ -1189,11 +1189,11 @@ cc_test(
         "rvvi_cli_integration_test.cc",
     ],
     data = [
-        "//riscv:rva23s64_sim",
         "testfiles/hello_world_64.elf",
+        "//riscv:rva23s64_sim",
     ],
     deps = [
-        "@com_google_googletest//:gtest_main",
         "@bazel_tools//tools/cpp/runfiles",
+        "@com_google_googletest//:gtest_main",
     ],
 )
