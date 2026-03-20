@@ -4,6 +4,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
 #include "tools/cpp/runfiles/runfiles.h"
 
 using bazel::tools::cpp::runfiles::Runfiles;
@@ -57,8 +59,19 @@ TEST_F(RvviCliIntegrationTest, BasicCliFlagAcceptance) {
 
   std::string output = "";
   char buffer[256];
-  ssize_t bytes_read;
-  while ((bytes_read = read(pipe_out[0], buffer, sizeof(buffer) - 1)) > 0) {
+  
+  struct pollfd pfd;
+  pfd.fd = pipe_out[0];
+  pfd.events = POLLIN;
+
+  while (true) {
+    int ret = poll(&pfd, 1, 5000); // 5 second timeout
+    if (ret <= 0) {
+      kill(pid, SIGKILL);
+      break;
+    }
+    ssize_t bytes_read = read(pipe_out[0], buffer, sizeof(buffer) - 1);
+    if (bytes_read <= 0) break;
     buffer[bytes_read] = '\0';
     output += buffer;
   }

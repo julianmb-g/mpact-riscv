@@ -101,11 +101,19 @@ TEST_F(RiscVBootTest, TestLinuxBootProtocol) {
   auto* db1 = state_->db_factory()->Allocate<uint32_t>(1);
   db1->Set<uint32_t>(0, inst1);
   memory_->Store(entry_point, db1);
+  auto* check_db1 = state_->db_factory()->Allocate<uint32_t>(1);
+  memory_->Load(entry_point, check_db1, nullptr, nullptr);
+  EXPECT_EQ(check_db1->Get<uint32_t>(0), inst1);
+  check_db1->DecRef();
   db1->DecRef();
   
   auto* db2 = state_->db_factory()->Allocate<uint32_t>(1);
   db2->Set<uint32_t>(0, inst2);
   memory_->Store(entry_point + 4, db2);
+  auto* check_db2 = state_->db_factory()->Allocate<uint32_t>(1);
+  memory_->Load(entry_point + 4, check_db2, nullptr, nullptr);
+  EXPECT_EQ(check_db2->Get<uint32_t>(0), inst2);
+  check_db2->DecRef();
   db2->DecRef();
 
   // Set the Program Counter to our boot stub
@@ -142,11 +150,19 @@ TEST_F(RiscVBootTest, TestOpenSbiFirmwareLoader) {
   auto* db1 = state_->db_factory()->Allocate<uint32_t>(1);
   db1->Set<uint32_t>(0, inst1);
   memory_->Store(entry_point, db1);
+  auto* check_db1 = state_->db_factory()->Allocate<uint32_t>(1);
+  memory_->Load(entry_point, check_db1, nullptr, nullptr);
+  EXPECT_EQ(check_db1->Get<uint32_t>(0), inst1);
+  check_db1->DecRef();
   db1->DecRef();
   
   auto* db2 = state_->db_factory()->Allocate<uint32_t>(1);
   db2->Set<uint32_t>(0, inst2);
   memory_->Store(entry_point + 4, db2);
+  auto* check_db2 = state_->db_factory()->Allocate<uint32_t>(1);
+  memory_->Load(entry_point + 4, check_db2, nullptr, nullptr);
+  EXPECT_EQ(check_db2->Get<uint32_t>(0), inst2);
+  check_db2->DecRef();
   db2->DecRef();
 
   // Set the Program Counter to our boot stub
