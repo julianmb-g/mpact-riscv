@@ -1182,6 +1182,13 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "subprocess_runner",
+    srcs = ["subprocess_runner.cc"],
+    hdrs = ["subprocess_runner.h"],
+    deps = [],
+)
+
 cc_test(
     name = "rvvi_cli_integration_test",
     size = "small",
@@ -1194,6 +1201,7 @@ cc_test(
         "//riscv:rva23s64_sim",
     ],
     deps = [
+        ":subprocess_runner",
         "@bazel_tools//tools/cpp/runfiles",
         "@com_google_googletest//:gtest_main",
     ],
