@@ -440,6 +440,15 @@ absl::Status RiscVTop::Run() {
         // and try again.
         executed = ExecuteInstruction(inst);
         counter_num_cycles_.Increment(1);
+        if (executed && !commit_watchers_.empty()) {
+          auto* db = state_->db_factory()->Allocate<uint32_t>(1);
+          state_->memory()->Load(pc, db, nullptr, nullptr);
+          uint32_t inst_val = db->Get<uint32_t>(0);
+          db->DecRef();
+          for (auto& watcher : commit_watchers_) {
+            watcher(pc, inst_val);
+          }
+        }
         state_->AdvanceDelayLines();
         // Check for interrupt.
         if (state_->is_interrupt_available()) {

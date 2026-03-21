@@ -1323,6 +1323,7 @@ cc_binary(
     ],
     copts = ["-O3"],
     deps = [
+        ":rvvi_sim",
         ":debug_command_shell",
         ":riscv32_htif_semihost",
         ":riscv32g_bitmanip_decoder",
@@ -1395,6 +1396,7 @@ cc_binary(
     ],
     copts = ["-O3"],
     deps = [
+        ":rvvi_sim",
         ":debug_command_shell",
         ":riscv64g_decoder",
         ":riscv_arm_semihost",

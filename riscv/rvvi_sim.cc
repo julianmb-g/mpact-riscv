@@ -51,7 +51,7 @@ void AsyncFormattingDaemon::DaemonLoop() {
       (void)packet;
     } else {
       std::unique_lock<std::mutex> lock(cv_m_);
-      cv_.wait_for(lock, std::chrono::milliseconds(timeout_ms), [this] { return !running_.load(); });
+      cv_.wait_for(lock, std::chrono::milliseconds(1), [this] { return !running_.load(); });
     }
   }
 }
@@ -168,3 +168,11 @@ void RvviMemoryMapper::DoRmwStore(uint64_t address, DataBuffer* db) {
 }  // namespace riscv
 }  // namespace sim
 }  // namespace mpact
+
+extern "C" void PushTracePacket(uint64_t pc, uint32_t inst, bool valid) {
+  mpact::sim::riscv::rvvi::TracePacket packet;
+  packet.pc = pc;
+  packet.instruction = inst;
+  packet.valid = valid;
+  mpact::sim::riscv::rvvi::g_trace_buffer.Push(packet);
+}

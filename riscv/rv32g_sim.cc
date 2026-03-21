@@ -60,6 +60,7 @@
 #include "riscv/riscv_state.h"
 #include "riscv/riscv_boot.h"
 #include "riscv/riscv_top.h"
+#include "riscv/rvvi_sim.h"
 #include "src/google/protobuf/text_format.h"
 
 using ::mpact::sim::generic::Instruction;
@@ -161,6 +162,10 @@ ABSL_FLAG(std::string, dcache, "", "Data cache configuration");
 // Flag to set the default value for the misa CSR.
 ABSL_FLAG(std::optional<uint64_t>, misa, std::nullopt, "misa value");
 
+ABSL_FLAG(bool, rvvi_trace, false, "Enable RVVI tracing");
+ABSL_FLAG(bool, log_commits, false, "Log commits similar to spike");
+
+
 constexpr char kStackEndSymbolName[] = "__stack_end";
 constexpr char kStackSizeSymbolName[] = "__stack_size";
 
@@ -256,7 +261,7 @@ int main(int argc, char** argv) {
   mpact::sim::util::MemoryWatcher* memory_watcher = nullptr;
   mpact::sim::util::AtomicMemory* atomic_memory = nullptr;
   if (absl::GetFlag(FLAGS_exit_on_tohost)) {
-    memory_watcher = new mpact::sim::util::MemoryWatcher(memory);
+    memory_watcher = new mpact::sim::util::MemoryWatcher(memory_interface);
     atomic_memory = new mpact::sim::util::AtomicMemory(memory_watcher);
   } else {
     atomic_memory = new mpact::sim::util::AtomicMemory(memory);
@@ -270,10 +275,20 @@ int main(int argc, char** argv) {
     return -1;
   }
 
+
   mpact::sim::util::MemoryInterface* memory_interface = memory;
   if (memory_watcher != nullptr) {
     memory_interface = memory_watcher;
   }
+  std::unique_ptr<mpact::sim::riscv::rvvi::RvviMemoryMapper> rvvi_mapper = nullptr;
+  if (absl::GetFlag(FLAGS_rvvi_trace) || absl::GetFlag(FLAGS_log_commits)) {
+    rvvi_mapper = std::make_unique<mpact::sim::riscv::rvvi::RvviMemoryMapper>(memory_interface);
+    rvvi_mapper->AddMmioRange(0x10000000, 0x10001000); // UART
+    rvvi_mapper->AddMmioRange(0x02000000, 0x02010000); // CLINT
+    rvvi_mapper->AddMmioRange(0x0C000000, 0x10000000); // PLIC
+    memory_interface = rvvi_mapper.get();
+  }
+
   // Set up architectural state and decoder.
   RiscVState rv_state("RiscV32", RiscVXlen::RV32, memory_interface,
                       atomic_memory);
@@ -314,6 +329,43 @@ int main(int argc, char** argv) {
   }
 
   RiscVTop riscv_top("RiscV32Sim", &rv_state, rv_decoder);
+
+  if (absl::GetFlag(FLAGS_rvvi_trace) || absl::GetFlag(FLAGS_log_commits)) {
+    riscv_top.AddCommitWatcher([&rv_state, &riscv_top](uint64_t pc, uint32_t inst_val) {
+      if (absl::GetFlag(FLAGS_rvvi_trace)) {
+        PushTracePacket(pc, inst_val, true);
+      }
+      if (absl::GetFlag(FLAGS_log_commits)) {
+        // Implement log_commits formatting similar to Spike.
+        auto* inst = riscv_top.GetInstruction(pc).value();
+        std::string trace_str;
+        absl::StrAppend(&trace_str, "core   0: ", *(rv_state.privilege_mode()),
+            " 0x", absl::Hex(pc, absl::PadSpec::kZeroPad16), " (0x",
+            absl::Hex(inst_val, absl::PadSpec::kZeroPad8), ")");
+        auto* register_map = rv_state.registers();
+        for (int i = 0; i < inst->DestinationsSize(); ++i) {
+          auto* dest = inst->Destination(i);
+          if (dest == nullptr) continue;
+          auto name = dest->AsString();
+          if (name == "pc" || name == "x0") continue;
+          auto iter = register_map->find(name);
+          if (iter != register_map->end()) {
+            auto* db = iter->second->data_buffer();
+            if (db->size<uint8_t>() == sizeof(uint64_t)) {
+              absl::StrAppend(&trace_str, " ", absl::StrFormat("%-3s", name), " 0x",
+                absl::Hex(db->Get<uint64_t>(0), absl::PadSpec::kZeroPad16));
+            } else if (db->size<uint8_t>() == sizeof(uint32_t)) {
+              absl::StrAppend(&trace_str, " ", absl::StrFormat("%-3s", name), " 0x",
+                absl::Hex(db->Get<uint32_t>(0), absl::PadSpec::kZeroPad8));
+            }
+          }
+        }
+        std::cerr << trace_str << std::endl;
+        inst->DecRef();
+      }
+    });
+  }
+
 
   if (!absl::GetFlag(FLAGS_icache).empty()) {
     ComponentValueEntry icache_value;
@@ -444,10 +496,10 @@ int main(int argc, char** argv) {
     RiscV32HtifSemiHost::SemiHostAddresses magic_addresses;
     if (GetMagicAddresses(&elf_loader, &magic_addresses)) {
       if (memory_watcher == nullptr) {
-        memory_watcher = new mpact::sim::util::MemoryWatcher(memory);
+        memory_watcher = new mpact::sim::util::MemoryWatcher(memory_interface);
       }
       htif_semihost = new RiscV32HtifSemiHost(
-          memory_watcher, memory, magic_addresses,
+          memory_watcher, memory_interface, magic_addresses,
           [&riscv_top]() {
             riscv_top.RequestHalt(RiscVTop::HaltReason::kSemihostHaltRequest,
                                   nullptr);
@@ -486,7 +538,17 @@ int main(int argc, char** argv) {
   CHECK_OK(riscv_top.AddCounter(&counter_sec));
   // Set up control-c handling.
   top = &riscv_top;
+
+  // Set up RVVI trace formatting daemon if requested.
+  std::unique_ptr<mpact::sim::riscv::rvvi::AsyncFormattingDaemon> rvvi_daemon = nullptr;
+  if (absl::GetFlag(FLAGS_rvvi_trace) || absl::GetFlag(FLAGS_log_commits)) {
+    // 10 second timeout for the daemon loop.
+    rvvi_daemon = std::make_unique<mpact::sim::riscv::rvvi::AsyncFormattingDaemon>(10);
+    rvvi_daemon->Start();
+  }
+
   struct sigaction sa;
+
   sa.sa_flags = 0;
   sigemptyset(&sa.sa_mask);
   sigaddset(&sa.sa_mask, SIGINT);

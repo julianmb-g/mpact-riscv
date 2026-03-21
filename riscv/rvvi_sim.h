@@ -164,3 +164,4 @@ extern "C" {
 }  // namespace mpact
 
 #endif  // MPACT_RISCV_RISCV_RVVI_SIM_H_
+extern "C" void PushTracePacket(uint64_t pc, uint32_t inst, bool valid);

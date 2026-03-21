@@ -65,6 +65,8 @@ struct BranchTraceEntry {
 // This class brings together the decoder, the architecture state, and control.
 class RiscVTop : public generic::Component, public RiscVDebugInterface {
  public:
+  using CommitWatcher = std::function<void(uint64_t, uint32_t)>;
+  void AddCommitWatcher(CommitWatcher watcher) { commit_watchers_.push_back(std::move(watcher)); }
   static constexpr int kBranchTraceSize = 16;
   using RunStatus = generic::CoreDebugInterface::RunStatus;
   using HaltReason = generic::CoreDebugInterface::HaltReason;
@@ -158,6 +160,7 @@ class RiscVTop : public generic::Component, public RiscVDebugInterface {
   Cache* dcache() const { return dcache_; }
 
  private:
+  std::vector<CommitWatcher> commit_watchers_;
   // Initialize the top.
   void Initialize();
   // Configure cache helper method.
