@@ -1,6 +1,8 @@
 #ifndef MPACT_RISCV_RISCV_TEST_SUBPROCESS_RUNNER_H_
 #define MPACT_RISCV_RISCV_TEST_SUBPROCESS_RUNNER_H_
 
+#include <sys/types.h>
+
 #include <string>
 #include <vector>
 
@@ -19,6 +21,10 @@ class SubprocessRunner {
   int RunWithInput(const std::string& input, std::string* output);
 
  private:
+  bool SetupPipes(int pipe_in[2], int pipe_out[2]);
+  pid_t SpawnChildProcess(int pipe_in[2], int pipe_out[2]);
+  void PollBidirectionalIO(pid_t pid, int pipe_in_fd, int pipe_out_fd, const std::string& input, std::string* output);
+
   std::string executable_path_;
   std::vector<std::string> args_;
 };
