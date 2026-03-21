@@ -11,3 +11,4 @@
 - **Code Duplication & Refactoring (`rv32g_sim.cc` / `rv64g_sim.cc`)**: Both top-level simulators duplicate logic for `DataBuffer` trace formatting (`log_commits`). Ensure this logic is properly extracted to reusable utilities like `TraceFormatter` to maintain DRY principles and ease maintenance across architectural variants.
 - **Thread Lifecycle Teardown Integrity**: When spawning detached background threads (like `AsyncFormattingDaemon`), they must be explicitly joined or stopped (e.g., `rvvi_daemon->Stop()`) before the `main` thread exits to prevent violent `std::terminate()` exceptions upon process shutdown.
 
+- **Orphaned Build Configuration**: Automated formatting tools (like buildifier) frequently alter Bazel BUILD file formatting alongside C++ modifications. Always ensure these configuration updates are explicitly staged and committed to prevent orphaned files drifting in the git stash.
