@@ -1190,8 +1190,8 @@ cc_test(
     ],
     data = [
         "testfiles/hello_world_64.elf",
-        "//riscv:rva23s64_sim",
         "//riscv:rv64g_sim",
+        "//riscv:rva23s64_sim",
     ],
     deps = [
         "@bazel_tools//tools/cpp/runfiles",
