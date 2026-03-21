@@ -1324,6 +1324,7 @@ cc_binary(
     copts = ["-O3"],
     deps = [
         ":debug_command_shell",
+        ":trace_formatter",
         ":riscv32_htif_semihost",
         ":riscv32g_bitmanip_decoder",
         ":riscv32g_decoder",
@@ -1361,6 +1362,7 @@ cc_binary(
     copts = ["-O3"],
     deps = [
         ":debug_command_shell",
+        ":trace_formatter",
         ":riscv32_htif_semihost",
         ":riscv32g_vec_decoder",
         ":riscv32gzb_vec_decoder",
@@ -1397,6 +1399,7 @@ cc_binary(
     copts = ["-O3"],
     deps = [
         ":debug_command_shell",
+        ":trace_formatter",
         ":riscv64g_decoder",
         ":riscv_arm_semihost",
         ":riscv_fp_state",
@@ -1431,6 +1434,7 @@ cc_binary(
     copts = ["-O3"],
     deps = [
         ":debug_command_shell",
+        ":trace_formatter",
         ":riscv64g_vec_decoder",
         ":riscv64gzb_vec_decoder",
         ":riscv_arm_semihost",
@@ -1568,6 +1572,7 @@ cc_library(
     ],
     deps = [
         ":debug_command_shell",
+        ":trace_formatter",
         ":riscv_top",
         ":stoull_wrapper",
         "@com_google_absl//absl/functional:any_invocable",
@@ -1595,6 +1600,7 @@ cc_library(
     ],
     deps = [
         ":debug_command_shell",
+        ":trace_formatter",
         ":instrumentation",
         ":riscv32g_decoder",
         ":riscv64g_decoder",
@@ -1779,6 +1785,7 @@ cc_binary(
     copts = ["-O3"],
     deps = [
         ":debug_command_shell",
+        ":trace_formatter",
         ":riscv_arm_semihost",
         ":riscv_fp_state",
         ":riscv_state",
@@ -1948,6 +1955,7 @@ cc_binary(
     copts = ["-O3"],
     deps = [
         ":debug_command_shell",
+        ":trace_formatter",
         ":riscv_arm_semihost",
         ":riscv_fp_state",
         ":riscv_state",
@@ -1996,5 +2004,17 @@ cc_library(
         "@com_google_absl//absl/log:check",
         "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
+
+cc_library(
+    name = "trace_formatter",
+    srcs = ["trace_formatter.cc"],
+    hdrs = ["trace_formatter.h"],
+    deps = [
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_mpact-sim//mpact/sim/generic:type_helpers",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
     ],
 )

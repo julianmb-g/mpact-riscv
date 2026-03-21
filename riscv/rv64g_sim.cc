@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 
+#include "riscv/trace_formatter.h"
 #include "absl/base/log_severity.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -314,13 +315,7 @@ int main(int argc, char** argv) {
           auto iter = register_map->find(name);
           if (iter != register_map->end()) {
             auto* db = iter->second->data_buffer();
-            if (db->size<uint8_t>() == sizeof(uint64_t)) {
-              absl::StrAppend(&trace_str, " ", absl::StrFormat("%-3s", name), " 0x",
-                absl::Hex(db->Get<uint64_t>(0), absl::PadSpec::kZeroPad16));
-            } else if (db->size<uint8_t>() == sizeof(uint32_t)) {
-              absl::StrAppend(&trace_str, " ", absl::StrFormat("%-3s", name), " 0x",
-                absl::Hex(db->Get<uint32_t>(0), absl::PadSpec::kZeroPad8));
-            }
+            mpact::sim::riscv::TraceFormatter::AppendDataBufferValue(&trace_str, name, db);
           }
         }
         std::cerr << trace_str << std::endl;
