@@ -258,13 +258,14 @@ int main(int argc, char** argv) {
   std::string file_basename = file_name.substr(0, file_name.find_first_of('.'));
 
   auto* memory = new mpact::sim::util::FlatDemandMemory();
+  mpact::sim::util::MemoryInterface* memory_interface = memory;
   mpact::sim::util::MemoryWatcher* memory_watcher = nullptr;
   mpact::sim::util::AtomicMemory* atomic_memory = nullptr;
   if (absl::GetFlag(FLAGS_exit_on_tohost)) {
     memory_watcher = new mpact::sim::util::MemoryWatcher(memory_interface);
     atomic_memory = new mpact::sim::util::AtomicMemory(memory_watcher);
   } else {
-    atomic_memory = new mpact::sim::util::AtomicMemory(memory);
+    atomic_memory = new mpact::sim::util::AtomicMemory(memory_interface);
   }
   // Load the elf segments into memory.
   mpact::sim::util::ElfProgramLoader elf_loader(memory);
@@ -275,8 +276,6 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-
-  mpact::sim::util::MemoryInterface* memory_interface = memory;
   if (memory_watcher != nullptr) {
     memory_interface = memory_watcher;
   }
@@ -611,6 +610,7 @@ int main(int argc, char** argv) {
   }
 
   // Cleanup.
+  if (rvvi_daemon != nullptr) rvvi_daemon->Stop();
   auto status = riscv_top.ClearAllSwBreakpoints();
   if (!status.ok()) {
     LOG(ERROR) << "Error in ClearAllSwBreakpoints: " << status.message();
