@@ -2,6 +2,7 @@
 
 ## Lessons Learned
 
+
 ### Architecture Quirks
 - **Blind Unconditional Memory Leak**: RVVI memory mappers must be conditionally instantiated and guarded by `std::unique_ptr` to avoid permanent leakage during simulation termination.
 

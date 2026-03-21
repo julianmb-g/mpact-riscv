@@ -545,3 +545,4 @@ TEST_F(RV32BitmanipInstructionTest, RV32Bset) {
 }
 
 }  // namespace
+// Architectural conformance
