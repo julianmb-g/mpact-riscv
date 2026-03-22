@@ -22,7 +22,9 @@ struct TracePacket {
   uint64_t pc;
   uint32_t instruction;
   bool valid;
+  uint8_t padding[3];
 };
+static_assert(sizeof(TracePacket) == 16, "ABI Violation: TracePacket must be exactly 16 bytes for SPSC Ring Buffer alignment");
 
 template <typename T, size_t Capacity>
 class SpscRingBuffer {
