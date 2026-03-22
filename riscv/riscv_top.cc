@@ -255,6 +255,23 @@ absl::Status RiscVTop::StepPastBreakpoint() {
       ->WriteOriginalInstruction(pc);
   // Execute the real instruction.
   auto real_inst = rv_decode_cache_->GetDecodedInstruction(pc);
+  if (real_inst == nullptr) {
+    state_->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
+                 *ExceptionCode::kIllegalInstruction, pc, nullptr);
+    counter_num_cycles_.Increment(1);
+    state_->AdvanceDelayLines();
+    (void)rv_action_point_manager_->ap_memory_interface()
+        ->WriteBreakpointInstruction(bpt_pc);
+    uint64_t next_pc = pc + 4;
+    if (state_->branch()) {
+      state_->set_branch(false);
+      auto new_pc = state_->pc_operand()->AsUint64(0);
+      AddToBranchTrace(pc, bpt_pc);
+      next_pc = new_pc;
+    }
+    SetPc(next_pc);
+    return absl::OkStatus();
+  }
   real_inst->IncRef();
   uint64_t next_pc = pc + real_inst->size();
   bool executed = false;
@@ -329,6 +346,25 @@ absl::StatusOr<int> RiscVTop::Step(int num) {
   while (!paused_ && (count < num)) {
     SetPc(pc);
     auto* inst = rv_decode_cache_->GetDecodedInstruction(pc);
+    if (inst == nullptr) {
+      state_->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
+                   *ExceptionCode::kIllegalInstruction, pc, nullptr);
+      counter_num_cycles_.Increment(1);
+      state_->AdvanceDelayLines();
+
+      uint64_t pc_val = pc_operand->AsUint64(0);
+      if (state_->branch()) {
+        state_->set_branch(false);
+        AddToBranchTrace(pc, pc_val);
+        next_pc = pc_val;
+      } else {
+        next_pc = pc + 4;
+      }
+      pc = next_pc;
+      paused_ |= halted_;
+      count++;
+      continue;
+    }
     // Set the next_pc to the next sequential instruction.
     next_pc = pc + inst->size();
     bool executed = false;
@@ -432,6 +468,24 @@ absl::Status RiscVTop::Run() {
     while (!paused_) {
       auto* inst = rv_decode_cache_->GetDecodedInstruction(pc);
       SetPc(pc);
+      if (inst == nullptr) {
+        state_->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
+                     *ExceptionCode::kIllegalInstruction, pc, nullptr);
+        counter_num_cycles_.Increment(1);
+        state_->AdvanceDelayLines();
+
+        uint64_t pc_val = pc_operand->AsUint64(0);
+        if (state_->branch()) {
+          state_->set_branch(false);
+          AddToBranchTrace(pc, pc_val);
+          next_pc = pc_val;
+        } else {
+          next_pc = pc + 4;
+        }
+        pc = next_pc;
+        paused_ |= halted_;
+        continue;
+      }
       next_pc = pc + inst->size();
       bool executed = false;
       if (icache_) ICacheFetch(pc);
@@ -819,7 +873,9 @@ absl::StatusOr<Instruction*> RiscVTop::GetInstruction(uint64_t address) {
   }
   // Get the decoded instruction.
   Instruction* inst = rv_decode_cache_->GetDecodedInstruction(address);
-  inst->IncRef();
+  if (inst != nullptr) {
+    inst->IncRef();
+  }
   // Swap back if required.
   if (inst_swap) {
     (void)rv_action_point_manager_->ap_memory_interface()
@@ -838,7 +894,7 @@ absl::StatusOr<std::string> RiscVTop::GetDisassembly(uint64_t address) {
   if (!res.ok()) return res.status();
   Instruction* inst = res.value();
   auto disasm = inst != nullptr ? inst->AsString() : "Invalid instruction";
-  inst->DecRef();
+  if (inst != nullptr) inst->DecRef();
   return disasm;
 }
 
