@@ -8,6 +8,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <sched.h>
+#include <chrono>
 #include "mpact/sim/util/memory/memory_interface.h"
 #include "mpact/sim/generic/data_buffer.h"
 #include <vector>
@@ -30,10 +31,15 @@ class SpscRingBuffer {
 
   void Push(const T& item) {
     size_t next_head = (head_.load(std::memory_order_relaxed) + 1) % Capacity;
+    auto start_time = std::chrono::steady_clock::now();
+    const auto timeout_duration = std::chrono::seconds(10);
     // Explicit backpressure handling (blocking yield) with abort safety
     while (next_head == tail_.load(std::memory_order_acquire)) {
       if (abort_.load(std::memory_order_acquire)) {
         throw std::runtime_error("SPSC Ring Buffer aborted due to consumer failure");
+      }
+      if (std::chrono::steady_clock::now() - start_time > timeout_duration) {
+        throw std::runtime_error("RVVI Trace SPSC Buffer Deadlock");
       }
       sched_yield();
     }
