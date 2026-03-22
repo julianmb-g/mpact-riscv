@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <mutex>
 #include <condition_variable>
+#include <sched.h>
 #include "mpact/sim/util/memory/memory_interface.h"
 #include "mpact/sim/generic/data_buffer.h"
 #include <vector>
@@ -34,7 +35,7 @@ class SpscRingBuffer {
       if (abort_.load(std::memory_order_acquire)) {
         throw std::runtime_error("SPSC Ring Buffer aborted due to consumer failure");
       }
-      std::this_thread::yield();
+      sched_yield();
     }
     buffer_[head_.load(std::memory_order_relaxed)] = item;
     head_.store(next_head, std::memory_order_release);
