@@ -25,9 +25,6 @@
 
 namespace {
 
-#ifndef EXPECT_OK
-#define EXPECT_OK(x) EXPECT_TRUE(x.ok())
-#endif
 
 using ::mpact::sim::generic::ActionPointManagerBase;
 using ::mpact::sim::generic::BreakpointManager;
@@ -97,7 +94,7 @@ TEST_F(RiscVBreakpointTest, Breakpoint16) {
   EXPECT_FALSE(bp_manager_->ClearBreakpoint(kBreak16Address).ok());
 
   // Set the breakpoint.
-  EXPECT_OK(bp_manager_->SetBreakpoint(kBreak16Address));
+  ASSERT_TRUE((bp_manager_->SetBreakpoint(kBreak16Address)).ok());
   EXPECT_TRUE(bp_manager_->HasBreakpoint(kBreak16Address));
   EXPECT_TRUE(bp_manager_->IsBreakpoint(kBreak16Address));
   memory_->Load(kBreak16Address, db2_, nullptr, nullptr);
@@ -107,17 +104,17 @@ TEST_F(RiscVBreakpointTest, Breakpoint16) {
   latch_size_ = -1;
 
   // Disable the breakpoint.
-  EXPECT_OK(bp_manager_->DisableBreakpoint(kBreak16Address));
+  ASSERT_TRUE((bp_manager_->DisableBreakpoint(kBreak16Address)).ok());
   EXPECT_TRUE(bp_manager_->HasBreakpoint(kBreak16Address));
   EXPECT_FALSE(bp_manager_->IsBreakpoint(kBreak16Address));
 
   // Enable the breakpoint.
-  EXPECT_OK(bp_manager_->EnableBreakpoint(kBreak16Address));
+  ASSERT_TRUE((bp_manager_->EnableBreakpoint(kBreak16Address)).ok());
   EXPECT_TRUE(bp_manager_->HasBreakpoint(kBreak16Address));
   EXPECT_TRUE(bp_manager_->IsBreakpoint(kBreak16Address));
 
   // Clear the breakpoint.
-  EXPECT_OK(bp_manager_->ClearBreakpoint(kBreak16Address));
+  ASSERT_TRUE((bp_manager_->ClearBreakpoint(kBreak16Address)).ok());
   EXPECT_FALSE(bp_manager_->HasBreakpoint(kBreak16Address));
   memory_->Load(kBreak16Address, db2_, nullptr, nullptr);
   EXPECT_EQ(db2_->Get<uint16_t>(0), kAdd16Instruction);
@@ -137,7 +134,7 @@ TEST_F(RiscVBreakpointTest, Breakpoint32) {
   EXPECT_EQ(latch_size_, -1);
 
   // Set the breakpoint.
-  EXPECT_OK(bp_manager_->SetBreakpoint(kBreak32Address));
+  ASSERT_TRUE((bp_manager_->SetBreakpoint(kBreak32Address)).ok());
   EXPECT_TRUE(bp_manager_->HasBreakpoint(kBreak32Address));
   EXPECT_TRUE(bp_manager_->IsBreakpoint(kBreak32Address));
   memory_->Load(kBreak32Address, db4_, nullptr, nullptr);
@@ -147,14 +144,14 @@ TEST_F(RiscVBreakpointTest, Breakpoint32) {
   latch_size_ = -1;
 
   // Disable the breakpoint.
-  EXPECT_OK(bp_manager_->DisableBreakpoint(kBreak32Address));
+  ASSERT_TRUE((bp_manager_->DisableBreakpoint(kBreak32Address)).ok());
   EXPECT_TRUE(bp_manager_->HasBreakpoint(kBreak32Address));
   EXPECT_FALSE(bp_manager_->IsBreakpoint(kBreak32Address));
   latch_address_ = 0;
   latch_size_ = -1;
 
   // Enable the breakpoint.
-  EXPECT_OK(bp_manager_->EnableBreakpoint(kBreak32Address));
+  ASSERT_TRUE((bp_manager_->EnableBreakpoint(kBreak32Address)).ok());
   EXPECT_TRUE(bp_manager_->HasBreakpoint(kBreak32Address));
   EXPECT_TRUE(bp_manager_->IsBreakpoint(kBreak32Address));
   memory_->Load(kBreak32Address, db4_, nullptr, nullptr);
@@ -162,7 +159,7 @@ TEST_F(RiscVBreakpointTest, Breakpoint32) {
   latch_size_ = -1;
 
   // Clear the breakpoint.
-  EXPECT_OK(bp_manager_->ClearBreakpoint(kBreak32Address));
+  ASSERT_TRUE((bp_manager_->ClearBreakpoint(kBreak32Address)).ok());
   EXPECT_FALSE(bp_manager_->HasBreakpoint(kBreak32Address));
   memory_->Load(kBreak32Address, db4_, nullptr, nullptr);
   EXPECT_EQ(db4_->Get<uint32_t>(0), kAdd32Instruction);

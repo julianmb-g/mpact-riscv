@@ -43,9 +43,6 @@ namespace {
 
 using ::mpact::sim::generic::operator*;  // NOLINT: is used below (clang error).
 
-#ifndef EXPECT_OK
-#define EXPECT_OK(x) EXPECT_TRUE(x.ok())
-#endif
 
 using ::mpact::sim::generic::DecoderInterface;
 using ::mpact::sim::generic::Instruction;
@@ -222,11 +219,11 @@ TEST_F(RiscVTopTest, RunProgramHtif) {
   LoadFile(kHtifFileName);
   HtifSemihostSetup htif_semihost(riscv_top_, loader_, memory_);
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->WriteRegister("pc", entry_point_));
+  ASSERT_TRUE((riscv_top_->WriteRegister("pc", entry_point_)).ok());
   // Initialize stack pointer.
-  EXPECT_OK(riscv_top_->WriteRegister("sp", 0x200000));
-  EXPECT_OK(riscv_top_->Run());
-  EXPECT_OK(riscv_top_->Wait());
+  ASSERT_TRUE((riscv_top_->WriteRegister("sp", 0x200000)).ok());
+  ASSERT_TRUE((riscv_top_->Run()).ok());
+  ASSERT_TRUE((riscv_top_->Wait()).ok());
   auto halt_result = riscv_top_->GetLastHaltReason();
   CHECK_OK(halt_result);
   EXPECT_EQ(static_cast<int>(halt_result.value()),
@@ -240,11 +237,11 @@ TEST_F(RiscVTopTest, RunProgramArm) {
   LoadFile(kArmFileName);
   ArmSemihostSetup arm_semihost(riscv_top_, memory_);
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->WriteRegister("pc", entry_point_));
+  ASSERT_TRUE((riscv_top_->WriteRegister("pc", entry_point_)).ok());
   // Initialize stack pointer.
-  EXPECT_OK(riscv_top_->WriteRegister("sp", 0x200000));
-  EXPECT_OK(riscv_top_->Run());
-  EXPECT_OK(riscv_top_->Wait());
+  ASSERT_TRUE((riscv_top_->WriteRegister("sp", 0x200000)).ok());
+  ASSERT_TRUE((riscv_top_->Run()).ok());
+  ASSERT_TRUE((riscv_top_->Wait()).ok());
   auto halt_result = riscv_top_->GetLastHaltReason();
   CHECK_OK(halt_result);
   EXPECT_EQ(static_cast<int>(halt_result.value()),
@@ -258,12 +255,12 @@ TEST_F(RiscVTopTest, StepProgramHtif) {
   LoadFile(kHtifFileName);
   HtifSemihostSetup htif_semihost(riscv_top_, loader_, memory_);
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->WriteRegister("pc", entry_point_));
+  ASSERT_TRUE((riscv_top_->WriteRegister("pc", entry_point_)).ok());
   // Initialize stack pointer.
-  EXPECT_OK(riscv_top_->WriteRegister("sp", 0x200000));
+  ASSERT_TRUE((riscv_top_->WriteRegister("sp", 0x200000)).ok());
 
   auto res = riscv_top_->Step(10000);
-  EXPECT_OK(res.status());
+  ASSERT_TRUE((res.status()).ok());
   auto halt_result = riscv_top_->GetLastHaltReason();
   CHECK_OK(halt_result);
   EXPECT_EQ(static_cast<int>(halt_result.value()),
@@ -278,12 +275,12 @@ TEST_F(RiscVTopTest, StepProgramArm) {
   LoadFile(kArmFileName);
   ArmSemihostSetup arm_semihost(riscv_top_, memory_);
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->WriteRegister("pc", entry_point_));
+  ASSERT_TRUE((riscv_top_->WriteRegister("pc", entry_point_)).ok());
   // Initialize stack pointer.
-  EXPECT_OK(riscv_top_->WriteRegister("sp", 0x200000));
+  ASSERT_TRUE((riscv_top_->WriteRegister("sp", 0x200000)).ok());
 
   auto res = riscv_top_->Step(10000);
-  EXPECT_OK(res.status());
+  ASSERT_TRUE((res.status()).ok());
   auto halt_result = riscv_top_->GetLastHaltReason();
   CHECK_OK(halt_result);
   EXPECT_EQ(static_cast<int>(halt_result.value()),
@@ -296,18 +293,18 @@ TEST_F(RiscVTopTest, StepProgramArm) {
 TEST_F(RiscVTopTest, SetAndClearBreakpoint) {
   LoadFile(kHtifFileName);
   auto result = loader_->GetSymbol("printf");
-  EXPECT_OK(result);
+  ASSERT_TRUE((result).ok());
   auto address = result.value().first;
   EXPECT_EQ(riscv_top_->ClearSwBreakpoint(address).code(),
             absl::StatusCode::kNotFound);
-  EXPECT_OK(riscv_top_->SetSwBreakpoint(address));
+  ASSERT_TRUE((riscv_top_->SetSwBreakpoint(address)).ok());
   EXPECT_EQ(riscv_top_->SetSwBreakpoint(address).code(),
             absl::StatusCode::kAlreadyExists);
-  EXPECT_OK(riscv_top_->ClearSwBreakpoint(address));
+  ASSERT_TRUE((riscv_top_->ClearSwBreakpoint(address)).ok());
   EXPECT_EQ(riscv_top_->ClearSwBreakpoint(address).code(),
             absl::StatusCode::kNotFound);
-  EXPECT_OK(riscv_top_->SetSwBreakpoint(address));
-  EXPECT_OK(riscv_top_->ClearAllSwBreakpoints());
+  ASSERT_TRUE((riscv_top_->SetSwBreakpoint(address)).ok());
+  ASSERT_TRUE((riscv_top_->ClearAllSwBreakpoints()).ok());
   EXPECT_EQ(riscv_top_->ClearSwBreakpoint(address).code(),
             absl::StatusCode::kNotFound);
 }
@@ -318,17 +315,17 @@ TEST_F(RiscVTopTest, RunWithBreakpointHtif) {
   HtifSemihostSetup htif_semihost(riscv_top_, loader_, memory_);
   // Set breakpoint at printf.
   auto result = loader_->GetSymbol("printf");
-  EXPECT_OK(result);
+  ASSERT_TRUE((result).ok());
   auto address = result.value().first;
-  EXPECT_OK(riscv_top_->SetSwBreakpoint(address));
-  EXPECT_OK(riscv_top_->WriteRegister("pc", entry_point_));
+  ASSERT_TRUE((riscv_top_->SetSwBreakpoint(address)).ok());
+  ASSERT_TRUE((riscv_top_->WriteRegister("pc", entry_point_)).ok());
   // Initialize stack pointer.
-  EXPECT_OK(riscv_top_->WriteRegister("sp", 0x200000));
+  ASSERT_TRUE((riscv_top_->WriteRegister("sp", 0x200000)).ok());
 
   // Run to printf. Capture stdout
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->Run());
-  EXPECT_OK(riscv_top_->Wait());
+  ASSERT_TRUE((riscv_top_->Run()).ok());
+  ASSERT_TRUE((riscv_top_->Wait()).ok());
   // Should be stopped at breakpoint, but nothing printed.
   auto halt_result = riscv_top_->GetLastHaltReason();
   CHECK_OK(halt_result);
@@ -338,8 +335,8 @@ TEST_F(RiscVTopTest, RunWithBreakpointHtif) {
 
   // Run to printf. Capture stdout.
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->Run());
-  EXPECT_OK(riscv_top_->Wait());
+  ASSERT_TRUE((riscv_top_->Run()).ok());
+  ASSERT_TRUE((riscv_top_->Wait()).ok());
   // Should be stopped at breakpoint. Captured 'Arch: RV32\n'.
   halt_result = riscv_top_->GetLastHaltReason();
   CHECK_OK(halt_result);
@@ -349,8 +346,8 @@ TEST_F(RiscVTopTest, RunWithBreakpointHtif) {
 
   // Run to the end of the program, and capture stdout.
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->Run());
-  EXPECT_OK(riscv_top_->Wait());
+  ASSERT_TRUE((riscv_top_->Run()).ok());
+  ASSERT_TRUE((riscv_top_->Wait()).ok());
   // Should be stopped due to semihost halt request. Captured 'Hello World!
   // 5\n'.
   halt_result = riscv_top_->GetLastHaltReason();
@@ -366,17 +363,17 @@ TEST_F(RiscVTopTest, RunWithBreakpointArm) {
   ArmSemihostSetup arm_semihost(riscv_top_, memory_);
   // Set breakpoint at printf.
   auto result = loader_->GetSymbol("printf");
-  EXPECT_OK(result);
+  ASSERT_TRUE((result).ok());
   auto address = result.value().first;
-  EXPECT_OK(riscv_top_->SetSwBreakpoint(address));
-  EXPECT_OK(riscv_top_->WriteRegister("pc", entry_point_));
+  ASSERT_TRUE((riscv_top_->SetSwBreakpoint(address)).ok());
+  ASSERT_TRUE((riscv_top_->WriteRegister("pc", entry_point_)).ok());
   // Initialize stack pointer.
-  EXPECT_OK(riscv_top_->WriteRegister("sp", 0x200000));
+  ASSERT_TRUE((riscv_top_->WriteRegister("sp", 0x200000)).ok());
 
   // Run to printf. Capture stdout.
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->Run());
-  EXPECT_OK(riscv_top_->Wait());
+  ASSERT_TRUE((riscv_top_->Run()).ok());
+  ASSERT_TRUE((riscv_top_->Wait()).ok());
 
   // Should be stopped at breakpoint, but nothing printed.
   auto halt_result = riscv_top_->GetLastHaltReason();
@@ -387,8 +384,8 @@ TEST_F(RiscVTopTest, RunWithBreakpointArm) {
 
   // Run to the end of the program. Capture stdout.
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->Run());
-  EXPECT_OK(riscv_top_->Wait());
+  ASSERT_TRUE((riscv_top_->Run()).ok());
+  ASSERT_TRUE((riscv_top_->Wait()).ok());
 
   // Should be stopped due to semihost halt request. Captured 'Hello World!
   // 5\n'.
@@ -405,30 +402,30 @@ TEST_F(RiscVTopTest, Memory) {
   uint16_t half_data = 0xabcd;
   uint32_t word_data = 0xba5eba11;
   uint64_t dword_data = 0x5ca1ab1e'0ddball;
-  EXPECT_OK(riscv_top_->WriteMemory(0x1000, &byte_data, sizeof(byte_data)));
-  EXPECT_OK(riscv_top_->WriteMemory(0x1004, &half_data, sizeof(half_data)));
-  EXPECT_OK(riscv_top_->WriteMemory(0x1008, &word_data, sizeof(word_data)));
-  EXPECT_OK(riscv_top_->WriteMemory(0x1010, &dword_data, sizeof(dword_data)));
+  ASSERT_TRUE((riscv_top_->WriteMemory(0x1000, &byte_data, sizeof(byte_data))).ok());
+  ASSERT_TRUE((riscv_top_->WriteMemory(0x1004, &half_data, sizeof(half_data))).ok());
+  ASSERT_TRUE((riscv_top_->WriteMemory(0x1008, &word_data, sizeof(word_data))).ok());
+  ASSERT_TRUE((riscv_top_->WriteMemory(0x1010, &dword_data, sizeof(dword_data))).ok());
 
   uint8_t byte_value;
   uint16_t half_value;
   uint32_t word_value;
   uint64_t dword_value;
 
-  EXPECT_OK(riscv_top_->ReadMemory(0x1000, &byte_value, sizeof(byte_value)));
-  EXPECT_OK(riscv_top_->ReadMemory(0x1004, &half_value, sizeof(half_value)));
-  EXPECT_OK(riscv_top_->ReadMemory(0x1008, &word_value, sizeof(word_value)));
-  EXPECT_OK(riscv_top_->ReadMemory(0x1010, &dword_value, sizeof(dword_value)));
+  ASSERT_TRUE((riscv_top_->ReadMemory(0x1000, &byte_value, sizeof(byte_value))).ok());
+  ASSERT_TRUE((riscv_top_->ReadMemory(0x1004, &half_value, sizeof(half_value))).ok());
+  ASSERT_TRUE((riscv_top_->ReadMemory(0x1008, &word_value, sizeof(word_value))).ok());
+  ASSERT_TRUE((riscv_top_->ReadMemory(0x1010, &dword_value, sizeof(dword_value))).ok());
 
   EXPECT_EQ(byte_data, byte_value);
   EXPECT_EQ(half_data, half_value);
   EXPECT_EQ(word_data, word_value);
   EXPECT_EQ(dword_data, dword_value);
 
-  EXPECT_OK(riscv_top_->ReadMemory(0x1000, &byte_value, sizeof(byte_value)));
-  EXPECT_OK(riscv_top_->ReadMemory(0x1000, &half_value, sizeof(half_value)));
-  EXPECT_OK(riscv_top_->ReadMemory(0x1000, &word_value, sizeof(word_value)));
-  EXPECT_OK(riscv_top_->ReadMemory(0x1000, &dword_value, sizeof(dword_value)));
+  ASSERT_TRUE((riscv_top_->ReadMemory(0x1000, &byte_value, sizeof(byte_value))).ok());
+  ASSERT_TRUE((riscv_top_->ReadMemory(0x1000, &half_value, sizeof(half_value))).ok());
+  ASSERT_TRUE((riscv_top_->ReadMemory(0x1000, &word_value, sizeof(word_value))).ok());
+  ASSERT_TRUE((riscv_top_->ReadMemory(0x1000, &dword_value, sizeof(dword_value))).ok());
 
   EXPECT_EQ(byte_data, byte_value);
   EXPECT_EQ(byte_data, half_value);
@@ -443,18 +440,18 @@ TEST_F(RiscVTopTest, RegisterNames) {
   for (int i = 0; i < 32; i++) {
     std::string name = absl::StrCat("x", i);
     auto result = riscv_top_->ReadRegister(name);
-    EXPECT_OK(result.status());
+    ASSERT_TRUE((result.status()).ok());
     word_value = result.value();
-    EXPECT_OK(riscv_top_->WriteRegister(name, word_value));
+    ASSERT_TRUE((riscv_top_->WriteRegister(name, word_value)).ok());
   }
   // Test d-names and numbers.
   uint64_t dword_value;
   for (int i = 0; i < 32; i++) {
     std::string name = absl::StrCat("f", i);
     auto result = riscv_top_->ReadRegister(name);
-    EXPECT_OK(result.status());
+    ASSERT_TRUE((result.status()).ok());
     dword_value = result.value();
-    EXPECT_OK(riscv_top_->WriteRegister(name, dword_value));
+    ASSERT_TRUE((riscv_top_->WriteRegister(name, dword_value)).ok());
   }
   // Not found.
   EXPECT_EQ(riscv_top_->ReadRegister("x32").status().code(),
@@ -466,10 +463,10 @@ TEST_F(RiscVTopTest, RegisterNames) {
                               {"x4", "tp"},
                               {"x8", "s0"}}) {
     uint32_t write_value = 0xba5eba11;
-    EXPECT_OK(riscv_top_->WriteRegister(name, write_value));
+    ASSERT_TRUE((riscv_top_->WriteRegister(name, write_value)).ok());
     uint32_t read_value;
     auto result = riscv_top_->ReadRegister(alias);
-    EXPECT_OK(result.status());
+    ASSERT_TRUE((result.status()).ok());
     read_value = result.value();
     EXPECT_EQ(read_value, write_value);
   }
@@ -487,12 +484,12 @@ TEST_F(RiscVTopTest, ReadWriteOutOfBoundMemory) {
   // read operation is successful within the physical memory size range.
   auto result =
       riscv_top_->ReadMemory(kBinaryAddress, mem_bytes, sizeof(mem_bytes));
-  EXPECT_OK(result);
+  ASSERT_TRUE((result).ok());
   EXPECT_EQ(result.value(), kTestMemerySize);
   // Read at the maximum physical address, so only one byte can be read.
   result =
       riscv_top_->ReadMemory(kMaxPhysicalAddress, mem_bytes, sizeof(mem_bytes));
-  EXPECT_OK(result);
+  ASSERT_TRUE((result).ok());
   EXPECT_EQ(result.value(), 1);
   // Read the memory with the staring address out of the physical memory range.
   // The read operation returns error.
@@ -504,12 +501,12 @@ TEST_F(RiscVTopTest, ReadWriteOutOfBoundMemory) {
   // write operation is successful within the physical memory size range.
   result =
       riscv_top_->WriteMemory(kBinaryAddress, mem_bytes, sizeof(mem_bytes));
-  EXPECT_OK(result);
+  ASSERT_TRUE((result).ok());
   EXPECT_EQ(result.value(), kTestMemerySize);
   // Write at the maximum physical address, so only one byte can be written.
   result = riscv_top_->WriteMemory(kMaxPhysicalAddress, mem_bytes,
                                    sizeof(mem_bytes));
-  EXPECT_OK(result);
+  ASSERT_TRUE((result).ok());
   EXPECT_EQ(result.value(), 1);
 
   // Write the memory with the staring address out of the physical memory range.
@@ -555,17 +552,17 @@ TEST_F(RiscVTopTest, RiscV64) {
   ArmSemihostSetup arm_semihost(riscv_top_, memory_);
   // Set breakpoint at printf.
   auto result = loader_->GetSymbol("printf");
-  EXPECT_OK(result);
+  ASSERT_TRUE((result).ok());
   auto address = result.value().first;
-  EXPECT_OK(riscv_top_->SetSwBreakpoint(address));
-  EXPECT_OK(riscv_top_->WriteRegister("pc", entry_point_));
+  ASSERT_TRUE((riscv_top_->SetSwBreakpoint(address)).ok());
+  ASSERT_TRUE((riscv_top_->WriteRegister("pc", entry_point_)).ok());
   // Initialize stack pointer.
-  EXPECT_OK(riscv_top_->WriteRegister("sp", 0x200000));
+  ASSERT_TRUE((riscv_top_->WriteRegister("sp", 0x200000)).ok());
 
   // Run to printf.
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->Run());
-  EXPECT_OK(riscv_top_->Wait());
+  ASSERT_TRUE((riscv_top_->Run()).ok());
+  ASSERT_TRUE((riscv_top_->Wait()).ok());
 
   // Should be stopped at breakpoint, but nothing printed.
   auto halt_result = riscv_top_->GetLastHaltReason();
@@ -576,8 +573,8 @@ TEST_F(RiscVTopTest, RiscV64) {
 
   // Run to the end of the program.
   testing::internal::CaptureStdout();
-  EXPECT_OK(riscv_top_->Run());
-  EXPECT_OK(riscv_top_->Wait());
+  ASSERT_TRUE((riscv_top_->Run()).ok());
+  ASSERT_TRUE((riscv_top_->Wait()).ok());
 
   // Should be stopped due to semihost halt request. Captured 'Hello World!
   // 5\n'.
@@ -630,10 +627,10 @@ TEST_F(RiscVTopTest, RiscV64) {
 // Test that executing an illegal instruction does not increment minstret.
 TEST_F(RiscVTopTest, IllegalInstructionTrap) {
   uint32_t illegal_instruction = 0;
-  EXPECT_OK(
-      riscv_top_->WriteMemory(0x1000, &illegal_instruction, sizeof(uint32_t)));
-  EXPECT_OK(riscv_top_->WriteRegister("pc", 0x1000));
-  EXPECT_OK(riscv_top_->WriteRegister("minstret", 1));
+  EXPECT_TRUE(
+      riscv_top_->WriteMemory(0x1000, &illegal_instruction, sizeof(uint32_t)).ok());
+  ASSERT_TRUE((riscv_top_->WriteRegister("pc", 0x1000)).ok());
+  ASSERT_TRUE((riscv_top_->WriteRegister("minstret", 1)).ok());
 
   bool trap_called = false;
   state_->set_on_trap([&trap_called](bool is_interrupt, uint64_t trap_value,
@@ -648,15 +645,15 @@ TEST_F(RiscVTopTest, IllegalInstructionTrap) {
   });
 
   auto minstret_before = riscv_top_->ReadRegister("minstret");
-  EXPECT_OK(minstret_before.status());
+  ASSERT_TRUE((minstret_before.status()).ok());
   EXPECT_EQ(minstret_before.value(), 0);
 
   auto res = riscv_top_->Step(1);
-  EXPECT_OK(res.status());
+  ASSERT_TRUE((res.status()).ok());
 
   EXPECT_TRUE(trap_called);
   auto minstret_after = riscv_top_->ReadRegister("minstret");
-  EXPECT_OK(minstret_after.status());
+  ASSERT_TRUE((minstret_after.status()).ok());
   EXPECT_EQ(minstret_after.value(), 0);
 }
 

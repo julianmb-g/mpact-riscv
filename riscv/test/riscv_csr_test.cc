@@ -24,9 +24,6 @@
 
 namespace {
 
-#ifndef EXPECT_OK
-#define EXPECT_OK(x) EXPECT_TRUE(x.ok())
-#endif
 
 using ::mpact::sim::riscv::RiscV32SimpleCsr;
 using ::mpact::sim::riscv::RiscVCsrEnum;
@@ -109,13 +106,13 @@ TEST_F(RiscV32CsrTest, CsrSet) {
                                    kReadMask, kWriteMask, state_);
   // Add it to the set, then try to add it again. The second attempt should
   // fail.
-  EXPECT_OK(state_->csr_set()->AddCsr(csr));
+  ASSERT_TRUE((state_->csr_set()->AddCsr(csr)).ok());
   EXPECT_EQ(state_->csr_set()->AddCsr(csr).code(),
             absl::StatusCode::kAlreadyExists);
   // Read the csr and validate the value.
   auto result =
       state_->csr_set()->GetCsr(static_cast<int>(RiscVCsrEnum::kUScratch));
-  EXPECT_OK(result.status());
+  ASSERT_TRUE((result.status()).ok());
   auto* stored_csr = result.value();
   EXPECT_EQ(stored_csr, csr);
   EXPECT_EQ(stored_csr->AsUint32(), (kA5 & kReadMask));
