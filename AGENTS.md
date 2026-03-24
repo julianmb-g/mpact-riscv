@@ -3,6 +3,7 @@
 ## Lessons Learned
 
 ### Architecture Quirks
+- **absl::StatusOr Unwrapping**: Never unwrap `absl::StatusOr<T>` using the `*` pointer operator (e.g., `*res`). Always explicitly call `.value()` after checking `.ok()` to comply with strict memory safety boundaries.
 - **RVVI Struct ABI Alignment**: The `rvvi_trace_event_t` POD struct must be locked to exactly 64-bytes. Do not hallucinate a 128-byte cache-line alignment which causes fatal cross-compilation misalignments.
 
 ### Build Dependencies
