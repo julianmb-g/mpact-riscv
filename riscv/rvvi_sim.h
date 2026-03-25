@@ -59,6 +59,10 @@ class SpscRingBuffer {
     return true;
   }
 
+  bool Empty() const {
+    return head_.load(std::memory_order_acquire) == tail_.load(std::memory_order_acquire);
+  }
+
   // Called only by the producer (simulator thread)
   void Clear() {
     // SPSC safe clear: Producer abandons all pushed items by rolling head back to tail
@@ -140,6 +144,8 @@ class RvviMemoryMapper : public util::MemoryInterface {
 
 };
 
+
+extern SpscRingBuffer<TracePacket, 1024> g_trace_buffer;
 
 class AsyncFormattingDaemon {
  public:
