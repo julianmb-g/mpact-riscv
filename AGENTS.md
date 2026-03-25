@@ -11,3 +11,4 @@
 
 ### absl::StatusOr Pointer Unwrapping Ban Remediation
 - **Safe Unwrapping**: When resolving `absl::StatusOr` unwrap violations in `mpact-riscv` (e.g., `GetCsr` calls in `riscv_top.cc` or `riscv_priv_instructions.cc`), ensure all pointer unwraps (`*res`, `*result`) are replaced with explicit `.value()` calls (e.g., `res.value()`). This enforces strict memory safety boundaries and complies with the architectural pointer unwrapping ban.
+
