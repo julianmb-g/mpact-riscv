@@ -596,7 +596,7 @@ absl::StatusOr<uint64_t> RiscVTop::ReadRegister(const std::string& name) {
       return absl::NotFoundError(
           absl::StrCat("Register '", name, "' not found"));
     }
-    auto* csr = *result;
+    auto* csr = result.value();
     auto xlen = state_->xlen();
     switch (xlen) {
       case RiscVXlen::RV32:
@@ -646,7 +646,7 @@ absl::Status RiscVTop::WriteRegister(const std::string& name, uint64_t value) {
       return absl::NotFoundError(
           absl::StrCat("Register '", name, "' not found"));
     }
-    auto* csr = *result;
+    auto* csr = result.value();
     auto xlen = state_->xlen();
     switch (xlen) {
       case RiscVXlen::RV32:

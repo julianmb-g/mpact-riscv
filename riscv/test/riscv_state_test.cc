@@ -111,7 +111,7 @@ TEST(RiscVStateTest, PerfCounterCsrNameAndIndexMatch_hpm) {
         state->csr_set()->GetCsr(hpmcounter_base + i);
     ASSERT_TRUE(csr_by_name.ok());
     ASSERT_TRUE(csr_by_index.ok());
-    EXPECT_EQ(*csr_by_name, *csr_by_index);
+    EXPECT_EQ(csr_by_name.value(), csr_by_index.value());
   }
 }
 
@@ -127,7 +127,7 @@ TEST(RiscVStateTest, PerfCounterCsrNameAndIndexMatch_hpm_high) {
         state->csr_set()->GetCsr(hpmcounter_base_high + i);
     ASSERT_TRUE(csr_by_name.ok());
     ASSERT_TRUE(csr_by_index.ok());
-    EXPECT_EQ(*csr_by_name, *csr_by_index);
+    EXPECT_EQ(csr_by_name.value(), csr_by_index.value());
   }
 }
 
@@ -143,7 +143,7 @@ TEST(RiscVStateTest, PerfCounterCsrNameAndIndexMatch_mhpm) {
         state->csr_set()->GetCsr(mhpmcounter_base + i);
     ASSERT_TRUE(csr_by_name.ok());
     ASSERT_TRUE(csr_by_index.ok());
-    EXPECT_EQ(*csr_by_name, *csr_by_index);
+    EXPECT_EQ(csr_by_name.value(), csr_by_index.value());
   }
 }
 
@@ -160,7 +160,7 @@ TEST(RiscVStateTest, PerfCounterCsrNameAndIndexMatch_mhpm_high) {
         state->csr_set()->GetCsr(mhpmcounter_base_high + i);
     ASSERT_TRUE(csr_by_name.ok());
     ASSERT_TRUE(csr_by_index.ok());
-    EXPECT_EQ(*csr_by_name, *csr_by_index);
+    EXPECT_EQ(csr_by_name.value(), csr_by_index.value());
   }
 }
 

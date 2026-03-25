@@ -60,7 +60,7 @@ void RiscVPrivSRet(const Instruction* inst) {
                                " sret: cannot access sepc");
     return;
   }
-  auto* sepc = *res;
+  auto* sepc = res.value();
   // Get db for PC.
   auto* db = inst->Destination(0)->AllocateDataBuffer();
   // Write the contents of mepc to the pc.
@@ -73,7 +73,7 @@ void RiscVPrivSRet(const Instruction* inst) {
                                " sret: cannot access mstatus");
     return;
   }
-  auto* mstatus = static_cast<RiscVMStatus*>(*res);
+  auto* mstatus = static_cast<RiscVMStatus*>(res.value());
   // Get misa too.
   res = state->csr_set()->GetCsr(*RiscVCsrEnum::kMIsa);
   if (!res.ok()) {
@@ -110,7 +110,7 @@ void RiscVPrivMRet(const Instruction* inst) {
                                " mret: cannot access mepc");
     return;
   }
-  auto* mepc = *res;
+  auto* mepc = res.value();
   // Get db for PC.
   auto* db = inst->Destination(0)->AllocateDataBuffer();
   // Write the contents of mepc to the pc.
@@ -123,7 +123,7 @@ void RiscVPrivMRet(const Instruction* inst) {
                                " mret: cannot access mstatus");
     return;
   }
-  auto* mstatus = static_cast<RiscVMStatus*>(*res);
+  auto* mstatus = static_cast<RiscVMStatus*>(res.value());
   // Get misa too.
   res = state->csr_set()->GetCsr(*RiscVCsrEnum::kMIsa);
   if (!res.ok()) {
@@ -131,7 +131,7 @@ void RiscVPrivMRet(const Instruction* inst) {
                                " mret: cannot access isa");
     return;
   }
-  auto* misa = static_cast<RiscVMIsa*>(*res);
+  auto* misa = static_cast<RiscVMIsa*>(res.value());
   // Set mstatus:mpp to new privilege mode as per RiscV Privileged Architectures
   // Arch V20190608-Priv-MSU-Ratified page 21:
   // When executing an xRet instruction, supposing xPP holds the value y, xIE
@@ -185,7 +185,7 @@ void RiscVPrivSRet(const Instruction* inst) {
                                " sret: cannot access sepc");
     return;
   }
-  auto* sepc = *res;
+  auto* sepc = res.value();
   // Get db for PC.
   auto* db = inst->Destination(0)->AllocateDataBuffer();
   // Write the contents of mepc to the pc.
@@ -198,7 +198,7 @@ void RiscVPrivSRet(const Instruction* inst) {
                                " sret: cannot access mstatus");
     return;
   }
-  auto* mstatus = static_cast<RiscVMStatus*>(*res);
+  auto* mstatus = static_cast<RiscVMStatus*>(res.value());
   // Get misa too.
   res = state->csr_set()->GetCsr(*RiscVCsrEnum::kMIsa);
   if (!res.ok()) {
@@ -223,7 +223,7 @@ void RiscVPrivSRet(const Instruction* inst) {
                                " mret: cannot access isa");
     return;
   }
-  auto* misa = static_cast<RiscVMIsa*>(*res);
+  auto* misa = static_cast<RiscVMIsa*>(res.value());
   if (misa->HasUserMode()) {
     mstatus->set_spp(*PrivilegeMode::kUser);
   } else {
@@ -247,7 +247,7 @@ void RiscVPrivMRet(const Instruction* inst) {
                                " mret: cannot access mepc");
     return;
   }
-  auto* mepc = *res;
+  auto* mepc = res.value();
   // Get db for PC.
   auto* db = inst->Destination(0)->AllocateDataBuffer();
   // Write the contents of mepc to the pc.
@@ -260,7 +260,7 @@ void RiscVPrivMRet(const Instruction* inst) {
                                " mret: cannot access mstatus");
     return;
   }
-  auto* mstatus = static_cast<RiscVMStatus*>(*res);
+  auto* mstatus = static_cast<RiscVMStatus*>(res.value());
   // Get misa too.
   res = state->csr_set()->GetCsr(*RiscVCsrEnum::kMIsa);
   if (!res.ok()) {
@@ -268,7 +268,7 @@ void RiscVPrivMRet(const Instruction* inst) {
                                " mret: cannot access isa");
     return;
   }
-  auto* misa = static_cast<RiscVMIsa*>(*res);
+  auto* misa = static_cast<RiscVMIsa*>(res.value());
   // Set mstatus:mpp to new privilege mode as per RiscV Privileged Architectures
   // Arch V20190608-Priv-MSU-Ratified page 21:
   // When executing an xRet instruction, supposing xPP holds the value y, xIE
