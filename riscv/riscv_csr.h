@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -279,6 +280,19 @@ enum class RiscVCsrEnum {
 
   // Simulator specific CSRs. These are numbered 0x1800-0x18ff.
   kSimMode = 0x1800,
+};
+
+struct CsrDirtyList {
+  absl::flat_hash_set<uint32_t> modified_csr_addresses;
+
+  void Push(uint32_t csr_address) {
+    modified_csr_addresses.insert(csr_address);
+  }
+
+  void ApplyVolatileMaskAndClear() {
+    // RVVI tracking logic to be integrated when dynamic plugin is ready.
+    modified_csr_addresses.clear();
+  }
 };
 
 // Base class for CSRs contains the name and index. The index is made wide in
