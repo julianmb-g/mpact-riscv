@@ -8,6 +8,7 @@
 #include <thread>
 #include <stdexcept>
 #include <mutex>
+#include "absl/synchronization/mutex.h"
 #include <condition_variable>
 #include <sched.h>
 #include <chrono>
@@ -135,7 +136,7 @@ class RvviMemoryMapper : public util::MemoryInterface {
 
   void DoRmwStore(uint64_t address, generic::DataBuffer* db);
 
-
+  absl::Mutex rmw_mutex_;
 
   util::MemoryInterface* memory_;
 

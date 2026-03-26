@@ -135,10 +135,26 @@ void RvviMemoryMapper::DoRmwStore(uint64_t address, DataBuffer* db) {
   size_t size = db->size<uint8_t>();
   uint8_t* write_data = static_cast<uint8_t*>(db->raw_ptr());
   
+  // Evaluate the entire range to prevent partial memory corruption
+  uint64_t check_addr = address;
+  size_t check_rem = size;
+  while (check_rem > 0) {
+    uint64_t aligned_addr = check_addr & ~0x7ull;
+    size_t in_block_offset = check_addr & 0x7ull;
+    size_t to_write = std::min(check_rem, (size_t)(8 - in_block_offset));
+    if (IsMmio(aligned_addr)) {
+      throw std::runtime_error("Read-Modify-Write cycle on MMIO base address");
+    }
+    check_addr += to_write;
+    check_rem -= to_write;
+  }
+
   uint64_t current_addr = address;
   size_t remaining = size;
   size_t offset = 0;
   
+  absl::MutexLock lock(&rmw_mutex_);
+
   while (remaining > 0) {
     uint64_t aligned_addr = current_addr & ~0x7ull;
     size_t in_block_offset = current_addr & 0x7ull;

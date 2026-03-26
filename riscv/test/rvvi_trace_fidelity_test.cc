@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 #include "riscv/rvvi_sim.h"
+#include "mpact/sim/util/memory/flat_demand_memory.h"
+#include "mpact/sim/generic/data_buffer.h"
 #include <chrono>
 #include <thread>
 
@@ -31,5 +33,24 @@ TEST(RvviTraceFidelityTest, test_spsc_ring_buffer_backpressure_yield) {
   // Validate that backpressure correctly yields and throws timeout/deadlock.
   EXPECT_GE(duration, 4900);
 }
+
+TEST(RvviTraceFidelityTest, test_rmw_trap_on_mmio) {
+  auto memory = new mpact::sim::util::FlatDemandMemory();
+  mpact::sim::riscv::rvvi::RvviMemoryMapper mapper(memory);
+  mapper.AddMmioRange(0x02000000, 0x02010000);
+  
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  auto db = db_factory.Allocate<uint32_t>(1);
+  db->Set<uint32_t>(0, 0xDEADBEEF);
+  
+  // Write 4 bytes at 0x01FFFFFF, which crosses into the 0x02000000 MMIO region.
+  // The first block will write to 0x01FFFFF8. The second block will write to 0x02000000.
+  EXPECT_THROW({
+    mapper.Store(0x01FFFFFF, db);
+  }, std::runtime_error);
+
+  db->DecRef();
+  delete memory;
 }
-// RVVI ABI deadlock tests implemented
+}
+
