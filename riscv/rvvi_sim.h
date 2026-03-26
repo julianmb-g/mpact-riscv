@@ -181,7 +181,7 @@ extern "C" {
 }  // namespace sim
 }  // namespace mpact
 
-#endif  // MPACT_RISCV_RISCV_RVVI_SIM_H_
+// MPACT_RISCV_RISCV_RVVI_SIM_H_
 extern "C" void PushTracePacket(uint64_t pc, uint32_t inst, bool valid);
 
 #ifdef __cplusplus
@@ -222,4 +222,6 @@ typedef struct __attribute__((aligned(64))) {
 #ifdef __cplusplus
 }
 #endif
+
+#endif  // MPACT_RISCV_RISCV_RVVI_SIM_H_
 
