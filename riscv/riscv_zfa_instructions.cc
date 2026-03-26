@@ -240,8 +240,22 @@ void RiscVFleqH(const Instruction* instruction) { RiscVIllegalInstruction(instru
 void RiscVFltqH(const Instruction* instruction) { RiscVIllegalInstruction(instruction); }
 
 // RV32-specific Zfa instructions.
-void RiscVFmvhXD(const Instruction* instruction) { RiscVIllegalInstruction(instruction); }
-void RiscVFmvpDX(const Instruction* instruction) { RiscVIllegalInstruction(instruction); }
+void RiscVFmvhXD(const Instruction* instruction) {
+  auto* dest = instruction->Destination(0);
+  uint64_t frs1 = generic::GetInstructionSource<uint64_t>(instruction, 0);
+  auto* db = dest->AllocateDataBuffer();
+  db->Set<uint32_t>(0, static_cast<uint32_t>(frs1 >> 32));
+  db->Submit();
+}
+void RiscVFmvpDX(const Instruction* instruction) {
+  auto* dest = instruction->Destination(0);
+  uint32_t rs1 = generic::GetInstructionSource<uint32_t>(instruction, 0);
+  uint32_t rs2 = generic::GetInstructionSource<uint32_t>(instruction, 1);
+  uint64_t val = (static_cast<uint64_t>(rs2) << 32) | static_cast<uint64_t>(rs1);
+  auto* db = dest->AllocateDataBuffer();
+  db->Set<uint64_t>(0, val);
+  db->Submit();
+}
 
 }  // namespace riscv
 }  // namespace sim

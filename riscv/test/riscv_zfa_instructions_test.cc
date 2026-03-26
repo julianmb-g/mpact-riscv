@@ -159,6 +159,50 @@ TEST_F(RiscVZfaInstructionsTest, TestZfaFminmFmaxmSemantics) {
   instruction2_->DecRef();
 }
 
+
+
+TEST_F(RiscVZfaInstructionsTest, TestFmvhXD) {
+  auto inst2 = new generic::Instruction(0, state_);
+  inst2->set_size(4);
+  
+  uint64_t frs1_val = 0xAABBCCDD11223344ULL;
+  auto src_op = new generic::ImmediateOperand<uint64_t>(frs1_val, "frs1");
+  inst2->AppendSource(src_op);
+  
+  auto rd_reg = state_->GetRegister<RV32Register>("x1").first;
+  auto rd_op = new generic::RegisterDestinationOperand<RV32Register::ValueType>(rd_reg, 0);
+  inst2->AppendDestination(rd_op);
+
+  RiscVFmvhXD(inst2);
+
+  auto val = rd_reg->data_buffer()->Get<uint32_t>(0);
+  EXPECT_EQ(val, 0xAABBCCDD);
+  inst2->DecRef();
+}
+
+TEST_F(RiscVZfaInstructionsTest, TestFmvpDX) {
+  auto inst2 = new generic::Instruction(0, state_);
+  inst2->set_size(4);
+  
+  uint32_t rs1_val = 0x11223344;
+  uint32_t rs2_val = 0xAABBCCDD;
+  
+  auto src_op1 = new generic::ImmediateOperand<uint32_t>(rs1_val, "rs1");
+  auto src_op2 = new generic::ImmediateOperand<uint32_t>(rs2_val, "rs2");
+  inst2->AppendSource(src_op1);
+  inst2->AppendSource(src_op2);
+  
+  auto dest_op = new generic::RegisterDestinationOperand<RVFpRegister::ValueType>(dest_reg_, 0);
+  inst2->AppendDestination(dest_op);
+  
+  RiscVFmvpDX(inst2);
+
+  auto val = dest_reg_->data_buffer()->Get<uint64_t>(0);
+  EXPECT_EQ(val, 0xAABBCCDD11223344ULL);
+  inst2->DecRef();
+}
+
+
 }  // namespace test
 }  // namespace riscv
 }  // namespace sim
