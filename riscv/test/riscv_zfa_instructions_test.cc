@@ -8,6 +8,9 @@
 #include "riscv/riscv_fp_info.h"
 #include "riscv/riscv_register.h"
 #include "riscv/riscv_state.h"
+#include "riscv/riscv_fp_state.h"
+
+using ::mpact::sim::generic::operator*;
 
 namespace mpact {
 namespace sim {
@@ -20,6 +23,8 @@ class RiscVZfaInstructionsTest : public ::testing::Test {
  protected:
   RiscVZfaInstructionsTest() {
     state_ = new RiscVState("test_state", RiscVXlen::RV64, nullptr, nullptr);
+    rv_fp_ = new mpact::sim::riscv::RiscVFPState(state_->csr_set(), state_);
+    state_->set_rv_fp(rv_fp_);
     instruction_ = new generic::Instruction(0, state_);
     instruction_->set_size(4);
     
@@ -38,10 +43,12 @@ class RiscVZfaInstructionsTest : public ::testing::Test {
 
   ~RiscVZfaInstructionsTest() override {
     instruction_->DecRef();
+    delete rv_fp_;
     delete state_;
   }
 
   RiscVState* state_;
+  mpact::sim::riscv::RiscVFPState* rv_fp_;
   generic::Instruction* instruction_;
   RVFpRegister* dest_reg_;
   RV32Register* flag_reg_;
@@ -202,6 +209,239 @@ TEST_F(RiscVZfaInstructionsTest, TestFmvpDX) {
   inst2->DecRef();
 }
 
+
+TEST_F(RiscVZfaInstructionsTest, TestFroundS) {
+  auto inst2 = new generic::Instruction(0, state_);
+  inst2->set_size(4);
+  
+  float frs1_val = 2.5f;
+  uint32_t val;
+  std::memcpy(&val, &frs1_val, sizeof(float));
+  uint64_t nan_boxed = 0xffffffff00000000ULL | val;
+  
+  auto src_op = new generic::ImmediateOperand<uint64_t>(nan_boxed, "frs1");
+  inst2->AppendSource(src_op);
+  
+  // RTZ rounding mode = 1
+  auto rm_op = new generic::ImmediateOperand<int>(1, "rm");
+  inst2->AppendSource(rm_op);
+  
+  auto dest_op = new generic::RegisterDestinationOperand<RVFpRegister::ValueType>(dest_reg_, 0);
+  inst2->AppendDestination(dest_op);
+  
+  auto fflags_op = new generic::RegisterDestinationOperand<RV32Register::ValueType>(flag_reg_, 0);
+  inst2->AppendDestination(fflags_op);
+  
+  RiscVFRoundS(inst2);
+
+  auto res_val = dest_reg_->data_buffer()->Get<uint64_t>(0);
+  uint32_t res_u32 = static_cast<uint32_t>(res_val);
+  float res_float;
+  std::memcpy(&res_float, &res_u32, sizeof(float));
+  
+  EXPECT_EQ(res_float, 2.0f);
+  inst2->DecRef();
+}
+
+TEST_F(RiscVZfaInstructionsTest, TestFroundnxS) {
+  auto inst2 = new generic::Instruction(0, state_);
+  inst2->set_size(4);
+  
+  float frs1_val = 2.5f;
+  uint32_t val;
+  std::memcpy(&val, &frs1_val, sizeof(float));
+  uint64_t nan_boxed = 0xffffffff00000000ULL | val;
+  
+  auto src_op = new generic::ImmediateOperand<uint64_t>(nan_boxed, "frs1");
+  inst2->AppendSource(src_op);
+  
+  // RUP rounding mode = 3
+  auto rm_op = new generic::ImmediateOperand<int>(3, "rm");
+  inst2->AppendSource(rm_op);
+  
+  auto dest_op = new generic::RegisterDestinationOperand<RVFpRegister::ValueType>(dest_reg_, 0);
+  inst2->AppendDestination(dest_op);
+  
+  auto fflags_op = new generic::RegisterDestinationOperand<RV32Register::ValueType>(flag_reg_, 0);
+  inst2->AppendDestination(fflags_op);
+  
+  RiscVFRoundnxS(inst2);
+
+  auto res_val = dest_reg_->data_buffer()->Get<uint64_t>(0);
+  uint32_t res_u32 = static_cast<uint32_t>(res_val);
+  float res_float;
+  std::memcpy(&res_float, &res_u32, sizeof(float));
+  
+  EXPECT_EQ(res_float, 3.0f);
+  inst2->DecRef();
+}
+
+TEST_F(RiscVZfaInstructionsTest, TestFcvtmodWD) {
+  auto inst2 = new generic::Instruction(0, state_);
+  inst2->set_size(4);
+  
+  double frs1_val = -2147483649.0;
+  uint64_t val;
+  std::memcpy(&val, &frs1_val, sizeof(double));
+  
+  auto src_op = new generic::ImmediateOperand<uint64_t>(val, "frs1");
+  inst2->AppendSource(src_op);
+  
+  // RTZ rounding mode = 1
+  auto rm_op = new generic::ImmediateOperand<int>(1, "rm");
+  inst2->AppendSource(rm_op);
+  
+  auto rd_reg = state_->GetRegister<RV64Register>("x1").first;
+  auto rd_op = new generic::RegisterDestinationOperand<RV64Register::ValueType>(rd_reg, 0);
+  inst2->AppendDestination(rd_op);
+  
+  auto fflags_op = new generic::RegisterDestinationOperand<RV32Register::ValueType>(flag_reg_, 0);
+  inst2->AppendDestination(fflags_op);
+
+  RiscVFCvtmodWD(inst2);
+
+  auto res_val = rd_reg->data_buffer()->Get<uint64_t>(0);
+  // -2147483649.0 -> lower 32 bits is 0x7FFFFFFF = 2147483647
+  EXPECT_EQ(res_val, 2147483647ULL);
+  
+  // Also InvalidOp should be set
+  auto flags = flag_reg_->data_buffer()->Get<uint32_t>(0);
+  EXPECT_EQ(flags & *FPExceptions::kInvalidOp, *FPExceptions::kInvalidOp);
+  
+  inst2->DecRef();
+}
+
+TEST_F(RiscVZfaInstructionsTest, TestFroundS_RMM) {
+  auto inst2 = new generic::Instruction(0, state_);
+  inst2->set_size(4);
+  
+  float frs1_val = 2.5f;
+  uint32_t val;
+  std::memcpy(&val, &frs1_val, sizeof(float));
+  uint64_t nan_boxed = 0xffffffff00000000ULL | val;
+  
+  auto src_op = new generic::ImmediateOperand<uint64_t>(nan_boxed, "frs1");
+  inst2->AppendSource(src_op);
+  
+  // RMM rounding mode = 4
+  auto rm_op = new generic::ImmediateOperand<int>(4, "rm");
+  inst2->AppendSource(rm_op);
+  
+  auto dest_op = new generic::RegisterDestinationOperand<RVFpRegister::ValueType>(dest_reg_, 0);
+  inst2->AppendDestination(dest_op);
+  
+  auto fflags_op = new generic::RegisterDestinationOperand<RV32Register::ValueType>(flag_reg_, 0);
+  inst2->AppendDestination(fflags_op);
+  
+  RiscVFRoundS(inst2);
+
+  auto res_val = dest_reg_->data_buffer()->Get<uint64_t>(0);
+  uint32_t res_u32 = static_cast<uint32_t>(res_val);
+  float res_float;
+  std::memcpy(&res_float, &res_u32, sizeof(float));
+  
+  EXPECT_EQ(res_float, 3.0f);
+  inst2->DecRef();
+}
+
+TEST_F(RiscVZfaInstructionsTest, TestFroundS_RMM_Negative) {
+  auto inst2 = new generic::Instruction(0, state_);
+  inst2->set_size(4);
+  
+  float frs1_val = -2.5f;
+  uint32_t val;
+  std::memcpy(&val, &frs1_val, sizeof(float));
+  uint64_t nan_boxed = 0xffffffff00000000ULL | val;
+  
+  auto src_op = new generic::ImmediateOperand<uint64_t>(nan_boxed, "frs1");
+  inst2->AppendSource(src_op);
+  
+  // RMM rounding mode = 4
+  auto rm_op = new generic::ImmediateOperand<int>(4, "rm");
+  inst2->AppendSource(rm_op);
+  
+  auto dest_op = new generic::RegisterDestinationOperand<RVFpRegister::ValueType>(dest_reg_, 0);
+  inst2->AppendDestination(dest_op);
+  
+  auto fflags_op = new generic::RegisterDestinationOperand<RV32Register::ValueType>(flag_reg_, 0);
+  inst2->AppendDestination(fflags_op);
+  
+  RiscVFRoundS(inst2);
+
+  auto res_val = dest_reg_->data_buffer()->Get<uint64_t>(0);
+  uint32_t res_u32 = static_cast<uint32_t>(res_val);
+  float res_float;
+  std::memcpy(&res_float, &res_u32, sizeof(float));
+  
+  EXPECT_EQ(res_float, -3.0f);
+  inst2->DecRef();
+}
+
+TEST_F(RiscVZfaInstructionsTest, TestFcvtmodWD_NaN) {
+  auto inst2 = new generic::Instruction(0, state_);
+  inst2->set_size(4);
+  
+  double frs1_val = std::numeric_limits<double>::quiet_NaN();
+  uint64_t val;
+  std::memcpy(&val, &frs1_val, sizeof(double));
+  
+  auto src_op = new generic::ImmediateOperand<uint64_t>(val, "frs1");
+  inst2->AppendSource(src_op);
+  
+  // RTZ rounding mode = 1
+  auto rm_op = new generic::ImmediateOperand<int>(1, "rm");
+  inst2->AppendSource(rm_op);
+  
+  auto rd_reg = state_->GetRegister<RV64Register>("x1").first;
+  auto rd_op = new generic::RegisterDestinationOperand<RV64Register::ValueType>(rd_reg, 0);
+  inst2->AppendDestination(rd_op);
+  
+  auto fflags_op = new generic::RegisterDestinationOperand<RV32Register::ValueType>(flag_reg_, 0);
+  inst2->AppendDestination(fflags_op);
+
+  RiscVFCvtmodWD(inst2);
+
+  auto res_val = rd_reg->data_buffer()->Get<uint64_t>(0);
+  EXPECT_EQ(res_val, 0ULL);
+  
+  auto flags = flag_reg_->data_buffer()->Get<uint32_t>(0);
+  EXPECT_EQ(flags & *FPExceptions::kInvalidOp, *FPExceptions::kInvalidOp);
+  
+  inst2->DecRef();
+}
+
+TEST_F(RiscVZfaInstructionsTest, TestFcvtmodWD_Inf) {
+  auto inst2 = new generic::Instruction(0, state_);
+  inst2->set_size(4);
+  
+  double frs1_val = std::numeric_limits<double>::infinity();
+  uint64_t val;
+  std::memcpy(&val, &frs1_val, sizeof(double));
+  
+  auto src_op = new generic::ImmediateOperand<uint64_t>(val, "frs1");
+  inst2->AppendSource(src_op);
+  
+  // RTZ rounding mode = 1
+  auto rm_op = new generic::ImmediateOperand<int>(1, "rm");
+  inst2->AppendSource(rm_op);
+  
+  auto rd_reg = state_->GetRegister<RV64Register>("x1").first;
+  auto rd_op = new generic::RegisterDestinationOperand<RV64Register::ValueType>(rd_reg, 0);
+  inst2->AppendDestination(rd_op);
+  
+  auto fflags_op = new generic::RegisterDestinationOperand<RV32Register::ValueType>(flag_reg_, 0);
+  inst2->AppendDestination(fflags_op);
+
+  RiscVFCvtmodWD(inst2);
+
+  auto res_val = rd_reg->data_buffer()->Get<uint64_t>(0);
+  EXPECT_EQ(res_val, 0ULL);
+  
+  auto flags = flag_reg_->data_buffer()->Get<uint32_t>(0);
+  EXPECT_EQ(flags & *FPExceptions::kInvalidOp, *FPExceptions::kInvalidOp);
+  
+  inst2->DecRef();
+}
 
 }  // namespace test
 }  // namespace riscv

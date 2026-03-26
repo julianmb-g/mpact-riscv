@@ -201,8 +201,58 @@ static inline void RVFltq(const Instruction* instruction) {
 
 template <typename T>
 void RVFRound(const Instruction* instruction, bool set_inexact) {
-  // Explicitly trap fround until rigorous architectural rounding is implemented.
-  RiscVIllegalInstruction(instruction);
+  int rm_value = generic::GetInstructionSource<int>(instruction, 1);
+  if (rm_value == *FPRoundingMode::kDynamic) {
+    auto* rv_fp = static_cast<RiscVState*>(instruction->state())->rv_fp();
+    if (!rv_fp->rounding_mode_valid()) {
+      auto* db = instruction->Destination(1)->AllocateDataBuffer();
+      db->Set<uint32_t>(0, *FPExceptions::kInvalidOp);
+      db->Submit();
+      return;
+    }
+    rm_value = *rv_fp->GetRoundingMode();
+  }
+
+  RiscVUnaryFloatNaNBoxOp<FPRegister::ValueType, FPRegister::ValueType, T, T>(
+      instruction,
+      [instruction, set_inexact, rm_value](T a) -> T {
+        if (FPTypeInfo<T>::IsNaN(a)) {
+          if (FPTypeInfo<T>::IsSNaN(a)) {
+            auto* db = instruction->Destination(1)->AllocateDataBuffer();
+            db->Set<uint32_t>(0, *FPExceptions::kInvalidOp);
+            db->Submit();
+          }
+          T result;
+          std::memcpy(&result, &FPTypeInfo<T>::kCanonicalNaN, sizeof(T));
+          return result;
+        }
+
+        if (std::isinf(a) || a == 0.0) {
+          return a;
+        }
+
+        T res;
+        if (rm_value == *FPRoundingMode::kRoundToNearestTiesToMax) {
+          res = std::round(a);
+          if (set_inexact && res != a) {
+            auto* db = instruction->Destination(1)->AllocateDataBuffer();
+            db->Set<uint32_t>(0, *FPExceptions::kInexact);
+            db->Submit();
+          }
+        } else {
+          if (set_inexact) {
+            res = std::rint(a);
+          } else {
+            res = std::nearbyint(a);
+          }
+        }
+
+        // Ensure sign of zero is preserved
+        if (res == 0.0) {
+          res = std::copysign(static_cast<T>(0.0), a);
+        }
+        return res;
+      });
 }
 
 } // namespace
@@ -226,7 +276,48 @@ void RiscVFleqD(const Instruction* instruction) { RVFleq<RV64Register, double>(i
 void RiscVFltqD(const Instruction* instruction) { RVFltq<RV64Register, double>(instruction); }
 
 void RiscVFCvtmodWD(const Instruction* instruction) {
+  int rm_value = generic::GetInstructionSource<int>(instruction, 1);
+  if (rm_value != *FPRoundingMode::kRoundTowardsZero) {
     RiscVIllegalInstruction(instruction);
+    return;
+  }
+
+  double a = GetNaNBoxedSource<FPRegister::ValueType, double>(instruction, 0);
+
+  int32_t dest_value = 0;
+  bool invalid = false;
+
+  if (std::isnan(a) || std::isinf(a)) {
+    dest_value = 0;
+    invalid = true;
+  } else {
+    double rtz_a = std::trunc(a);
+    if (rtz_a >= -2147483648.0 && rtz_a <= 2147483647.0) {
+      dest_value = static_cast<int32_t>(rtz_a);
+    } else {
+      invalid = true;
+      double mod2_32 = std::fmod(rtz_a, 4294967296.0);
+      if (mod2_32 < 0.0) {
+        mod2_32 += 4294967296.0;
+      }
+      dest_value = static_cast<int32_t>(static_cast<uint32_t>(mod2_32));
+    }
+  }
+
+  auto* dest = instruction->Destination(0);
+  auto* db = dest->AllocateDataBuffer();
+  if (db->template size<uint32_t>() == 1) {
+    db->Set<uint32_t>(0, static_cast<uint32_t>(dest_value));
+  } else {
+    db->Set<uint64_t>(0, static_cast<uint64_t>(static_cast<int64_t>(dest_value)));
+  }
+  db->Submit();
+
+  if (invalid) {
+    auto* db_flags = instruction->Destination(1)->AllocateDataBuffer();
+    db_flags->Set<uint32_t>(0, *FPExceptions::kInvalidOp);
+    db_flags->Submit();
+  }
 }
 
 // Half precision implementations
