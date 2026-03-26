@@ -42,7 +42,7 @@ void AsyncFormattingDaemon::Stop() {
 }
 
 void AsyncFormattingDaemon::DaemonLoop() {
-  int64_t timeout_ms = static_cast<int64_t>(timeout_seconds_) * 1000;
+  (void)timeout_seconds_;
   
   while (running_.load()) {
     TracePacket packet;

@@ -1206,3 +1206,12 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "rvvi_trace_fidelity_test",
+    srcs = ["rvvi_trace_fidelity_test.cc"],
+    deps = [
+        "//riscv:rvvi_sim",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

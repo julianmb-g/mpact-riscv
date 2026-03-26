@@ -1,3 +1,5 @@
+#include "absl/time/time.h"
+#include "absl/time/clock.h"
 #ifndef MPACT_RISCV_RISCV_RVVI_SIM_H_
 #define MPACT_RISCV_RISCV_RVVI_SIM_H_
 
@@ -34,7 +36,8 @@ class SpscRingBuffer {
   void Push(const T& item) {
     size_t next_head = (head_.load(std::memory_order_relaxed) + 1) % Capacity;
     auto start_time = std::chrono::steady_clock::now();
-    const auto timeout_duration = std::chrono::seconds(10);
+    constexpr int kSpscYieldTimeoutMs = 5000;
+    const auto timeout_duration = std::chrono::milliseconds(kSpscYieldTimeoutMs);
     // Explicit backpressure handling (blocking yield) with abort safety
     while (next_head == tail_.load(std::memory_order_acquire)) {
       if (abort_.load(std::memory_order_acquire)) {
@@ -43,7 +46,7 @@ class SpscRingBuffer {
       if (std::chrono::steady_clock::now() - start_time > timeout_duration) {
         throw std::runtime_error("RVVI Trace SPSC Buffer Deadlock");
       }
-      sched_yield();
+      absl::SleepFor(absl::Milliseconds(1));
     }
     buffer_[head_.load(std::memory_order_relaxed)] = item;
     head_.store(next_head, std::memory_order_release);
@@ -180,3 +183,43 @@ extern "C" {
 
 #endif  // MPACT_RISCV_RISCV_RVVI_SIM_H_
 extern "C" void PushTracePacket(uint64_t pc, uint32_t inst, bool valid);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct __attribute__((aligned(64))) {
+    uint64_t timestamp;      // [0-7]
+    uint64_t pc;             // [8-15]
+    uint32_t hartId;         // [16-19]
+    uint32_t order;          // [20-23]
+    uint32_t insn;           // [24-27]
+    uint32_t trap_cause;     // [28-31]
+    uint64_t trap_tval;      // [32-39]
+    uint64_t gpr_wdata;      // [40-47]
+    uint64_t fpr_wdata;      // [48-55]
+    uint64_t mem_paddr;      // [56-63]
+    uint64_t mem_wdata;      // [64-71]
+    uint64_t mem_rdata;      // [72-79]
+    uint8_t  gpr_addr;       // [80]
+    uint8_t  gpr_we;         // [81]
+    uint8_t  fpr_addr;       // [82]
+    uint8_t  fpr_we;         // [83]
+    uint8_t  mem_wmask;      // [84]
+    uint8_t  mem_rmask;      // [85]
+    uint8_t  mem_we;         // [86]
+    uint8_t  mem_re;         // [87]
+    uint8_t  vr_addr;        // [88]
+    uint8_t  vr_we;          // [89]
+    uint16_t vstart;         // [90-91]
+    uint32_t vl;             // [92-95]
+    uint64_t vr_wdata_0;     // [96-103]
+    uint64_t vr_wdata_1;     // [104-111]
+    uint64_t vr_wdata_2;     // [112-119]
+    uint64_t vr_wdata_3;     // [120-127]
+} rvvi_trace_event_t;
+
+#ifdef __cplusplus
+}
+#endif
+

@@ -12,3 +12,6 @@
 ### absl::StatusOr Pointer Unwrapping Ban Remediation
 - **Safe Unwrapping**: When resolving `absl::StatusOr` unwrap violations in `mpact-riscv` (e.g., `GetCsr` calls in `riscv_top.cc` or `riscv_priv_instructions.cc`), ensure all pointer unwraps (`*res`, `*result`) are replaced with explicit `.value()` calls (e.g., `res.value()`). This enforces strict memory safety boundaries and complies with the architectural pointer unwrapping ban.
 
+
+### SPSC Ring Buffer Concurrency
+- **SPSC Ring Buffer Concurrency & Backpressure**: Implement strict lock-free SPSC backpressure boundaries. If the ring buffer fills, the producer must explicitly yield (`absl::SleepFor(absl::Milliseconds(1))`, not `sched_yield()`). Evaluate a monotonic clock against a strict timeout (e.g., `kSpscYieldTimeoutMs = 5000`) and throw `std::runtime_error` if the buffer fails to drain. Validate this organically in test beds via `EXPECT_THROW` rather than masking wall-clock deadlocks.
