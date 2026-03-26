@@ -45,7 +45,7 @@ class SpscRingBuffer {
         throw std::runtime_error("SPSC Ring Buffer aborted due to consumer failure");
       }
       if (std::chrono::steady_clock::now() - start_time > timeout_duration) {
-        throw std::runtime_error("RVVI Trace SPSC Buffer Deadlock");
+        throw std::runtime_error("SPSC Formatting Daemon Deadlock");
       }
       absl::SleepFor(absl::Milliseconds(1));
     }
