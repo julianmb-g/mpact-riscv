@@ -291,14 +291,18 @@ void RiscVFCvtmodWD(const Instruction* instruction) {
     dest_value = 0;
     invalid = true;
   } else {
+    constexpr double kMinInt32 = -2147483648.0;
+    constexpr double kMaxInt32 = 2147483647.0;
+    constexpr double kTwoPow32 = 4294967296.0;
+
     double rtz_a = std::trunc(a);
-    if (rtz_a >= -2147483648.0 && rtz_a <= 2147483647.0) {
+    if (rtz_a >= kMinInt32 && rtz_a <= kMaxInt32) {
       dest_value = static_cast<int32_t>(rtz_a);
     } else {
       invalid = true;
-      double mod2_32 = std::fmod(rtz_a, 4294967296.0);
+      double mod2_32 = std::fmod(rtz_a, kTwoPow32);
       if (mod2_32 < 0.0) {
-        mod2_32 += 4294967296.0;
+        mod2_32 += kTwoPow32;
       }
       dest_value = static_cast<int32_t>(static_cast<uint32_t>(mod2_32));
     }

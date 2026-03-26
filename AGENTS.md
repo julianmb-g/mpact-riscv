@@ -11,3 +11,4 @@
 - **CsrDirtyList Implementation**: Successfully integrated `CsrDirtyList` into `mpact-riscv/riscv/riscv_csr.h` to track modified CSR addresses.
 - **RISC-V RMM Rounding Mode**: When implementing operations that respect the `RMM` (Round to Nearest, ties to Max Magnitude) rounding mode, remember that `ScopedFPStatus` translates it to standard ties-to-even on most hosts. For operations that natively implement rounding (like `fround`), you must manually intercept `kRoundToNearestTiesToMax` and apply `std::round` (which intrinsically rounds halves away from zero) to ensure correct architectural fidelity.
 
+- **Floating-Point Boundaries**: Avoid hardcoding raw float maximums directly in inline code logic. Assign them explicitly to named `constexpr`/`const` constants (e.g., `constexpr double kTwoPow32 = 4294967296.0;`). Avoid using `std::pow` as it is not `constexpr` and introduces hot-path overhead.
