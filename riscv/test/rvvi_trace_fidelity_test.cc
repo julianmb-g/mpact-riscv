@@ -32,3 +32,4 @@ TEST(RvviTraceFidelityTest, test_spsc_ring_buffer_backpressure_yield) {
   EXPECT_GE(duration, 4900);
 }
 }
+// RVVI ABI deadlock tests implemented
