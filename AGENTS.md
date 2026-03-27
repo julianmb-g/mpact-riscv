@@ -18,3 +18,4 @@
 
 ### ABI Struct Redefinition
 - **Struct Definition Duplication Across Submodules**: When multiple repositories define the exact same struct (e.g., `rvvi_trace_event_t`) for ABI plugin compliance, they must wrap the definition in `#ifndef` guards (e.g., `#ifndef RVVI_TRACE_EVENT_T_DEFINED`) to prevent fatal C++ `typedef redefinition` errors during cross-repository compilation and linking.
+- **Hardware Interrupt Testing Authenticity**: When implementing hardware interrupt tests (like CLINT/PLIC logic), tests must not just evaluate `is_interrupt_available` manually. Instead, they must instantiate the full `RiscVTop` CPU execution loop and verify that the interrupt organically traps and updates `epc` to the correct execution offset. Use `NativeTextualAssembler` to dynamically compile authentic RISC-V payloads (like `wfi`) to guarantee true E2E routing and avoid mock boundaries.

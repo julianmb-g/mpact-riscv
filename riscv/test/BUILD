@@ -804,7 +804,30 @@ cc_test(
     ],
     deps = [
         "//riscv:riscv_clint",
+        "//riscv:riscv32g_decoder",
         "//riscv:riscv_state",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/generic:counters",
+        "@com_google_mpact-sim//mpact/sim/generic:instruction",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
+cc_test(
+    name = "riscv_clint_plic_hardware_interrupt_test",
+    size = "small",
+    srcs = [
+        "riscv_clint_plic_hardware_interrupt_test.cc",
+    ],
+    deps = [
+        "//riscv:riscv_clint",
+        "//riscv:riscv32g_decoder",
+        "//riscv:riscv_plic",
+        "//riscv:riscv_state",
+        "//riscv:riscv_top",
+        "//utils/assembler:native_assembler",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status:status",
         "@com_google_googletest//:gtest_main",
         "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_mpact-sim//mpact/sim/generic:counters",
@@ -1140,6 +1163,7 @@ cc_test(
     srcs = ["riscv_sstc_test.cc"],
     deps = [
         "//riscv:riscv_clint",
+        "//riscv:riscv32g_decoder",
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
