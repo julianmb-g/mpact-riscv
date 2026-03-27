@@ -22,3 +22,7 @@
 - **Zfa E2E Execution Trapping**: When validating new instruction extensions like Zfa (`fround.s`, `fcvtmod.w.d`), the execution sequence must be natively decoded by the top-level simulator loop (`RiscVTop::Step()`) using explicitly encoded bytes (e.g., `0x4045c553` for `fround.s`) to organically prove that the instruction traps and routes securely without isolating or mocking the instruction context boundaries.
 
 - **Zve32f E2E Execution Trapping**: When validating new instruction extensions like `Zve32f` (`vfsqrt.v`), the execution sequence must be natively decoded by the top-level simulator loop (`RiscVTop::Step()`) using explicitly encoded bytes (e.g., `0x4e2010d7` for `vfsqrt.v` and `0xcd0272d7` for `vsetivli`) to organically prove that the instruction traps and routes securely without isolating or mocking the instruction context boundaries.
+
+## Local Submodule Lessons
+- **Fatal Git Rule:** Never use `git reset` or `git rebase --abort`. Use `git restore --staged` and `git commit --amend` to remediate failures.
+- **TDD Pattern:** Always adhere to Test-Driven Development (Red, Green, Refactor) for new execution tasks.
