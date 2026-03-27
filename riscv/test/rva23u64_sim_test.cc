@@ -160,6 +160,8 @@ TEST(Rva23u64SimTest, ZfaFroundE2EExecutionBoundary) {
     EXPECT_NE(state->AddRegister<RV64Register>(reg_name), nullptr);
     reg_name = absl::StrCat(RiscVState::kFregPrefix, i);
     EXPECT_NE(state->AddRegister<RVFpRegister>(reg_name), nullptr);
+    reg_name = absl::StrCat(RiscVState::kVregPrefix, i);
+    EXPECT_NE(state->GetRegister<mpact::sim::riscv::RVVectorRegister>(reg_name).first, nullptr);
   }
   
   auto* top = new RiscVTop("test_top", state, decoder);
@@ -212,7 +214,81 @@ TEST(Rva23u64SimTest, ZfaFroundE2EExecutionBoundary) {
   delete memory;
 }
 
-}  // namespace
+TEST(Rva23u64SimTest, Zve32fUnaryExecutionBoundary) {
+  auto* memory = new FlatDemandMemory();
+  auto* atomic_memory = new AtomicMemory(memory);
+  auto* state = new RiscVState("test_rva23u64_zve32f", RiscVXlen::RV64, memory, atomic_memory);
+  auto* fp_state = new RiscVFPState(state->csr_set(), state);
+  state->set_rv_fp(fp_state);
+  auto* vector_state = new RiscVVectorState(state, 64);
+  state->set_rv_vector(vector_state);
+  auto* decoder = new Rva23u64DecoderWrapper(state, memory);
+
+  for (int i = 0; i < 32; i++) {
+    std::string reg_name = absl::StrCat(RiscVState::kXregPrefix, i);
+    EXPECT_NE(state->AddRegister<RV64Register>(reg_name), nullptr);
+    reg_name = absl::StrCat(RiscVState::kFregPrefix, i);
+    EXPECT_NE(state->AddRegister<RVFpRegister>(reg_name), nullptr);
+    
+  }
+  
+  auto* top = new RiscVTop("test_top", state, decoder);
+
+  
+  uint32_t vsetivli_opcode = 0xcd0272d7;
+  
+  uint32_t vfsqrt_opcode = 0x4e2010d7;
+  
+
+  uint64_t pc = 0x1000;
+  EXPECT_TRUE(top->WriteRegister("pc", pc).ok());
+  
+  auto db1 = state->db_factory()->Allocate<uint32_t>(1);
+  db1->Set<uint32_t>(0, vsetivli_opcode);
+  memory->Store(pc, db1);
+  db1->DecRef();
+  
+  auto db2 = state->db_factory()->Allocate<uint32_t>(1);
+  db2->Set<uint32_t>(0, vfsqrt_opcode);
+  memory->Store(pc + 4, db2);
+  db2->DecRef();
+
+  auto mstatus_res = state->csr_set()->GetCsr("mstatus");
+  EXPECT_TRUE(mstatus_res.ok());
+  mstatus_res.value()->Write(static_cast<uint64_t>(0x6600)); 
+
+  auto v2 = state->GetRegister<mpact::sim::riscv::RVVectorRegister>("v2").first;
+  auto v1 = state->GetRegister<mpact::sim::riscv::RVVectorRegister>("v1").first;
+  
+  auto db_v2 = state->db_factory()->Allocate<uint32_t>(4);
+  float vals[4] = {2.0f, -1.0f, 0.0f, 2.25f};
+  db_v2->Set<uint32_t>(0, absl::bit_cast<uint32_t>(vals[0]));
+  db_v2->Set<uint32_t>(1, absl::bit_cast<uint32_t>(vals[1]));
+  db_v2->Set<uint32_t>(2, absl::bit_cast<uint32_t>(vals[2]));
+  db_v2->Set<uint32_t>(3, absl::bit_cast<uint32_t>(vals[3]));
+  v2->SetDataBuffer(db_v2);
+  db_v2->DecRef();
+
+  EXPECT_TRUE(top->Step(1).ok()); 
+  EXPECT_TRUE(top->Step(1).ok()); 
+
+  auto v1_buf = v1->data_buffer();
+  ASSERT_NE(v1_buf, nullptr);
+  EXPECT_FLOAT_EQ(absl::bit_cast<float>(v1_buf->Get<uint32_t>(0)), std::sqrt(2.0f));
+  EXPECT_TRUE(std::isnan(absl::bit_cast<float>(v1_buf->Get<uint32_t>(1))));
+  EXPECT_FLOAT_EQ(absl::bit_cast<float>(v1_buf->Get<uint32_t>(2)), 0.0f);
+  EXPECT_FLOAT_EQ(absl::bit_cast<float>(v1_buf->Get<uint32_t>(3)), 1.5f);
+
+  EXPECT_EQ(top->ReadRegister("pc").value(), pc + 8);
+
+  delete top;
+  delete decoder;
+  delete vector_state;
+  delete fp_state;
+  delete state;
+  delete atomic_memory;
+  delete memory;
+}
 
 TEST(Rva23u64SimTest, ZfaFcvtmodE2EExecutionBoundary) {
   auto* memory = new FlatDemandMemory();
@@ -229,6 +305,8 @@ TEST(Rva23u64SimTest, ZfaFcvtmodE2EExecutionBoundary) {
     EXPECT_NE(state->AddRegister<RV64Register>(reg_name), nullptr);
     reg_name = absl::StrCat(RiscVState::kFregPrefix, i);
     EXPECT_NE(state->AddRegister<RVFpRegister>(reg_name), nullptr);
+    reg_name = absl::StrCat(RiscVState::kVregPrefix, i);
+    EXPECT_NE(state->GetRegister<mpact::sim::riscv::RVVectorRegister>(reg_name).first, nullptr);
   }
   
   auto* top = new RiscVTop("test_top", state, decoder);
@@ -274,3 +352,4 @@ TEST(Rva23u64SimTest, ZfaFcvtmodE2EExecutionBoundary) {
   delete atomic_memory;
   delete memory;
 }
+}  // namespace
