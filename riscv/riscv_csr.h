@@ -48,6 +48,7 @@ enum class RiscVCsrEnum {
   kUStatus = 0x000,
   kUIe = 0x004,
   kUTvec = 0x005,
+  kSsp = 0x011,
   // User vector CSRs.
   kVstart = 0x008,
   kVxsat = 0x009,

@@ -428,6 +428,11 @@ void CreateCsrs(RiscVState* state, std::vector<RiscVCsrInterface*>& csr_vec) {
                CsrInfo<T>::kUstatusRMask, CsrInfo<T>::kUstatusWMask, state),
            nullptr);
 
+  // ssp
+  CHECK_NE(CreateCsr<RiscVSimpleCsr<T>>(
+               state, csr_vec, "ssp", RiscVCsrEnum::kSsp, 0, state),
+           nullptr);
+
   // PMP CSRs
   state->pmp_ = new RiscVPmp(state);
   state->pmp_->CreatePmpCsrs<T, RiscVCsrEnum>(state->csr_set());

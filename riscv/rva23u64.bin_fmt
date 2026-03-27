@@ -27,6 +27,7 @@ decoder Rva23u64 {
     RiscVZawrs,
     RiscVSvinval,
     RiscVZicbo,
+    RiscVZicfiss,
   };
   Rva23u64Inst16 = {
     RiscVCInst16,
@@ -51,6 +52,7 @@ decoder Rva23u64 {
 #include "riscv_zawrs.bin_fmt"
 #include "riscv_svinval.bin_fmt"
 #include "riscv_zicbo.bin_fmt"
+#include "riscv_zicfiss.bin_fmt"
 
 instruction group RiscVZfh64Inst32[32] : Inst32Format {
   flh      : IType : func3 == 0b001,  opcode == 0b000'0111;

@@ -1,0 +1,24 @@
+// Copyright 2024 Google LLC
+
+slot riscv_zicfiss {
+  includes {
+    #include "riscv/riscv_zicfiss_instructions.h"
+  }
+  default size = 4;
+  opcodes {
+    ssrdp{: : rd},
+      resources: {next_pc : rd[..rd]},
+      disasm: "ssrdp", "%rd",
+      semfunc: "&::mpact::sim::riscv::RiscVSsrdp";
+      
+    sspush{: rs2 : },
+      resources: {next_pc},
+      disasm: "sspush", "%rs2",
+      semfunc: "&::mpact::sim::riscv::RiscVSspush";
+
+    lpad{: U_imm20 :},
+      resources: {next_pc},
+      disasm: "lpad", "0x%(U_imm20:08x)",
+      semfunc: "&::mpact::sim::riscv::RiscVLpad";
+  }
+}

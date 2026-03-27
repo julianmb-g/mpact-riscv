@@ -1299,3 +1299,17 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "riscv_zicfiss_instructions_test",
+    srcs = ["riscv_zicfiss_instructions_test.cc"],
+    deps = [
+        "//riscv:riscv_state",
+        "//riscv:rvm23_instructions",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/generic:instruction",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
