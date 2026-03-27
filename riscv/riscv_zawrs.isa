@@ -17,6 +17,7 @@ includes {
 }
 
 slot riscv_zawrs {
+  default size = 4;
   resources ZawrsOp = {next_pc};
   opcodes {
     wrs_nto{},

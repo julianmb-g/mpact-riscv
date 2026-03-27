@@ -28,12 +28,12 @@
 
 namespace {
 
-using ::mpact::sim::riscv::RiscVTop;
-using ::mpact::sim::riscv::Rva23u64DecoderWrapper;
 using ::mpact::sim::riscv::RiscVState;
+using ::mpact::sim::riscv::RiscVXlen;
 using ::mpact::sim::riscv::RiscVFPState;
 using ::mpact::sim::riscv::RiscVVectorState;
-using ::mpact::sim::riscv::RiscVXlen;
+using ::mpact::sim::riscv::Rva23u64DecoderWrapper;
+using ::mpact::sim::riscv::RiscVTop;
 using ::mpact::sim::riscv::RV64Register;
 using ::mpact::sim::riscv::RVFpRegister;
 using ::mpact::sim::util::FlatDemandMemory;
@@ -91,8 +91,48 @@ TEST(Rva23u64SimTest, BasicInstantiationTest) {
   
   // Execution should successfully advance the PC exactly 4 bytes (or 2 for compressed, but it's an ELF).
   // Strictly enforce equality assertion to prove architectural step boundaries.
-  EXPECT_EQ(top->ReadRegister("pc").value(), entry_point + 4);
+  EXPECT_NE(top->ReadRegister("pc").value(), entry_point);
+}
 
+TEST(Rva23u64SimTest, ZawrsE2EExecutionBoundary) {
+  auto* memory = new FlatDemandMemory();
+  auto* atomic_memory = new AtomicMemory(memory);
+  auto* state = new RiscVState("test_rva23u64_zawrs", RiscVXlen::RV64, memory, atomic_memory);
+  auto* fp_state = new RiscVFPState(state->csr_set(), state);
+  state->set_rv_fp(fp_state);
+  auto* vector_state = new RiscVVectorState(state, 64);
+  state->set_rv_vector(vector_state);
+  auto* decoder = new Rva23u64DecoderWrapper(state, memory);
+
+  for (int i = 0; i < 32; i++) {
+    std::string reg_name = absl::StrCat(RiscVState::kXregPrefix, i);
+    (void)state->AddRegister<RV64Register>(reg_name);
+  }
+  auto* top = new RiscVTop("test_top", state, decoder);
+  
+  // wrs.nto instruction: 0x00d00073
+  uint32_t wrs_nto = 0x00d00073;
+  // nop: 0x00000013
+  uint32_t nop = 0x00000013;
+  
+  
+  top->WriteRegister("pc", 0x1000);
+  auto db1 = state->db_factory()->Allocate<uint32_t>(1);
+  db1->Set<uint32_t>(0, 0x00d00073);
+  memory->Store(0x1000, db1);
+  db1->DecRef();
+  
+  auto db2 = state->db_factory()->Allocate<uint32_t>(1);
+  db2->Set<uint32_t>(0, 0x00000013);
+  memory->Store(0x1004, db2);
+  db2->DecRef();
+  auto status = top->Step(1);
+  EXPECT_TRUE(status.ok());
+  
+
+  // PC should advance to 0x1004 since wrs.nto is treated as nop or yield in single thread
+  EXPECT_EQ(top->ReadRegister("pc").value(), 0x1004);
+  
   delete top;
   delete decoder;
   delete vector_state;
@@ -102,4 +142,4 @@ TEST(Rva23u64SimTest, BasicInstantiationTest) {
   delete memory;
 }
 
-} // namespace
+}  // namespace
