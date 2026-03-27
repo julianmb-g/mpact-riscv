@@ -1,0 +1,11 @@
+// Svinval instructions (Supervisor-level fine-grained TLB invalidations)
+
+instruction group RiscVSvinval[32] : Inst32Format {
+  sinval_vma_zz : RType : func7 == 0b0001011, rs2 == 0, rs1 == 0, func3 == 0, rd == 0, opcode == 0b1110011;
+  sinval_vma_zn : RType : func7 == 0b0001011, rs2 != 0, rs1 == 0, func3 == 0, rd == 0, opcode == 0b1110011;
+  sinval_vma_nz : RType : func7 == 0b0001011, rs2 == 0, rs1 != 0, func3 == 0, rd == 0, opcode == 0b1110011;
+  sinval_vma_nn : RType : func7 == 0b0001011, rs2 != 0, rs1 != 0, func3 == 0, rd == 0, opcode == 0b1110011;
+
+  sfence_w_inval : RType : func7 == 0b0001100, rs2 == 0, rs1 == 0, func3 == 0, rd == 0, opcode == 0b1110011;
+  sfence_inval_ir: RType : func7 == 0b0001100, rs2 == 1, rs1 == 0, func3 == 0, rd == 0, opcode == 0b1110011;
+}

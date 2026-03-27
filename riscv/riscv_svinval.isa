@@ -1,0 +1,34 @@
+// The Svinval extension provides fine-grained translation cache invalidation.
+slot riscv_svinval {
+  includes {
+    #include "riscv/riscv_svinval_instructions.h"
+  }
+  default size = 4;
+  opcodes {
+    sinval_vma_zz{: rs1, rs2},
+      resources: {},
+      disasm: "sinval.vma", "%rs1, %rs2",
+      semfunc: "&::mpact::sim::riscv::RiscVSinvalVma";
+    sinval_vma_zn{: rs1, rs2},
+      resources: {rs2},
+      disasm: "sinval.vma", "%rs1, %rs2",
+      semfunc: "&::mpact::sim::riscv::RiscVSinvalVma";
+    sinval_vma_nz{: rs1, rs2},
+      resources: {rs1},
+      disasm: "sinval.vma", "%rs1, %rs2",
+      semfunc: "&::mpact::sim::riscv::RiscVSinvalVma";
+    sinval_vma_nn{: rs1, rs2},
+      resources: {rs1, rs2},
+      disasm: "sinval.vma", "%rs1, %rs2",
+      semfunc: "&::mpact::sim::riscv::RiscVSinvalVma";
+
+    sfence_w_inval{},
+      resources: {},
+      disasm: "sfence.w.inval",
+      semfunc: "&::mpact::sim::riscv::RiscVSfenceWInval";
+    sfence_inval_ir{},
+      resources: {},
+      disasm: "sfence.inval.ir",
+      semfunc: "&::mpact::sim::riscv::RiscVSfenceInvalIr";
+  }
+}

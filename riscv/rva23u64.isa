@@ -30,6 +30,7 @@ isa Rva23u64 {
 #include "riscv_zfh.isa"
 #include "riscv_zfa.isa"
 #include "riscv_zawrs.isa"
+#include "riscv_svinval.isa"
 #include "riscv_zicbo.isa"
 
 slot rva23u64 :
@@ -61,6 +62,7 @@ slot rva23u64 :
   riscv_zfa,
   riscv_zawrs,
   riscv_zicbo64,
+  riscv_svinval,
   riscv64_zfh {
   default opcode =
     disasm: "Illegal instruction at 0x%(@:08x)",

@@ -139,3 +139,70 @@ TEST(Rva23s64SimTest, BasicInstantiationTest) {
 }
 
 } // namespace
+
+
+TEST(Rva23s64SimTest, SvinvalE2EExecutionBoundary) {
+  auto* memory = new FlatDemandMemory();
+  auto* atomic_memory = new AtomicMemory(memory);
+  auto* state = new RiscVState("RVA23S64", RiscVXlen::RV64, memory, atomic_memory);
+  auto* decoder = new Rva23s64DecoderWrapper(state, memory);
+
+  for (int i = 0; i < 32; i++) {
+    std::string reg_name = absl::StrCat(RiscVState::kXregPrefix, i);
+    EXPECT_NE(state->AddRegister<RV64Register>(reg_name), nullptr);
+  }
+  
+  auto* top = new RiscVTop("test_top", state, decoder);
+
+  uint32_t sinval_vma_inst = 0x16000073;    // sinval.vma zero, zero
+  uint32_t sfence_w_inval_inst = 0x18000073; // sfence.w.inval
+  uint32_t sfence_inval_ir_inst = 0x18100073; // sfence.inval.ir
+  uint32_t nop_inst = 0x00000013;           // nop
+
+  uint64_t pc = 0x1000;
+  EXPECT_TRUE(top->WriteRegister("pc", pc).ok());
+  
+  auto store_inst = [&](uint64_t addr, uint32_t inst) {
+    auto db = state->db_factory()->Allocate<uint32_t>(1);
+    db->Set<uint32_t>(0, inst);
+    memory->Store(addr, db);
+    db->DecRef();
+  };
+
+  store_inst(pc, sinval_vma_inst);
+  store_inst(pc + 4, sfence_w_inval_inst);
+  store_inst(pc + 8, sfence_inval_ir_inst);
+  store_inst(pc + 12, nop_inst);
+
+  bool trapped = false;
+  state->set_on_trap([&](bool is_interrupt, uint64_t trap_value, uint64_t exception_code, uint64_t epc, const ::mpact::sim::generic::Instruction* inst) {
+    trapped = true;
+    return true;
+  });
+
+  // Test Machine Mode (should not trap)
+  state->set_privilege_mode(::mpact::sim::riscv::PrivilegeMode::kMachine);
+  EXPECT_TRUE(top->Step(1).ok()); // sinval.vma
+  EXPECT_EQ(top->ReadRegister("pc").value(), pc + 4);
+  EXPECT_FALSE(trapped);
+
+  EXPECT_TRUE(top->Step(1).ok()); // sfence.w.inval
+  EXPECT_EQ(top->ReadRegister("pc").value(), pc + 8);
+  EXPECT_FALSE(trapped);
+
+  EXPECT_TRUE(top->Step(1).ok()); // sfence.inval.ir
+  EXPECT_EQ(top->ReadRegister("pc").value(), pc + 12);
+  EXPECT_FALSE(trapped);
+
+  // Test User Mode (should trap)
+  EXPECT_TRUE(top->WriteRegister("pc", pc).ok());
+  state->set_privilege_mode(::mpact::sim::riscv::PrivilegeMode::kUser);
+  EXPECT_TRUE(top->Step(1).ok()); // sinval.vma will TRAP
+  EXPECT_TRUE(trapped);
+
+  delete top;
+  delete decoder;
+  delete state;
+  delete atomic_memory;
+  delete memory;
+}
