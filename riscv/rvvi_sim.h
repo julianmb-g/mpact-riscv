@@ -189,6 +189,9 @@ extern "C" void PushTracePacket(uint64_t pc, uint32_t inst, bool valid);
 extern "C" {
 #endif
 
+#ifndef RVVI_TRACE_EVENT_T_DEFINED
+#define RVVI_TRACE_EVENT_T_DEFINED
+
 typedef struct __attribute__((aligned(64))) {
     uint64_t timestamp;      // [0-7]
     uint64_t pc;             // [8-15]
@@ -219,6 +222,8 @@ typedef struct __attribute__((aligned(64))) {
     uint64_t vr_wdata_2;     // [112-119]
     uint64_t vr_wdata_3;     // [120-127]
 } rvvi_trace_event_t;
+
+#endif // RVVI_TRACE_EVENT_T_DEFINED
 
 #ifdef __cplusplus
 }
