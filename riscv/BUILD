@@ -2018,3 +2018,16 @@ cc_library(
         "@com_google_mpact-sim//mpact/sim/generic:type_helpers",
     ],
 )
+
+cc_library(
+    name = "riscv_dtb_loader",
+    srcs = ["riscv_dtb_loader.cc"],
+    hdrs = ["riscv_dtb_loader.h"],
+    copts = ["-O3"],
+    deps = [
+        ":riscv_state",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+    ],
+)
