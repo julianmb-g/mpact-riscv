@@ -46,6 +46,20 @@ class STimeCmpCsr : public RiscVSimpleCsr<uint64_t> {
   std::function<void(uint64_t)> timer_cb_;
 };
 
+// Smstateen CSRs implement the State Enable Extension.
+class MStateEn0Csr : public RiscVSimpleCsr<uint64_t> {
+ public:
+  MStateEn0Csr(RiscVState *state);
+  void Write(uint64_t value) override;
+  void Write(uint32_t value) override;
+};
+
+class SStateEn0Csr : public RiscVSimpleCsr<uint64_t> {
+ public:
+  SStateEn0Csr(RiscVState *state);
+  void Write(uint64_t value) override;
+  void Write(uint32_t value) override;
+};
 class RiscVSimModeCsr : public RiscVSimpleCsr<uint32_t> {
  public:
   RiscVSimModeCsr(std::string name, RiscVCsrEnum index, RiscVState* state)

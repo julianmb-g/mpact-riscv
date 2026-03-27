@@ -56,6 +56,28 @@ void STimeCmpCsr::Write(uint32_t value) {
   Write(static_cast<uint64_t>(value));
 }
 
+
+MStateEn0Csr::MStateEn0Csr(RiscVState *state)
+    : RiscVSimpleCsr<uint64_t>("mstateen0", 0x30C, 0ULL, -1ULL, -1ULL, state) {}
+
+void MStateEn0Csr::Write(uint64_t value) {
+  Set(value);
+}
+
+void MStateEn0Csr::Write(uint32_t value) {
+  Write(static_cast<uint64_t>(value));
+}
+
+SStateEn0Csr::SStateEn0Csr(RiscVState *state)
+    : RiscVSimpleCsr<uint64_t>("sstateen0", 0x10C, 0ULL, -1ULL, -1ULL, state) {}
+
+void SStateEn0Csr::Write(uint64_t value) {
+  Set(value);
+}
+
+void SStateEn0Csr::Write(uint32_t value) {
+  Write(static_cast<uint64_t>(value));
+}
 uint32_t RiscVSimModeCsr::GetUint32() {
   return static_cast<uint32_t>(state_->privilege_mode());
 }
