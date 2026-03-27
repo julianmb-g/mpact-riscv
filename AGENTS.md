@@ -26,3 +26,4 @@
 ## Local Submodule Lessons
 - **Fatal Git Rule:** Never use `git reset` or `git rebase --abort`. Use `git restore --staged` and `git commit --amend` to remediate failures.
 - **TDD Pattern:** Always adhere to Test-Driven Development (Red, Green, Refactor) for new execution tasks.
+\n## QA Lessons (Current Cycle)\n- **Control Flow Integrity & CSR Execution (`Zicfiss`/`Smstateen`):** When implementing execution logic for new extensions, tests that exclusively evaluate raw `generic::Instruction` objects with explicitly mapped operands constitute a mocked boundary. All execution pathways must be proven by routing an authentic, cross-compiled ELF through the `RiscVTop` instruction decoder.
