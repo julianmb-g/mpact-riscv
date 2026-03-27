@@ -846,6 +846,8 @@ cc_library(
         "riscv_getters_zbb32.h",
         "riscv_getters_zbb64.h",
         "riscv_getters_zvbb.h",
+        "riscv_zc_getters.h",
+        "riscv_zfa_getters.h",
     ],
     deps = [
         ":riscv_encoding_common",

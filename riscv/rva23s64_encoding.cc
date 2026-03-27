@@ -30,6 +30,9 @@
 #include "riscv/riscv_getters_vector.h"
 #include "riscv/riscv_getters_zba.h"
 #include "riscv/riscv_getters_zbb64.h"
+#include "riscv/riscv_zc_getters.h"
+#include "riscv/riscv_zfa_getters.h"
+#include "riscv/riscv_getters_zvbb.h"
 #include "riscv/riscv_register.h"
 #include "riscv/riscv_state.h"
 
@@ -75,6 +78,17 @@ Rva23s64Encoding::Rva23s64Encoding(RiscVState* state)
       source_op_getters_, this);
   AddRiscVVectorDestGetters<DestOpEnum, Extractors, RVVectorRegister>(
       dest_op_getters_, this);
+  // Add RVA23 extension getters.
+  AddRiscVZcbSourceGetters<SourceOpEnum, Extractors, RV64Register,
+                           RVFpRegister>(source_op_getters_, this);
+  AddRiscVZcbDestGetters<DestOpEnum, Extractors, RV64Register,
+                         RVFpRegister>(dest_op_getters_, this);
+  AddRiscVZfaSourceGetters<SourceOpEnum, Extractors, RV64Register,
+                           RVFpRegister>(source_op_getters_, this);
+  AddRiscVZfaDestGetters<DestOpEnum, Extractors, RV64Register,
+                         RVFpRegister>(dest_op_getters_, this);
+  AddRiscVZvbbSourceVectorGetters<SourceOpEnum, Extractors, RVVectorRegister>(
+      source_op_getters_, this);
   // Verify that there are getters for each enum value.
   for (int i = *SourceOpEnum::kNone; i < *SourceOpEnum::kPastMaxValue; ++i) {
     if (source_op_getters_.find(i) == source_op_getters_.end()) {

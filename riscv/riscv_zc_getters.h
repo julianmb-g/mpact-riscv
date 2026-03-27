@@ -151,7 +151,7 @@ void AddRiscVZcbSourceGetters(SourceOpGetterMap& getter_map,
     auto num = Extractors::CLB::ExtractUimm2(common->inst_word());
     return new ImmediateOperand<uint32_t>(num);
   });
-  Insert(getter_map, *Enum::kUimm2h, [common](int latency) {
+  Insert(getter_map, *Enum::kUimm2h, [common]() {
     auto num = Extractors::CLH::ExtractUimm2(common->inst_word());
     return new ImmediateOperand<uint32_t>(num);
   });
@@ -164,7 +164,7 @@ template <typename Enum, typename Extractors, typename IntRegister,
 void AddRiscVZcbDestGetters(DestOpGetterMap& getter_map,
                             RiscVEncodingCommon* common) {
   Insert(getter_map, *Enum::kC3rs2, [common](int latency) {
-    int num = Extractors::CLB::ExtractClRd(common->inst_word());
+    int num = Extractors::CLB::ExtractRd(common->inst_word());
     return GetRegisterDestinationOp<IntRegister>(
         common->state(), absl::StrCat(RiscVState::kXregPrefix, num), latency);
   });
@@ -458,7 +458,7 @@ template <typename Enum, typename Extractors, typename IntRegister,
           typename FpRegister>
 void AddRiscVZcmtSourceGetters(SourceOpGetterMap& getter_map,
                                RiscVEncodingCommon* common) {
-  Insert(getter_map, *Enum::kJtIndex, [common](int latency) {
+  Insert(getter_map, *Enum::kJtIndex, [common]() {
     int num = Extractors::CMJT::ExtractIndex(common->inst_word());
     return new ImmediateOperand<uint32_t>(num);
   });

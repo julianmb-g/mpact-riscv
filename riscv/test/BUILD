@@ -1022,6 +1022,22 @@ config_setting(
 )
 
 cc_test(
+    name = "rva23_extensions_test",
+    srcs = ["rva23_extensions_test.cc"],
+    copts = ["-O3"],
+    deps = [
+        "//riscv:riscv_fp_state",
+        "//riscv:riscv_state",
+        "//riscv:riscv_top",
+        "//riscv:rva23u64_decoder",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
+
+cc_test(
     name = "rva23u64_sim_test",
     srcs = ["rva23u64_sim_test.cc"],
     copts = ["-O3"],
