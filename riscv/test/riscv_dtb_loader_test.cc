@@ -32,19 +32,7 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     state_->AddRegister<RV64Register>("x10");
     state_->AddRegister<RV64Register>("x11");
     
-    // Use pre-compiled placeholder artifacts
-    vmlinux_path_ = "/tmp/vmlinux_placeholder.elf";
     dtb_path_ = std::string(::testing::TempDir()) + "/dummy.dtb";
-    
-    // Read the existing placeholder to know the expected size/data
-    std::ifstream vmlinux_file(vmlinux_path_, std::ios::binary | std::ios::ate);
-    if (vmlinux_file.is_open()) {
-      auto size = vmlinux_file.tellg();
-      vmlinux_data_.resize(size);
-      vmlinux_file.seekg(0, std::ios::beg);
-      vmlinux_file.read(reinterpret_cast<char*>(vmlinux_data_.data()), size);
-      vmlinux_file.close();
-    }
 
     std::ofstream dtb_file(dtb_path_, std::ios::binary);
     dtb_data_ = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
@@ -62,7 +50,6 @@ class RiscvDtbLoaderTest : public ::testing::Test {
   RiscVState* state_;
   std::string vmlinux_path_;
   std::string dtb_path_;
-  std::vector<uint8_t> vmlinux_data_;
   std::vector<uint8_t> dtb_data_;
 };
 
@@ -82,6 +69,13 @@ TEST_F(RiscvDtbLoaderTest, LoadsFirmwareAndSeedsRegisters) {
     EXPECT_EQ(db_dtb->Get<uint8_t>(i), dtb_data_[i]);
   }
   db_dtb->DecRef();
+
+  // Verify that hello_world.elf loaded into memory (Entry point is 0x80000000)
+  auto db_vmlinux = state_->db_factory()->Allocate<uint32_t>(1);
+  memory_->Load(0x80000000, db_vmlinux, nullptr, nullptr);
+  uint32_t entry_instr = db_vmlinux->Get<uint32_t>(0);
+  EXPECT_NE(entry_instr, 0) << "hello_world.elf was not loaded into EXTMEM";
+  db_vmlinux->DecRef();
 
   EXPECT_EQ(a0->data_buffer()->Get<uint64_t>(0), 0); // hartid
   EXPECT_EQ(a1->data_buffer()->Get<uint64_t>(0), 0x203F0000); // kDtbAddress

@@ -1,6 +1,7 @@
 #include "riscv/riscv_dtb_loader.h"
 #include <fstream>
 #include <vector>
+#include <filesystem>
 #include "absl/strings/str_cat.h"
 #include "mpact/sim/generic/data_buffer.h"
 #include "mpact/sim/util/program_loader/elf_program_loader.h"
@@ -29,8 +30,7 @@ absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
     }
     // Evasion ban: if it's there but parsing fails or something, or if it doesn't exist, we must return NotFound for missing file, 
     // but elf_loader might return a different error. Let's explicitly check file existence to return NotFoundError if missing.
-    std::ifstream vmlinux_file(vmlinux_payload_path, std::ios::binary);
-    if (!vmlinux_file.good()) {
+    if (!std::filesystem::exists(vmlinux_payload_path)) {
       return absl::NotFoundError(absl::StrCat("Unable to open elf file: '", vmlinux_payload_path, "'"));
     }
     return load_result.status();
