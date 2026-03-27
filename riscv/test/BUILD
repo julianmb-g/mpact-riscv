@@ -803,8 +803,8 @@ cc_test(
         "riscv_clint_test.cc",
     ],
     deps = [
-        "//riscv:riscv_clint",
         "//riscv:riscv32g_decoder",
+        "//riscv:riscv_clint",
         "//riscv:riscv_state",
         "@com_google_googletest//:gtest_main",
         "@com_google_mpact-sim//mpact/sim/generic:core",
@@ -813,6 +813,7 @@ cc_test(
         "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
+
 cc_test(
     name = "riscv_clint_plic_hardware_interrupt_test",
     size = "small",
@@ -820,14 +821,14 @@ cc_test(
         "riscv_clint_plic_hardware_interrupt_test.cc",
     ],
     deps = [
-        "//riscv:riscv_clint",
         "//riscv:riscv32g_decoder",
+        "//riscv:riscv_clint",
         "//riscv:riscv_plic",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
         "//utils/assembler:native_assembler",
         "@com_google_absl//absl/log:check",
-        "@com_google_absl//absl/status:status",
+        "@com_google_absl//absl/status",
         "@com_google_googletest//:gtest_main",
         "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_mpact-sim//mpact/sim/generic:counters",
@@ -1070,11 +1071,11 @@ cc_test(
         "//riscv:riscv_state",
         "//riscv:riscv_top",
         "//riscv:rva23u64_decoder",
+        "//utils/assembler:native_assembler",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
         "@com_google_mpact-sim//mpact/sim/util/memory",
         "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
-        "//utils/assembler:native_assembler",
     ],
 )
 
@@ -1163,8 +1164,8 @@ cc_test(
     name = "riscv_sstc_test",
     srcs = ["riscv_sstc_test.cc"],
     deps = [
-        "//riscv:riscv_clint",
         "//riscv:riscv32g_decoder",
+        "//riscv:riscv_clint",
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
@@ -1254,20 +1255,17 @@ cc_test(
     data = [
         "testfiles/hello_world.elf",
     ],
-
     deps = [
+        "//riscv:riscv32_htif_semihost",
+        "//riscv:riscv32g_decoder",
+        "//riscv:riscv_fp_state",
+        "//riscv:riscv_state",
+        "//riscv:riscv_top",
         "//riscv:rvvi_sim",
         "@com_google_googletest//:gtest_main",
-    
-        "//riscv:riscv_top",
-        "//riscv:riscv_state",
-        "//riscv:riscv_fp_state",
-        "//riscv:riscv32g_decoder",
         "@com_google_mpact-sim//mpact/sim/util/memory",
         "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
-
-        "//riscv:riscv32_htif_semihost",
-],
+    ],
 )
 
 cc_test(
