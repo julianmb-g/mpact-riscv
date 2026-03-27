@@ -1065,7 +1065,7 @@ cc_test(
     name = "rva23u64_sim_test",
     srcs = ["rva23u64_sim_test.cc"],
     copts = ["-O3"],
-    data = ["testfiles/hello_world_64.elf"],
+    data = ["testfiles/hello_world_64.elf", "testfiles/zawrs.elf", "testfiles/zve32f.elf"],
     deps = [
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
@@ -1113,7 +1113,7 @@ cc_test(
     name = "rva23s64_sim_test",
     srcs = ["rva23s64_sim_test.cc"],
     copts = ["-O3"],
-    data = ["testfiles/hello_world_64.elf"],
+    data = ["testfiles/hello_world_64.elf", "testfiles/zawrs.elf", "testfiles/zve32f.elf"],
     deps = [
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
@@ -1180,12 +1180,16 @@ cc_test(
     name = "riscv_zawrs_instructions_test",
     size = "small",
     srcs = ["riscv_zawrs_instructions_test.cc"],
+    data = ["testfiles/zawrs.elf"],
     deps = [
         "//riscv:riscv_state",
-        "//riscv:rvm23_instructions",
+        "//riscv:riscv_top",
+        "//riscv:rva23u64_decoder",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
         "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
     ],
 )
 
