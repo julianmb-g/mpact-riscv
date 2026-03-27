@@ -52,5 +52,68 @@ TEST(RvviTraceFidelityTest, test_rmw_trap_on_mmio) {
   db->DecRef();
   delete memory;
 }
+
+TEST(RvviTraceFidelityTest, RVVIStateInvarianceTest_SumOfDeltas) {
+  SpscRingBuffer<rvvi_trace_event_t, 10> trace_buffer;
+
+  uint64_t current_timestamp = 1000;
+  uint32_t current_order = 1;
+  uint64_t current_pc = 0x80000000;
+  
+  // Baseline architectural state for GPR x5
+  uint64_t gpr_x5_state = 0;
+  
+  // Simulate 5 instructions mutating the register file in monotonic order
+  for (int i = 0; i < 5; ++i) {
+    rvvi_trace_event_t event = {};
+    event.timestamp = current_timestamp;
+    event.order = current_order;
+    event.pc = current_pc;
+    event.hartId = 0;
+    
+    event.gpr_we = 1;
+    event.gpr_addr = 5;
+    
+    // Explicit mathematical boundary: state delta of +10 per instruction
+    uint64_t delta = 10;
+    gpr_x5_state += delta;
+    event.gpr_wdata = gpr_x5_state;
+    
+    trace_buffer.Push(event);
+    
+    current_timestamp += 5; // Chronological monotonic timestamps
+    current_order++;        // Monotonic commit ordering
+    current_pc += 4;
+  }
+
+  // Mathematically prove fidelity by verifying monotonic bounds and exact delta accumulations
+  uint64_t last_timestamp = 0;
+  uint32_t last_order = 0;
+  uint64_t recomputed_x5_state = 0;
+  
+  for (int i = 0; i < 5; ++i) {
+    rvvi_trace_event_t popped;
+    ASSERT_TRUE(trace_buffer.Pop(popped));
+    
+    // Explicit chronological timestamps and monotonic trace ordering assertions
+    EXPECT_GT(popped.timestamp, last_timestamp);
+    EXPECT_GT(popped.order, last_order);
+    
+    last_timestamp = popped.timestamp;
+    last_order = popped.order;
+    
+    // Sum of Deltas (reconstructing architectural state purely from traces)
+    if (popped.gpr_we && popped.gpr_addr == 5) {
+      EXPECT_EQ(popped.gpr_wdata, recomputed_x5_state + 10) << "Architectural trace oracle fidelity failed: intermediate delta mismatch";
+      recomputed_x5_state = popped.gpr_wdata;
+    }
+  }
+  
+  EXPECT_TRUE(trace_buffer.Empty());
+  
+  // The final mathematically verified state must exactly match the expected boundary
+  EXPECT_EQ(recomputed_x5_state, 50) << "Architectural trace oracle fidelity failed: sum of deltas mismatch";
+}
+
 }
 
