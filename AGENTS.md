@@ -27,7 +27,7 @@
 \n## QA Lessons (Current Cycle)\n- **Control Flow Integrity & CSR Execution (`Zicfiss`/`Smstateen`):** When implementing execution logic for new extensions, tests that exclusively evaluate raw `generic::Instruction` objects with explicitly mapped operands constitute a mocked boundary. All execution pathways must be proven by routing an authentic, cross-compiled ELF through the `RiscVTop` instruction decoder.
 
 ### Missing Dependencies in BUILD files
-- **Bazel Header Resolution (`elf_program_loader.h`)**: When including headers from `mpact-sim` (like `mpact/sim/util/program_loader/elf_program_loader.h`), the corresponding Bazel `cc_library` target in `mpact-riscv` MUST explicitly include the dependency (e.g., `@com_google_mpact_sim//mpact/sim/util/program_loader:elf_program_loader` or similar) in its `deps` list. Failing to do so results in fatal "file not found" compilation errors.
+- **Bazel Header Resolution (`elf_program_loader.h`)**: When including headers from `mpact-sim` (like `mpact/sim/util/program_loader/elf_program_loader.h`), the corresponding Bazel `cc_library` target in `mpact-riscv` MUST explicitly include the exact dependency target name (e.g., `@com_google_mpact_sim//mpact/sim/util/program_loader:elf_loader`) in its `deps` list. Failing to do so results in fatal "file not found" compilation errors.
 
 ### New QA Lessons (Current Cycle)
 - **Control Flow Integrity & CSR Execution (`Zicfiss`/`Smstateen`):** When implementing execution logic for new extensions, tests that exclusively evaluate raw `generic::Instruction` objects with explicitly mapped operands constitute a mocked boundary. All execution pathways must be proven by routing an authentic, cross-compiled ELF through the `RiscVTop` instruction decoder.
