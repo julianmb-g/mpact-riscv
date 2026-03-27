@@ -19,6 +19,7 @@
 #include <limits>
 #include <tuple>
 
+#include "absl/base/casts.h"
 #include "absl/log/log.h"
 #include "mpact/sim/generic/instruction.h"
 #include "mpact/sim/generic/type_helpers.h"
@@ -566,16 +567,16 @@ void Vfncvtrodffw(const Instruction* inst) {
             }
             using UIntD = typename FPTypeInfo<double>::UIntType;
             using UIntF = typename FPTypeInfo<float>::UIntType;
-            UIntD uval = *reinterpret_cast<UIntD*>(&vs2);
+            UIntD uval = absl::bit_cast<UIntD>(vs2);
             int sig_diff =
                 FPTypeInfo<double>::kSigSize - FPTypeInfo<float>::kSigSize;
             UIntD mask = (1ULL << sig_diff) - 1;
             UIntF bit = (mask & uval) != 0;
             auto res = static_cast<float>(vs2);
             if (FPTypeInfo<float>::IsInf(res)) return res;
-            UIntF ures = *reinterpret_cast<UIntF*>(&res);
+            UIntF ures = absl::bit_cast<UIntF>(res);
             ures |= bit;
-            return *reinterpret_cast<float*>(&ures);
+            return absl::bit_cast<float>(ures);
           });
     default:
       LOG(ERROR) << "Vfwcvt.rod.f.fw: Illegal sew (" << sew << ")";
@@ -683,7 +684,7 @@ inline std::tuple<T, uint32_t> SqrtHelper(T vs2) {
   T res;
   if (FPTypeInfo<T>::IsNaN(vs2) || vs2 < 0.0) {
     auto value = FPTypeInfo<T>::kCanonicalNaN;
-    res = *reinterpret_cast<T*>(&value);
+    res = absl::bit_cast<T>(value);
     flags = *FPExceptions::kInvalidOp;
     return std::tie(res, flags);
   }
@@ -737,7 +738,7 @@ void Vfsqrtv(const Instruction* inst) {
 template <typename T>
 inline T RecipSqrt7(T value) {
   using Uint = typename FPTypeInfo<T>::UIntType;
-  Uint uint_value = *reinterpret_cast<Uint*>(&value);
+  Uint uint_value = absl::bit_cast<Uint>(value);
   // The input value is positive. Negative values are already handled.
   int norm_exponent =
       (uint_value & FPTypeInfo<T>::kExpMask) >> FPTypeInfo<T>::kSigSize;
@@ -760,7 +761,7 @@ inline T RecipSqrt7(T value) {
                       << (FPTypeInfo<T>::kSigSize - 7);
   Uint new_exponent = (3 * FPTypeInfo<T>::kExpBias - 1 - norm_exponent) / 2;
   Uint new_value = (new_exponent << FPTypeInfo<T>::kSigSize) | new_mantissa;
-  T new_fp_value = *reinterpret_cast<T*>(&new_value);
+  T new_fp_value = absl::bit_cast<T>(new_value);
   return new_fp_value;
 }
 
@@ -834,7 +835,7 @@ template <typename T>
 inline T Recip7(T value, FPRoundingMode rm) {
   using Uint = typename FPTypeInfo<T>::UIntType;
   using Int = typename FPTypeInfo<T>::IntType;
-  Uint uint_value = *reinterpret_cast<Uint*>(&value);
+  Uint uint_value = absl::bit_cast<Uint>(value);
   Int norm_exponent =
       (uint_value & FPTypeInfo<T>::kExpMask) >> FPTypeInfo<T>::kSigSize;
   Uint norm_mantissa = uint_value & FPTypeInfo<T>::kSigMask;
@@ -888,7 +889,7 @@ inline T Recip7(T value, FPRoundingMode rm) {
     new_mantissa &= 0b111'1111;
   }
   Uint new_value = (new_exponent << FPTypeInfo<T>::kSigSize) | new_mantissa;
-  T new_fp_value = *reinterpret_cast<T*>(&new_value);
+  T new_fp_value = absl::bit_cast<T>(new_value);
   return value < 0.0 ? -new_fp_value : new_fp_value;
 }
 
