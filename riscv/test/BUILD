@@ -1210,8 +1210,40 @@ cc_test(
 cc_test(
     name = "rvvi_trace_fidelity_test",
     srcs = ["rvvi_trace_fidelity_test.cc"],
+    data = [
+        "testfiles/hello_world.elf",
+    ],
+
     deps = [
         "//riscv:rvvi_sim",
         "@com_google_googletest//:gtest_main",
+    
+        "//riscv:riscv_top",
+        "//riscv:riscv_state",
+        "//riscv:riscv_fp_state",
+        "//riscv:riscv32g_decoder",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
+
+        "//riscv:riscv32_htif_semihost",
+],
+)
+
+cc_test(
+    name = "riscv_dtb_loader_test",
+    size = "small",
+    srcs = ["riscv_dtb_loader_test.cc"],
+    data = [
+        "testfiles/hello_world.elf",
+    ],
+    deps = [
+        "//riscv:riscv_dtb_loader",
+        "//riscv:riscv_state",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/generic:core",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )

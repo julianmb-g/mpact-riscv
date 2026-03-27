@@ -3,12 +3,12 @@
 #include <vector>
 #include "absl/strings/str_cat.h"
 #include "mpact/sim/generic/data_buffer.h"
+#include "mpact/sim/util/program_loader/elf_program_loader.h"
 
 namespace mpact {
 namespace sim {
 namespace riscv {
 
-constexpr uint64_t kVmlinuxAddress = 0x20000000;
 constexpr uint64_t kDtbAddress = 0x203F0000;
 
 absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
@@ -20,16 +20,20 @@ absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
     return absl::InvalidArgumentError("Invalid state or memory pointer");
   }
 
-  // Load vmlinux
-  std::ifstream vmlinux_file(vmlinux_payload_path, std::ios::binary | std::ios::ate);
-  if (!vmlinux_file) {
-    return absl::NotFoundError(absl::StrCat("Unable to open elf file: '", vmlinux_payload_path, "'"));
-  }
-  std::streamsize vmlinux_size = vmlinux_file.tellg();
-  vmlinux_file.seekg(0, std::ios::beg);
-  std::vector<uint8_t> vmlinux_data(vmlinux_size);
-  if (vmlinux_size > 0 && !vmlinux_file.read(reinterpret_cast<char*>(vmlinux_data.data()), vmlinux_size)) {
-      return absl::InternalError("Failed to read vmlinux payload");
+  // Load vmlinux via ELF Loader
+  mpact::sim::util::ElfProgramLoader elf_loader(state->memory());
+  auto load_result = elf_loader.LoadProgram(vmlinux_payload_path);
+  if (!load_result.ok()) {
+    if (absl::IsNotFound(load_result.status())) {
+      return load_result.status();
+    }
+    // Evasion ban: if it's there but parsing fails or something, or if it doesn't exist, we must return NotFound for missing file, 
+    // but elf_loader might return a different error. Let's explicitly check file existence to return NotFoundError if missing.
+    std::ifstream vmlinux_file(vmlinux_payload_path, std::ios::binary);
+    if (!vmlinux_file.good()) {
+      return absl::NotFoundError(absl::StrCat("Unable to open elf file: '", vmlinux_payload_path, "'"));
+    }
+    return load_result.status();
   }
 
   // Load dtb
@@ -45,14 +49,6 @@ absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
   }
 
   auto db_factory = state->db_factory();
-
-  // Map vmlinux into EXTMEM
-  if (vmlinux_size > 0) {
-    auto db_vmlinux = db_factory->Allocate<uint8_t>(vmlinux_size);
-    std::memcpy(db_vmlinux->Get<uint8_t>().data(), vmlinux_data.data(), vmlinux_size);
-    state->memory()->Store(kVmlinuxAddress, db_vmlinux);
-    db_vmlinux->DecRef();
-  }
 
   // Map dtb into enforced safe zone
   if (dtb_size > 0) {
