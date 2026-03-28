@@ -24,3 +24,8 @@ build --host_copt=-Wno-unused-function --host_cxxopt="-std=c++17"
 # TODO: migrate all dependencies from WORKSPACE to MODULE.bazel
 # https://github.com/protocolbuffers/protobuf/issues/14313
 common --noenable_bzlmod
+
+build --local_resources=cpu=8
+build --local_resources=memory=HOST_RAM*0.5
+test --local_resources=cpu=8
+test --local_resources=memory=HOST_RAM*0.5
