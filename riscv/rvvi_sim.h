@@ -193,34 +193,18 @@ extern "C" {
 #define RVVI_TRACE_EVENT_T_DEFINED
 
 typedef struct __attribute__((aligned(64))) {
-    uint64_t timestamp;      // [0-7]
-    uint64_t pc;             // [8-15]
-    uint32_t hartId;         // [16-19]
-    uint32_t order;          // [20-23]
-    uint32_t insn;           // [24-27]
-    uint32_t trap_cause;     // [28-31]
-    uint64_t trap_tval;      // [32-39]
-    uint64_t gpr_wdata;      // [40-47]
-    uint64_t fpr_wdata;      // [48-55]
-    uint64_t mem_paddr;      // [56-63]
-    uint64_t mem_wdata;      // [64-71]
-    uint64_t mem_rdata;      // [72-79]
-    uint8_t  gpr_addr;       // [80]
-    uint8_t  gpr_we;         // [81]
-    uint8_t  fpr_addr;       // [82]
-    uint8_t  fpr_we;         // [83]
-    uint8_t  mem_wmask;      // [84]
-    uint8_t  mem_rmask;      // [85]
-    uint8_t  mem_we;         // [86]
-    uint8_t  mem_re;         // [87]
-    uint8_t  vr_addr;        // [88]
-    uint8_t  vr_we;          // [89]
-    uint16_t vstart;         // [90-91]
-    uint32_t vl;             // [92-95]
-    uint64_t vr_wdata_0;     // [96-103]
-    uint64_t vr_wdata_1;     // [104-111]
-    uint64_t vr_wdata_2;     // [112-119]
-    uint64_t vr_wdata_3;     // [120-127]
+    uint64_t cycle_count;
+    uint64_t pc;
+    uint32_t inst;
+    uint32_t hart_id;
+    uint32_t gpr_addr;
+    uint32_t _pad0;
+    uint64_t gpr_data;
+    uint64_t mem_paddr;
+    uint64_t mem_data;
+    uint8_t  mem_mask;
+    uint8_t  is_trap;
+    uint8_t  pad[6];
 } rvvi_trace_event_t;
 
 #endif // RVVI_TRACE_EVENT_T_DEFINED

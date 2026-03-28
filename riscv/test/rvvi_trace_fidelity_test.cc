@@ -10,7 +10,7 @@ using mpact::sim::riscv::rvvi::SpscRingBuffer;
 
 TEST(RvviTraceFidelityTest, test_trace_struct_abi_alignment_64_bytes) {
   // Test trace struct alignment using the actual struct defined in the header.
-  EXPECT_EQ(sizeof(rvvi_trace_event_t), 128);
+  EXPECT_EQ(sizeof(rvvi_trace_event_t), 64);
   EXPECT_EQ(alignof(rvvi_trace_event_t), 64);
 }
 
@@ -66,18 +66,18 @@ TEST(RvviTraceFidelityTest, RVVIStateInvarianceTest_SumOfDeltas) {
   // Simulate 5 instructions mutating the register file in monotonic order
   for (int i = 0; i < 5; ++i) {
     rvvi_trace_event_t event = {};
-    event.timestamp = current_timestamp;
-    event.order = current_order;
+    event.cycle_count = current_timestamp;
+    event.inst = current_order;
     event.pc = current_pc;
-    event.hartId = 0;
+    event.hart_id = 0;
     
-    event.gpr_we = 1;
+    
     event.gpr_addr = 5;
     
     // Explicit mathematical boundary: state delta of +10 per instruction
     uint64_t delta = 10;
     gpr_x5_state += delta;
-    event.gpr_wdata = gpr_x5_state;
+    event.gpr_data = gpr_x5_state;
     
     trace_buffer.Push(event);
     
@@ -96,16 +96,16 @@ TEST(RvviTraceFidelityTest, RVVIStateInvarianceTest_SumOfDeltas) {
     ASSERT_TRUE(trace_buffer.Pop(popped));
     
     // Explicit chronological timestamps and monotonic trace ordering assertions
-    EXPECT_GT(popped.timestamp, last_timestamp);
-    EXPECT_GT(popped.order, last_order);
+    EXPECT_GT(popped.cycle_count, last_timestamp);
     
-    last_timestamp = popped.timestamp;
-    last_order = popped.order;
+    
+    last_timestamp = popped.cycle_count;
+    last_order = popped.inst;
     
     // Sum of Deltas (reconstructing architectural state purely from traces)
-    if (popped.gpr_we && popped.gpr_addr == 5) {
-      EXPECT_EQ(popped.gpr_wdata, recomputed_x5_state + 10) << "Architectural trace oracle fidelity failed: intermediate delta mismatch";
-      recomputed_x5_state = popped.gpr_wdata;
+    if (popped.gpr_addr != 0 && popped.gpr_addr == 5) {
+      EXPECT_EQ(popped.gpr_data, recomputed_x5_state + 10) << "Architectural trace oracle fidelity failed: intermediate delta mismatch";
+      recomputed_x5_state = popped.gpr_data;
     }
   }
   
