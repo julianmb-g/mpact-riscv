@@ -31,44 +31,107 @@ using ::mpact::sim::generic::Instruction;
 // Default cache block size if not specified.
 constexpr uint64_t kDefaultCacheBlockSize = 64;
 
+static bool CheckZicbomPrivilege(RiscVState* state, Instruction* inst, bool is_inval) {
+  auto priv_mode = state->privilege_mode();
+  if (priv_mode == PrivilegeMode::kMachine) return true;
+
+  auto get_cbie = [](uint64_t envcfg) { return (envcfg >> 4) & 3; };
+  auto get_cbcfe = [](uint64_t envcfg) { return (envcfg >> 6) & 1; };
+
+  uint64_t menvcfg = 0;
+  auto res_m = state->csr_set()->GetCsr(static_cast<uint64_t>(RiscVCsrEnum::kMenvcfg));
+  if (res_m.ok() && res_m.value() != nullptr) {
+    menvcfg = res_m.value()->GetUint64();
+  }
+
+  if (is_inval) {
+    uint64_t m_cbie = get_cbie(menvcfg);
+    if (m_cbie == 0 || m_cbie == 2) return false;
+  } else {
+    if (get_cbcfe(menvcfg) == 0) return false;
+  }
+
+  if (priv_mode == PrivilegeMode::kUser) {
+    uint64_t senvcfg = 0;
+    auto res_s = state->csr_set()->GetCsr(static_cast<uint64_t>(RiscVCsrEnum::kSenvcfg));
+    if (res_s.ok() && res_s.value() != nullptr) {
+      senvcfg = res_s.value()->GetUint64();
+    }
+    if (is_inval) {
+      uint64_t s_cbie = get_cbie(senvcfg);
+      if (s_cbie == 0 || s_cbie == 2) return false;
+    } else {
+      if (get_cbcfe(senvcfg) == 0) return false;
+    }
+  }
+
+  return true;
+}
+
+static bool CheckZicbozPrivilege(RiscVState* state, Instruction* inst) {
+  auto priv_mode = state->privilege_mode();
+  if (priv_mode == PrivilegeMode::kMachine) return true;
+
+  // CBZE is bit 7 in menvcfg and senvcfg
+  auto get_cbze = [](uint64_t envcfg) { return (envcfg >> 7) & 1; };
+
+  uint64_t menvcfg = 0;
+  auto res_m = state->csr_set()->GetCsr(static_cast<uint64_t>(RiscVCsrEnum::kMenvcfg));
+  if (res_m.ok() && res_m.value() != nullptr) {
+    menvcfg = res_m.value()->GetUint64();
+  }
+
+  if (get_cbze(menvcfg) == 0) return false;
+
+  if (priv_mode == PrivilegeMode::kUser) {
+    uint64_t senvcfg = 0;
+    auto res_s = state->csr_set()->GetCsr(static_cast<uint64_t>(RiscVCsrEnum::kSenvcfg));
+    if (res_s.ok() && res_s.value() != nullptr) {
+      senvcfg = res_s.value()->GetUint64();
+    }
+    if (get_cbze(senvcfg) == 0) return false;
+  }
+
+  return true;
+}
+
 void RiscVCboInval(Instruction* inst) {
-  // Cache block invalidation. For functional simulation, this is a no-op.
+  auto* state = static_cast<RiscVState*>(inst->state());
+  if (!CheckZicbomPrivilege(state, inst, /*is_inval=*/true)) {
+    state->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
+                static_cast<uint64_t>(ExceptionCode::kIllegalInstruction),
+                inst->address(), inst);
+    return;
+  }
+  // Cache block invalidation. For functional simulation, this is a no-op if authorized.
 }
 
 void RiscVCboClean(Instruction* inst) {
-  // Cache block clean. For functional simulation, this is a no-op.
+  auto* state = static_cast<RiscVState*>(inst->state());
+  if (!CheckZicbomPrivilege(state, inst, /*is_inval=*/false)) {
+    state->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
+                static_cast<uint64_t>(ExceptionCode::kIllegalInstruction),
+                inst->address(), inst);
+    return;
+  }
+  // Cache block clean. For functional simulation, this is a no-op if authorized.
 }
 
 void RiscVCboFlush(Instruction* inst) {
-  // Cache block flush. For functional simulation, this is a no-op.
+  auto* state = static_cast<RiscVState*>(inst->state());
+  if (!CheckZicbomPrivilege(state, inst, /*is_inval=*/false)) {
+    state->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
+                static_cast<uint64_t>(ExceptionCode::kIllegalInstruction),
+                inst->address(), inst);
+    return;
+  }
+  // Cache block flush. For functional simulation, this is a no-op if authorized.
 }
 
 void RiscVCboZero(Instruction* inst) {
   auto* state = static_cast<RiscVState*>(inst->state());
 
-  // Privilege checks for Zicboz
-  bool cbze_enabled = true;
-  auto priv_mode = state->privilege_mode();
-  if (priv_mode != PrivilegeMode::kMachine) {
-    auto res_m = state->csr_set()->GetCsr(static_cast<uint64_t>(RiscVCsrEnum::kMenvcfg));
-    if (res_m.ok() && res_m.value() != nullptr) {
-      uint64_t menvcfg = res_m.value()->GetUint64();
-      if ((menvcfg & (1ULL << 4)) == 0) {
-        cbze_enabled = false;
-      }
-    }
-  }
-  if (cbze_enabled && priv_mode == PrivilegeMode::kUser) {
-    auto res_s = state->csr_set()->GetCsr(static_cast<uint64_t>(RiscVCsrEnum::kSenvcfg));
-    if (res_s.ok() && res_s.value() != nullptr) {
-      uint64_t senvcfg = res_s.value()->GetUint64();
-      if ((senvcfg & (1ULL << 4)) == 0) {
-        cbze_enabled = false;
-      }
-    }
-  }
-
-  if (!cbze_enabled) {
+  if (!CheckZicbozPrivilege(state, inst)) {
     state->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
                 static_cast<uint64_t>(ExceptionCode::kIllegalInstruction),
                 inst->address(), inst);
