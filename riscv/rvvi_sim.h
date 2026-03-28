@@ -36,18 +36,19 @@ class SpscRingBuffer {
 
   void Push(const T& item) {
     size_t next_head = (head_.load(std::memory_order_relaxed) + 1) % Capacity;
-    auto start_time = std::chrono::steady_clock::now();
-    constexpr int kSpscYieldTimeoutMs = 5000;
-    const auto timeout_duration = std::chrono::milliseconds(kSpscYieldTimeoutMs);
+    int yield_count = 0;
+    constexpr int kMaxYields = 100000;
+    
+    
     // Explicit backpressure handling (blocking yield) with abort safety
     while (next_head == tail_.load(std::memory_order_acquire)) {
       if (abort_.load(std::memory_order_acquire)) {
         throw std::runtime_error("SPSC Ring Buffer aborted due to consumer failure");
       }
-      if (std::chrono::steady_clock::now() - start_time > timeout_duration) {
+      if (++yield_count > kMaxYields) {
         throw std::runtime_error("SPSC Formatting Daemon Deadlock");
       }
-      absl::SleepFor(absl::Milliseconds(1));
+      std::this_thread::yield();
     }
     buffer_[head_.load(std::memory_order_relaxed)] = item;
     head_.store(next_head, std::memory_order_release);
