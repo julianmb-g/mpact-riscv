@@ -4,83 +4,64 @@
 
 ### Tier 1: Critical Architecture, Testing Boundaries & Build Integrity
 
-- **Authentic Execution Boundaries & Hardware Trapping (Zfa/Zve32f/Zicfiss/Smstateen)**
-  - **Quote:** "When adding new instruction sets... do not rely solely on unit tests instantiating raw `generic::Instruction` objects with explicitly mapped operands. All execution pathways must be proven by routing an authentic, cross-compiled ELF through the `RiscVTop` instruction decoder."
-  - **Impact:** Mocking instruction context boundaries masks E2E routing failures and cross-component architectural trapping logic.
-  - **Action:** Natively decode execution sequences via the top-level simulator loop (`RiscVTop::Step()`) using cross-compiled ELFs or explicitly encoded bytes to organically prove that the instructions trap and route securely.
+- **Authentic Execution Boundaries & E2E Verification**
+  - **Quote:** "Validating bytes written to memory does not prove cross-component hardware integration. Eradicate `memory->Store` mock logic with hardcoded opcodes."
+  - **Impact:** Mocking instruction boundaries or using isolated target encoders creates systemic testing illusions, masking E2E routing and architectural trapping failures.
+  - **Action:** E2E execution tests MUST natively route authentic cross-compiled ELFs through the full simulator loop (`RiscVTop::Step()`). Dynamically compile payloads using `NativeTextualAssembler` to verify organic execution.
+
+- **Hardware Simulation & Mock Isolation Rules**
+  - **Quote:** "Mocking AxiSlave with Python dictionaries and swallowing test exceptions."
+  - **Impact:** False positive 100% unit tests that fail to simulate RTL component boundaries.
+  - **Action:** Tests mimicking external memory MUST instantiate REAL synthesized DDR controllers and SRAM RTL block responders. Eviscerating memory boundaries to trap timeouts is strictly forbidden.
 
 - **Hardware Interrupt Testing Authenticity**
   - **Quote:** "When implementing hardware interrupt tests (like CLINT/PLIC logic), tests must not just evaluate `is_interrupt_available` manually."
   - **Impact:** Manual evaluation creates mock boundaries that fail to prove actual execution trapping.
-  - **Action:** Instantiate the full `RiscVTop` CPU execution loop, use `NativeTextualAssembler` to dynamically compile authentic RISC-V payloads (like `wfi`), and verify organic traps and correct `epc` updates.
+  - **Action:** Instantiate the full `RiscVTop` CPU execution loop, use `NativeTextualAssembler` to compile authentic RISC-V payloads (like `wfi`), and verify organic traps and correct `epc` updates.
 
-- **Mathematical Trace Fidelity vs Cosmetic String Assertions**
-  - **Quote:** "When validating hardware tracing APIs (like `rvvi_trace_event_t`), it is strictly forbidden to use cosmetic evaluation limits (e.g. `EXPECT_EQ(output, "PASS")`)."
-  - **Impact:** Cosmetic assertions fail to guarantee the structural state correctness of the hardware.
-  - **Action:** Implement explicit temporal limits (like chronological timestamps and monotonic commit tracking) and mathematically accumulate the structural deltas to natively re-derive the hardware state.
+- **Boot Sequence Integrity & Memory Offset Bounds**
+  - **Quote:** "Validating the OpenSBI hardware handshake tests must utilize mock/dummy payloads and enforce organic failure via `absl::IsNotFound` when artifacts are completely missing."
+  - **Impact:** Using `GTEST_SKIP()` mathematically masks configuration drift. Overlapping memory regions cause silent bootloader crashes.
+  - **Action:** Enforce strict physical load addresses (e.g., `vmlinux` at `0x20000000`, DTB at `0x21000000`) and assert non-intersection. Enforce organic bounds failures natively when artifacts are missing.
 
-- **RiscvDtbLoader Boot Sequence Integrity**
-  - **Quote:** "Tests validating the OpenSBI hardware handshake (e.g. `riscv_dtb_loader_test`) must utilize mock/dummy payloads and enforce organic failure via `absl::IsNotFound` when required artifacts are completely missing, rather than skipping the test with `GTEST_SKIP()`."
-  - **Impact:** Using `GTEST_SKIP()` mathematically masks configuration drift and missing boot artifacts natively.
-  - **Action:** Enforce organic failure natively when artifacts are missing.
+- **Mathematical Trace Fidelity**
+  - **Quote:** "When validating hardware tracing APIs, it is strictly forbidden to use cosmetic evaluation limits like `EXPECT_EQ(output, \"PASS\")`."
+  - **Impact:** Cosmetic assertions fail to guarantee structural state correctness of the hardware.
+  - **Action:** Implement explicit temporal limits and mathematically accumulate structural deltas to natively re-derive the hardware state.
 
-- **Local Repository Prohibition**
-  - **Quote:** "Replacing `http_archive` with `local_repository` or `native.local_repository` in Bazel repository definitions (e.g., `repos.bzl`) is strictly forbidden across all submodules."
-  - **Impact:** Doing so breaks hermeticity and cross-system reproducibility.
-  - **Action:** Never use `local_repository` in Bazel definitions; strictly enforce hermetic dependencies.
+- **Hermeticity & Dependency Resolution**
+  - **Quote:** "Replacing `http_archive` with `local_repository` is strictly forbidden. The Bazel `cc_library` target MUST explicitly include the exact dependency target name."
+  - **Impact:** Breaks hermeticity, cross-system reproducibility, and causes fatal "file not found" compilation errors.
+  - **Action:** Never use `local_repository`. Always explicitly list exact target names in `deps` for Bazel targets.
 
-- **Bazel Header Resolution Constraints**
-  - **Quote:** "When including headers from `mpact-sim`... the corresponding Bazel `cc_library` target in `mpact-riscv` MUST explicitly include the exact dependency target name... in its `deps` list."
-  - **Impact:** Failing to declare explicit dependencies results in fatal "file not found" compilation errors.
-  - **Action:** Always explicitly include exact dependency target names in `deps` lists for Bazel `cc_library` targets.
-
-- **Struct Definition Duplication Across Submodules**
-  - **Quote:** "When multiple repositories define the exact same struct (e.g., `rvvi_trace_event_t`) for ABI plugin compliance, they must wrap the definition in `#ifndef` guards..."
-  - **Impact:** Cross-repository compilation and linking will fail with fatal C++ `typedef redefinition` errors.
+- **Struct Definition Duplication**
+  - **Quote:** "When multiple repositories define the exact same struct for ABI plugin compliance, they must wrap the definition in `#ifndef` guards."
+  - **Impact:** Cross-repository linking fails with fatal C++ `typedef redefinition` errors.
   - **Action:** Always wrap duplicate struct definitions in `#ifndef` guards (e.g., `#ifndef RVVI_TRACE_EVENT_T_DEFINED`).
 
 ### Tier 2: Memory Safety, Code Quality & Standard Practices
 
 - **absl::StatusOr Pointer Unwrapping Ban**
-  - **Quote:** "Never unwrap `absl::StatusOr<T>` using the `*` pointer operator (e.g., `*res`)."
+  - **Quote:** "Never unwrap `absl::StatusOr<T>` using the `*` pointer operator."
   - **Impact:** Violates strict memory safety boundaries and risks pointer dereference undefined behavior.
-  - **Action:** Always explicitly call `.value()` after checking `.ok()` when unwrapping `absl::StatusOr<T>`.
+  - **Action:** Always explicitly call `.value()` after checking `.ok()`.
 
 - **RISC-V RMM Rounding Mode Fidelity**
-  - **Quote:** "When implementing operations that respect the `RMM` (Round to Nearest, ties to Max Magnitude) rounding mode, remember that `ScopedFPStatus` translates it to standard ties-to-even on most hosts."
-  - **Impact:** Relying on `ScopedFPStatus` defaults to standard ties-to-even, violating architectural fidelity for RMM.
-  - **Action:** Manually intercept `kRoundToNearestTiesToMax` and apply `std::round` (which intrinsically rounds halves away from zero) to ensure correct architectural fidelity.
+  - **Quote:** "ScopedFPStatus translates RMM (Round to Nearest, ties to Max Magnitude) to standard ties-to-even on most hosts."
+  - **Impact:** Relying on default host rounding violates architectural fidelity for RMM instructions.
+  - **Action:** Manually intercept `kRoundToNearestTiesToMax` and apply `std::round` to ensure correct architectural behavior.
 
-- **Floating-Point Boundaries**
-  - **Quote:** "Avoid hardcoding raw float maximums directly in inline code logic. Avoid using `std::pow` as it is not `constexpr` and introduces hot-path overhead."
-  - **Impact:** Hardcoding introduces magic numbers and `std::pow` introduces hot-path execution overhead.
+- **Floating-Point Boundaries & Performance**
+  - **Quote:** "Avoid hardcoding raw float maximums directly in inline code logic. Avoid using `std::pow` as it is not `constexpr`."
+  - **Impact:** Introduces magic numbers and hot-path execution overhead.
   - **Action:** Assign float maximums explicitly to named `constexpr`/`const` constants (e.g., `constexpr double kTwoPow32 = 4294967296.0;`).
 
-- **Code Duplication & Refactoring (`rv32g_sim.cc` / `rv64g_sim.cc`)**
-  - **Quote:** "Both top-level simulators duplicate logic for `DataBuffer` trace formatting (`log_commits`)."
+- **Code Duplication & Component Reusability**
+  - **Quote:** "Both top-level simulators duplicate logic for `DataBuffer` trace formatting."
   - **Impact:** Violates DRY principles and complicates maintenance across architectural variants.
-  - **Action:** Extract duplicate trace formatting logic into reusable utilities like `TraceFormatter`.
+  - **Action:** Extract duplicate logic (like trace formatting or `CsrDirtyList` tracking) into reusable utilities and common headers.
 
-- **CsrDirtyList Implementation Status**
-  - **Quote:** "Successfully integrated `CsrDirtyList` into `mpact-riscv/riscv/riscv_csr.h` to track modified CSR addresses."
-  - **Impact:** Ensures tracking of modified CSR addresses is correctly maintained.
-  - **Action:** Continue utilizing `CsrDirtyList` for CSR modification tracking across architectural components.### Restored Knowledge (Data-Loss Audit Remediation - Latest Cycle)
-- Eradicate `memory->Store` mock logic with hardcoded binary opcodes in E2E execution tests. Dynamically compile payloads using `NativeTextualAssembler` or load an authentic `.elf`.
-- OS Boot Handshake: Ensure E2E execution tests instantiate `RiscvTop`, load `vmlinux` via the loader, and organically trap the boot sequence execution trace.
-- Memory offset map explicit bounds: e.g. `vmlinux` at `0x20000000`, DTB at `0x21000000`, asserting non-intersection.
-
-[FLAG: stale] ### Restored Knowledge (Data-Loss Audit Remediation - Testing Illusion Mandates)
-- **Tier 1: Hardware Simulation & Mock Isolation Rules**
-  - **Quote:** "Mocking AxiSlave with Python dictionaries and swallowing test exceptions."
-  - **Impact:** False positive 100% unit tests that fail to simulate RTL component boundaries.
-  - **Action:** tests mimicking external memory MUST instantiate REAL synthesized DDR controllers and SRAM RTL block responders. Eviscerating memory boundaries to trap timeouts is strictly forbidden.
-- **Tier 1: E2E Integration Boundary Rules**
-  - **Quote:** "Validating bytes written to memory does not prove cross-component hardware integration."
-  - **Impact:** Systemic testing illusions where isolated string matching or individual instruction evaluations bypass cross-component routing.
-  - **Action:** MUST introduce rigorous Integration/E2E execution tests. A mutator or wrapper component is invalid until an authentic AST payload (compiled ELF) routes through the entire execution loop natively and verifies execution traces. Mocking TargetEncoder classes is insufficient.
-
-### Tier 2: Documentation & Ledger Maintenance
-* **[Tier 2] Submodule Ledger Consolidation**
-  * **Quote**: "Leaving 'Restored Knowledge' blocks at the bottom of the submodule AGENTS.md."
-  * **Impact**: Fragments submodule-specific execution constraints.
-  * **Action**: Immediately integrate audit restorations into the primary strict execution mandates and remove the restoration headers.
+- **Submodule Ledger Consolidation**
+  - **Quote:** "Leaving 'Restored Knowledge' blocks at the bottom of the submodule AGENTS.md."
+  - **Impact:** Fragments submodule-specific execution constraints.
+  - **Action:** Immediately integrate audit restorations into the primary strict execution mandates and remove the restoration headers.
