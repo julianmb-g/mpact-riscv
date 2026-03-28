@@ -40,13 +40,18 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     dtb_file.write(reinterpret_cast<const char*>(dtb_data_.data()), dtb_data_.size());
     dtb_file.close();
 
-    // Create a dummy vmlinux.elf
+    // Create a dummy vmlinux.elf with a strict linker script to ensure the segment exactly begins at 0x20000000.
     vmlinux_path_ = std::string(::testing::TempDir()) + "/dummy_vmlinux.elf";
     std::string s_path = std::string(::testing::TempDir()) + "/dummy.s";
     std::ofstream s_file(s_path);
     s_file << ".global _start\n_start:\n  wfi\n";
     s_file.close();
-    std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x20000000 -nostdlib -Wl,--nmagic " + s_path + " -o " + vmlinux_path_;
+    std::string dummy_ld_path = std::string(::testing::TempDir()) + "/dummy.ld";
+    std::ofstream dummy_ld_file(dummy_ld_path);
+    dummy_ld_file << "PHDRS { text PT_LOAD; }\n";
+    dummy_ld_file << "SECTIONS { . = 0x20000000; .text : { *(.text) } :text }\n";
+    dummy_ld_file.close();
+    std::string cmd = "riscv64-unknown-elf-gcc -nostdlib -Wl,-T," + dummy_ld_path + " " + s_path + " -o " + vmlinux_path_;
     int ret = system(cmd.c_str());
     EXPECT_EQ(ret, 0);
 
