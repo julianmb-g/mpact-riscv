@@ -324,23 +324,87 @@ TEST(Rva23u64SimTest, ZfaFcvtmodE2EExecutionBoundary) {
 #include "riscv/riscv_dtb_loader.h"
 
 TEST(Rva23u64SimTest, BootSequenceE2E) {
-  const std::string vmlinux_path = "/tmp/vmlinux_placeholder.elf";
-  const std::string dtb_path = "/tmp/board_placeholder.dtb";
+  std::string vmlinux_path = std::string(::testing::TempDir()) + "/vmlinux_boot_test.elf";
+  std::string dtb_path = std::string(::testing::TempDir()) + "/board_boot_test.dtb";
+  std::string asm_path = std::string(::testing::TempDir()) + "/boot_stub.s";
 
-  if (!std::filesystem::exists(vmlinux_path) || !std::filesystem::exists(dtb_path)) {
-    GTEST_SKIP() << "Pre-compiled OS artifacts missing, skipping boot test.";
+  struct FileCleaner {
+    std::string p1, p2, p3;
+    ~FileCleaner() {
+      std::remove(p1.c_str());
+      std::remove(p2.c_str());
+      std::remove(p3.c_str());
+    }
+  } cleaner{vmlinux_path, dtb_path, asm_path};
+
+  // Create DTB
+  std::ofstream dtb_file(dtb_path, std::ios::binary);
+  std::vector<uint8_t> dtb_data = {0xd0, 0x0d, 0xfe, 0xed, 0x00, 0x11, 0x22, 0x33};
+  dtb_file.write(reinterpret_cast<const char*>(dtb_data.data()), dtb_data.size());
+  dtb_file.close();
+
+  // Create ASM Stub
+  std::ofstream s_file(asm_path);
+  s_file << ".global _start\n_start:\n"
+            "  lw t0, 0(a1)\n"
+            "  slli t0, t0, 32\n"
+            "  srli t0, t0, 32\n"
+            "  li t1, 0xedfe0dd0\n"
+            "  beq t0, t1, 1f\n"
+            "2:\n"
+            "  j 2b\n"
+            "1:\n"
+            "  nop\n";
+  s_file.close();
+
+  // Compile
+  std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x20000000 -nostdlib " + asm_path + " -o " + vmlinux_path;
+  int ret = system(cmd.c_str());
+  if (ret != 0) {
+    GTEST_SKIP() << "Compiler not available, skipping true E2E boot test.";
   }
 
   auto* memory = new ::mpact::sim::util::FlatDemandMemory();
   auto* atomic_memory = new ::mpact::sim::util::AtomicMemory(memory);
   auto* state = new ::mpact::sim::riscv::RiscVState("test_boot", ::mpact::sim::riscv::RiscVXlen::RV64, memory, atomic_memory);
+  
+  auto* fp_state = new ::mpact::sim::riscv::RiscVFPState(state->csr_set(), state);
+  state->set_rv_fp(fp_state);
+  auto* vector_state = new ::mpact::sim::riscv::RiscVVectorState(state, 64);
+  state->set_rv_vector(vector_state);
+  
+  auto* decoder = new ::mpact::sim::riscv::Rva23u64DecoderWrapper(state, memory);
+  
+  for (int i = 0; i < 32; i++) {
+    std::string reg_name = absl::StrCat("x", i);
+    state->AddRegister<::mpact::sim::riscv::RV64Register>(reg_name);
+    state->AddRegisterAlias<::mpact::sim::riscv::RV64Register>(reg_name, ::mpact::sim::riscv::kXRegisterAliases[i]);
+  }
+  
+  auto* top = new ::mpact::sim::riscv::RiscVTop("test_top", state, decoder);
 
   absl::Status status = ::mpact::sim::riscv::RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state, vmlinux_path, dtb_path);
-  if (absl::IsNotFound(status)) {
-    GTEST_SKIP() << "Pre-compiled OS artifacts missing, skipping boot test.";
-  }
-  EXPECT_TRUE(status.ok());
+  EXPECT_TRUE(status.ok()) << status.message();
 
+  uint64_t entry_point = 0x20000000;
+  EXPECT_TRUE(top->WriteRegister("pc", entry_point).ok());
+
+  // Execute instructions.
+  auto run_status = top->Step(8);
+  EXPECT_TRUE(run_status.ok());
+
+  uint64_t final_pc = top->ReadRegister("pc").value();
+  uint64_t mcause = state->csr_set()->GetCsr("mcause").value()->AsUint64();
+  uint64_t mtval = state->csr_set()->GetCsr("mtval").value()->AsUint64();
+
+  // If it failed the branch, it would hit WFI at 0x20000014
+  // If it succeeded, it branched to the NOP and advanced PC
+  EXPECT_GT(final_pc, 0x20000018) << "Boot sequence failed. mcause: " << mcause << " mtval: " << mtval;
+
+  delete top;
+  delete decoder;
+  delete vector_state;
+  delete fp_state;
   delete state;
   delete atomic_memory;
   delete memory;
