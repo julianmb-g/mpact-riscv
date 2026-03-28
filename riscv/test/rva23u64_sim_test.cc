@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "absl/strings/str_cat.h"
+#include "riscv/riscv_dtb_loader.h"
+#include <fstream>
 #include "riscv/riscv_top.h"
 #include "riscv/rva23u64_decoder_wrapper.h"
 #include "riscv/riscv_state.h"
@@ -318,4 +320,5 @@ TEST(Rva23u64SimTest, ZfaFcvtmodE2EExecutionBoundary) {
   delete atomic_memory;
   delete memory;
 }
+
 }  // namespace
