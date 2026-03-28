@@ -1103,7 +1103,7 @@ cc_test(
 cc_test(
     name = "riscv_boot_test",
     srcs = ["riscv_boot_test.cc"],
-    data = ["testfiles/hello_world.elf"],
+    data = ["testfiles/vmlinux_placeholder.elf"],
     deps = [
         "//riscv:riscv32g_decoder",
         "//riscv:riscv_state",
