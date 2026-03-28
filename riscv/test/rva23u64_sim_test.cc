@@ -409,3 +409,78 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
   delete atomic_memory;
   delete memory;
 }
+
+TEST(Rva23u64SimTest, ZicboE2EExecutionBoundary) {
+  std::string vmlinux_path = std::string(::testing::TempDir()) + "/zicbo_test.elf";
+  std::string asm_path = std::string(::testing::TempDir()) + "/zicbo_stub.s";
+
+  struct FileCleaner {
+    std::string p1, p2;
+    ~FileCleaner() {
+      std::remove(p1.c_str());
+      std::remove(p2.c_str());
+    }
+  } cleaner{vmlinux_path, asm_path};
+
+  // Create ASM Stub
+  std::ofstream s_file(asm_path);
+  s_file << ".global _start\n_start:\n"
+            "  li a0, 0x10000\n"
+            "  cbo.zero (a0)\n"
+            "  cbo.clean (a0)\n"
+            "  cbo.flush (a0)\n"
+            "  cbo.inval (a0)\n"
+            "  nop\n";
+  s_file.close();
+
+  // Compile
+  std::string cmd = "riscv64-unknown-elf-gcc -march=rv64g_zicbom_zicboz -mabi=lp64d -nostdlib " + asm_path + " -o " + vmlinux_path;
+  int ret = system(cmd.c_str());
+  if (ret != 0) {
+    GTEST_SKIP() << "Compiler not available, skipping Zicbo E2E execution test.";
+  }
+
+  auto* memory = new ::mpact::sim::util::FlatDemandMemory();
+  auto* atomic_memory = new ::mpact::sim::util::AtomicMemory(memory);
+  auto* state = new ::mpact::sim::riscv::RiscVState("test_zicbo", ::mpact::sim::riscv::RiscVXlen::RV64, memory, atomic_memory);
+  
+  auto* fp_state = new ::mpact::sim::riscv::RiscVFPState(state->csr_set(), state);
+  state->set_rv_fp(fp_state);
+  auto* vector_state = new ::mpact::sim::riscv::RiscVVectorState(state, 64);
+  state->set_rv_vector(vector_state);
+  
+  auto* decoder = new ::mpact::sim::riscv::Rva23u64DecoderWrapper(state, memory);
+  
+  for (int i = 0; i < 32; i++) {
+    std::string reg_name = absl::StrCat("x", i);
+    state->AddRegister<::mpact::sim::riscv::RV64Register>(reg_name);
+    state->AddRegisterAlias<::mpact::sim::riscv::RV64Register>(reg_name, ::mpact::sim::riscv::kXRegisterAliases[i]);
+  }
+  
+  auto* top = new ::mpact::sim::riscv::RiscVTop("test_top", state, decoder);
+
+  ::mpact::sim::util::ElfProgramLoader elf_loader(memory);
+  auto load_result = elf_loader.LoadProgram(vmlinux_path);
+  EXPECT_TRUE(load_result.ok());
+
+  uint64_t entry_point = load_result.value();
+  EXPECT_TRUE(top->WriteRegister("pc", entry_point).ok());
+
+  // Execute instructions. 6 instructions total.
+  auto run_status = top->Step(6);
+  EXPECT_TRUE(run_status.ok());
+
+  uint64_t final_pc = top->ReadRegister("pc").value();
+  uint64_t mcause = state->csr_set()->GetCsr("mcause").value()->AsUint64();
+
+  EXPECT_GT(final_pc, entry_point + 16) << "Execution failed. mcause: " << mcause;
+  EXPECT_EQ(mcause, 0);
+
+  delete top;
+  delete decoder;
+  delete vector_state;
+  delete fp_state;
+  delete state;
+  delete atomic_memory;
+  delete memory;
+}

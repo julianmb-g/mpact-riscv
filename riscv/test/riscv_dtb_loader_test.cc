@@ -35,8 +35,8 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     dtb_path_ = std::string(::testing::TempDir()) + "/dummy.dtb";
 
     std::ofstream dtb_file(dtb_path_, std::ios::binary);
-    // 0xd00dfeed magic number + 1 extra byte
-    dtb_data_ = {0xd0, 0x0d, 0xfe, 0xed, 0xEE};
+    // 0xd00dfeed magic number + no extra bytes to strictly enforce boundary
+    dtb_data_ = {0xd0, 0x0d, 0xfe, 0xed};
     dtb_file.write(reinterpret_cast<const char*>(dtb_data_.data()), dtb_data_.size());
     dtb_file.close();
 
@@ -46,7 +46,7 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     std::ofstream s_file(s_path);
     s_file << ".global _start\n_start:\n  wfi\n";
     s_file.close();
-    std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x20000000 -nostdlib " + s_path + " -o " + vmlinux_path_;
+    std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x20000000 -nostdlib -Wl,--nmagic " + s_path + " -o " + vmlinux_path_;
     int ret = system(cmd.c_str());
     EXPECT_EQ(ret, 0);
 
