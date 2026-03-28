@@ -64,4 +64,7 @@
 - **CsrDirtyList Implementation Status**
   - **Quote:** "Successfully integrated `CsrDirtyList` into `mpact-riscv/riscv/riscv_csr.h` to track modified CSR addresses."
   - **Impact:** Ensures tracking of modified CSR addresses is correctly maintained.
-  - **Action:** Continue utilizing `CsrDirtyList` for CSR modification tracking across architectural components.
+  - **Action:** Continue utilizing `CsrDirtyList` for CSR modification tracking across architectural components.### Restored Knowledge (Data-Loss Audit Remediation - Latest Cycle)
+- Eradicate `memory->Store` mock logic with hardcoded binary opcodes in E2E execution tests. Dynamically compile payloads using `NativeTextualAssembler` or load an authentic `.elf`.
+- OS Boot Handshake: Ensure E2E execution tests instantiate `RiscvTop`, load `vmlinux` via the loader, and organically trap the boot sequence execution trace.
+- Memory offset map explicit bounds: e.g. `vmlinux` at `0x20000000`, DTB at `0x21000000`, asserting non-intersection.
