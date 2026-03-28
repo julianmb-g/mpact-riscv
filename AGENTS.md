@@ -100,3 +100,8 @@
   * **Quote:** "Mutating if (0x20000000 >= start && 0x20000000 < end) to if (0x20000000 > start && 0x20000000 < end)"
   * **Impact:** This surviving mutant falsely rejects valid ELF payloads that begin exactly at the `0x20000000` entry point address, proving the E2E hardware verification is failing to organically test perfect edge-case boundary mapping for the OS boot payload.
   * **Action:** `riscv_dtb_loader_test` MUST generate a rigorous ELF payload that perfectly aligns exactly to `0x20000000` to verify boundary conditions are inclusive natively.
+
+* **Isolated Execution Boundary Evaluation**
+  * **Quote:** "The test evaluates the C++ loader function natively on `FlatDemandMemory` but never executes the loaded payload via the simulator's CPU loop."
+  * **Impact:** Asserting memory is written completely ignores whether the `RiscvTop` orchestrator can accurately execute the loaded bytes. This represents an isolated unit test masking as E2E.
+  * **Action:** Any payload loading test MUST instantiate the `RiscvTop` execution loop and organically step the CPU, asserting `pc` bounds traverse the mapped addresses natively.
