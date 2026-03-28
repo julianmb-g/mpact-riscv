@@ -1073,7 +1073,6 @@ cc_test(
         "testfiles/zfa_fcvtmod.elf",
     ],
     deps = [
-        "//riscv:riscv_dtb_loader",
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
