@@ -10,7 +10,7 @@ namespace mpact {
 namespace sim {
 namespace riscv {
 
-constexpr uint64_t kDtbAddress = 0x203F0000;
+constexpr uint64_t kDtbAddress = 0x21000000;
 
 absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
     RiscVState* state, 
@@ -46,6 +46,39 @@ absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
   std::vector<uint8_t> dtb_data(dtb_size);
   if (dtb_size > 0 && !dtb_file.read(reinterpret_cast<char*>(dtb_data.data()), dtb_size)) {
       return absl::InternalError("Failed to read dtb payload");
+  }
+
+  // FDT magic validation
+  if (dtb_size >= 4) {
+    if (dtb_data[0] != 0xd0 || dtb_data[1] != 0x0d || 
+        dtb_data[2] != 0xfe || dtb_data[3] != 0xed) {
+      return absl::InvalidArgumentError("Invalid FDT magic number");
+    }
+  } else if (dtb_size > 0) {
+      return absl::InvalidArgumentError("Invalid FDT magic number");
+  }
+
+  // Determine loaded ELF bounds
+  uint64_t elf_start = std::numeric_limits<uint64_t>::max();
+  uint64_t elf_end = 0;
+  for (const auto& segment : elf_loader.elf_reader()->segments) {
+    if (segment->get_type() == ELFIO::PT_LOAD) {
+      uint64_t start = segment->get_physical_address();
+      uint64_t end = start + segment->get_memory_size();
+      if (start < elf_start) elf_start = start;
+      if (end > elf_end) elf_end = end;
+    }
+  }
+
+  // Boundary intersection check
+  if (dtb_size > 0 && elf_start < elf_end) {
+    uint64_t dtb_start = kDtbAddress;
+    uint64_t dtb_end = dtb_start + dtb_size;
+    if (std::max(dtb_start, elf_start) < std::min(dtb_end, elf_end)) {
+      return absl::InvalidArgumentError(absl::StrCat(
+          "DTB memory [0x", absl::Hex(dtb_start), " - 0x", absl::Hex(dtb_end),
+          "] intersects with ELF memory [0x", absl::Hex(elf_start), " - 0x", absl::Hex(elf_end), "]"));
+    }
   }
 
   auto db_factory = state->db_factory();
