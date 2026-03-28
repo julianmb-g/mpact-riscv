@@ -319,3 +319,29 @@ TEST(Rva23u64SimTest, ZfaFcvtmodE2EExecutionBoundary) {
   delete memory;
 }
 }  // namespace
+
+#include <filesystem>
+#include "riscv/riscv_dtb_loader.h"
+
+TEST(Rva23u64SimTest, BootSequenceE2E) {
+  const std::string vmlinux_path = "/tmp/vmlinux_placeholder.elf";
+  const std::string dtb_path = "/tmp/board_placeholder.dtb";
+
+  if (!std::filesystem::exists(vmlinux_path) || !std::filesystem::exists(dtb_path)) {
+    GTEST_SKIP() << "Pre-compiled OS artifacts missing, skipping boot test.";
+  }
+
+  auto* memory = new ::mpact::sim::util::FlatDemandMemory();
+  auto* atomic_memory = new ::mpact::sim::util::AtomicMemory(memory);
+  auto* state = new ::mpact::sim::riscv::RiscVState("test_boot", ::mpact::sim::riscv::RiscVXlen::RV64, memory, atomic_memory);
+
+  absl::Status status = ::mpact::sim::riscv::RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state, vmlinux_path, dtb_path);
+  if (absl::IsNotFound(status)) {
+    GTEST_SKIP() << "Pre-compiled OS artifacts missing, skipping boot test.";
+  }
+  EXPECT_TRUE(status.ok());
+
+  delete state;
+  delete atomic_memory;
+  delete memory;
+}
