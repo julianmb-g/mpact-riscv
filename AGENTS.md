@@ -95,3 +95,8 @@
   - **Quote:** "Leaving 'Restored Knowledge' blocks at the bottom of the submodule AGENTS.md."
   - **Impact:** Fragments submodule-specific execution constraints.
   - **Action:** Immediately integrate audit restorations into the primary strict execution mandates and remove the restoration headers.
+
+* **OS Boot Entry Point Boundary Evasion**
+  * **Quote:** "Mutating if (0x20000000 >= start && 0x20000000 < end) to if (0x20000000 > start && 0x20000000 < end)"
+  * **Impact:** This surviving mutant falsely rejects valid ELF payloads that begin exactly at the `0x20000000` entry point address, proving the E2E hardware verification is failing to organically test perfect edge-case boundary mapping for the OS boot payload.
+  * **Action:** `riscv_dtb_loader_test` MUST generate a rigorous ELF payload that perfectly aligns exactly to `0x20000000` to verify boundary conditions are inclusive natively.
