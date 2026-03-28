@@ -72,3 +72,9 @@
 * **E2E Integration Testing Rigor:** Mocking components like `TargetEncoder` or injecting raw hexadecimal words into memory (e.g., bypassing `NativeTextualAssembler`) is testing fraud. Authentic tests must route raw assembly through the full compilation-to-execution loop.
 * **Python Linter Integrity:** Scattered Python import violations must be resolved by moving standard/third-party imports to the top of the file (exceptions apply to PyBind11 simulator bindings). Remove unused variables or use them in verifiable assertions.
 * **OS Boot Artifact Graceful Degradation:** Pre-compiled OS artifacts must be probed; if missing, raise `unittest.SkipTest` or `pytest.skip` organically to avoid pipeline-crashing null pointer defects.
+
+### New Lessons Learned (Cycle 168 - E2E Fidelity)
+* **Tier 1: Phantom E2E Boot Test Reversion:** 
+  * **Quote:** "Validating OS bootstraps by only checking bytes written to memory or executing arbitrary NOPs."
+  * **Impact:** Empty `#include` validation fraud creates a false sense of OS boot execution.
+  * **Action:** Never mock E2E boot tests. FDT magic numbers must be strictly checked and OS payloads physically routed. Revert empty validation tests.
