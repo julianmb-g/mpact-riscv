@@ -1068,9 +1068,9 @@ cc_test(
     data = [
         "testfiles/hello_world_64.elf",
         "testfiles/zawrs.elf",
-        "testfiles/zve32f.elf",
-        "testfiles/zfa_fround.elf",
         "testfiles/zfa_fcvtmod.elf",
+        "testfiles/zfa_fround.elf",
+        "testfiles/zve32f.elf",
     ],
     deps = [
         "//riscv:riscv_dtb_loader",
@@ -1123,9 +1123,9 @@ cc_test(
     data = [
         "testfiles/hello_world_64.elf",
         "testfiles/zawrs.elf",
-        "testfiles/zve32f.elf",
-        "testfiles/zfa_fround.elf",
         "testfiles/zfa_fcvtmod.elf",
+        "testfiles/zfa_fround.elf",
+        "testfiles/zve32f.elf",
     ],
     deps = [
         "//riscv:riscv_fp_state",
