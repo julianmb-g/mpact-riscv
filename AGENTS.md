@@ -78,3 +78,14 @@
   * **Quote:** "Validating OS bootstraps by only checking bytes written to memory or executing arbitrary NOPs."
   * **Impact:** Empty `#include` validation fraud creates a false sense of OS boot execution.
   * **Action:** Never mock E2E boot tests. FDT magic numbers must be strictly checked and OS payloads physically routed. Revert empty validation tests.
+# mpact-riscv Submodule specific Rules
+
+### Tier 1: RVVI ABI Fidelity Enforcement
+* **Quote:** "The lock-free rvvi_trace_event_t POD struct must be exactly 64 bytes padded."
+* **Impact:** Breaking the strict 64-byte ABI alignment for tracing structures silently corrupts cross-component ring buffer integrations and breaks trace event ingestion.
+* **Action:** Never alter foundational ABI size assertions (e.g., expanding from 64 bytes to 128 bytes). Any size assertions MUST exactly match the architectural `DESIGN.md`.
+
+### Tier 1: E2E OpenSBI Boot Execution
+* **Quote:** "Validating that bytes are written to memory does not prove the simulator can actually execute the OpenSBI boot handshake."
+* **Impact:** Fails to prevent overlapping memory regions and invalid Device Tree Blobs (DTB) from silently crashing the bootloader.
+* **Action:** E2E tests must instantiate the top-level simulator (e.g. RiscvTop) and actually execute the instruction trace. 
