@@ -1065,7 +1065,13 @@ cc_test(
     name = "rva23u64_sim_test",
     srcs = ["rva23u64_sim_test.cc"],
     copts = ["-O3"],
-    data = ["testfiles/hello_world_64.elf", "testfiles/zawrs.elf", "testfiles/zve32f.elf"],
+    data = [
+        "testfiles/hello_world_64.elf",
+        "testfiles/zawrs.elf",
+        "testfiles/zve32f.elf",
+        "testfiles/zfa_fround.elf",
+        "testfiles/zfa_fcvtmod.elf",
+    ],
     deps = [
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
@@ -1113,7 +1119,13 @@ cc_test(
     name = "rva23s64_sim_test",
     srcs = ["rva23s64_sim_test.cc"],
     copts = ["-O3"],
-    data = ["testfiles/hello_world_64.elf", "testfiles/zawrs.elf", "testfiles/zve32f.elf"],
+    data = [
+        "testfiles/hello_world_64.elf",
+        "testfiles/zawrs.elf",
+        "testfiles/zve32f.elf",
+        "testfiles/zfa_fround.elf",
+        "testfiles/zfa_fcvtmod.elf",
+    ],
     deps = [
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",

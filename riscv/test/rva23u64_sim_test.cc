@@ -161,21 +161,12 @@ TEST(Rva23u64SimTest, ZfaFroundE2EExecutionBoundary) {
   
   auto* top = new RiscVTop("test_top", state, decoder);
 
-  uint32_t encoded_inst = 0x4045c553; // fround.s fa0, fa1, rmm
-  uint32_t encoded_nop = 0x00000013;  // nop
-
-  uint64_t pc = 0x1000;
+  ElfProgramLoader elf_loader(memory);
+  auto load_result = elf_loader.LoadProgram("riscv/test/testfiles/zfa_fround.elf");
+  EXPECT_TRUE(load_result.ok());
+  uint64_t pc = load_result.value();
+  
   EXPECT_TRUE(top->WriteRegister("pc", pc).ok());
-  
-  auto db1 = state->db_factory()->Allocate<uint32_t>(1);
-  db1->Set<uint32_t>(0, encoded_inst);
-  memory->Store(pc, db1);
-  db1->DecRef();
-  
-  auto db2 = state->db_factory()->Allocate<uint32_t>(1);
-  db2->Set<uint32_t>(0, encoded_nop);
-  memory->Store(pc + 4, db2);
-  db2->DecRef();
 
   // fa1 maps to f11. fa0 maps to f10.
   auto fa1 = state->GetRegister<RVFpRegister>("f11").first;
@@ -230,23 +221,12 @@ TEST(Rva23u64SimTest, Zve32fUnaryExecutionBoundary) {
   auto* top = new RiscVTop("test_top", state, decoder);
 
   
-  uint32_t vsetivli_opcode = 0xcd0272d7;
+  ElfProgramLoader elf_loader(memory);
+  auto load_result = elf_loader.LoadProgram("riscv/test/testfiles/zve32f.elf");
+  EXPECT_TRUE(load_result.ok());
+  uint64_t pc = load_result.value();
   
-  uint32_t vfsqrt_opcode = 0x4e2010d7;
-  
-
-  uint64_t pc = 0x1000;
   EXPECT_TRUE(top->WriteRegister("pc", pc).ok());
-  
-  auto db1 = state->db_factory()->Allocate<uint32_t>(1);
-  db1->Set<uint32_t>(0, vsetivli_opcode);
-  memory->Store(pc, db1);
-  db1->DecRef();
-  
-  auto db2 = state->db_factory()->Allocate<uint32_t>(1);
-  db2->Set<uint32_t>(0, vfsqrt_opcode);
-  memory->Store(pc + 4, db2);
-  db2->DecRef();
 
   auto mstatus_res = state->csr_set()->GetCsr("mstatus");
   EXPECT_TRUE(mstatus_res.ok());
@@ -306,21 +286,12 @@ TEST(Rva23u64SimTest, ZfaFcvtmodE2EExecutionBoundary) {
   
   auto* top = new RiscVTop("test_top", state, decoder);
 
-  uint32_t encoded_inst = 0xc2859553; // fcvtmod.w.d a0, fa1, rtz
-  uint32_t encoded_nop = 0x00000013;  // nop
-
-  uint64_t pc = 0x1000;
+  ElfProgramLoader elf_loader(memory);
+  auto load_result = elf_loader.LoadProgram("riscv/test/testfiles/zfa_fcvtmod.elf");
+  EXPECT_TRUE(load_result.ok());
+  uint64_t pc = load_result.value();
+  
   EXPECT_TRUE(top->WriteRegister("pc", pc).ok());
-  
-  auto db1 = state->db_factory()->Allocate<uint32_t>(1);
-  db1->Set<uint32_t>(0, encoded_inst);
-  memory->Store(pc, db1);
-  db1->DecRef();
-  
-  auto db2 = state->db_factory()->Allocate<uint32_t>(1);
-  db2->Set<uint32_t>(0, encoded_nop);
-  memory->Store(pc + 4, db2);
-  db2->DecRef();
 
   auto fa1 = state->GetRegister<RVFpRegister>("f11").first;
   auto a0 = state->GetRegister<RV64Register>("x10").first;
