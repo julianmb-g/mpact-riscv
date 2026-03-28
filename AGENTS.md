@@ -80,3 +80,17 @@
   - **Quote:** "Leaving 'Restored Knowledge' blocks at the bottom of the submodule AGENTS.md."
   - **Impact:** Fragments submodule-specific execution constraints.
   - **Action:** Immediately integrate audit restorations into the primary strict execution mandates and remove the restoration headers.
+* **Tier 1: Critical Blocker - Zicbom Standard Profile Execution Mocking**
+  * **Quote**: "In `riscv_zicbo_instructions_test.cc`, `instruction_->set_semantic_function(&mpact::sim::riscv::RiscVCboZero); instruction_->Execute(nullptr);`"
+  * **Impact**: Total evasion of the E2E execution boundary. Mocks the instruction object bypassing decoder and memory interface.
+  * **Action**: MUST write strict E2E test that cross-compiles Zicbom assembly (`cbo.zero`), loads ELF into `RiscvTop` simulator naturally, and verifies state natively.
+
+* **Tier 1: Critical Blocker - FDT Magic Size Boundary Evasion**
+  * **Quote**: "`mpact-riscv/riscv/riscv_dtb_loader.cc` Mutated `if (dtb_size >= 4)` to `if (dtb_size > 4)`"
+  * **Impact**: Skips device tree magic validation block if exactly 4-byte FDT magic header is passed.
+  * **Action**: MUST explicitly inject an exactly 4-byte DTB payload (containing only magic `0xd00dfeed`) to enforce exact boundary natively.
+
+* **Tier 1: Critical Blocker - OS Boot Entry Point Boundary Evasion**
+  * **Quote**: "`mpact-riscv/riscv/riscv_dtb_loader.cc` Mutated `if (0x20000000 >= start)`..."
+  * **Impact**: Falsely rejects valid ELF payloads that begin exactly at `0x20000000`.
+  * **Action**: Generate rigorous ELF payload that aligns exactly to `0x20000000` to verify boundary conditions are inclusive natively.
