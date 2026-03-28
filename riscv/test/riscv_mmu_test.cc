@@ -563,8 +563,117 @@ TEST_F(RiscVMmuSv48TranslationTest, Sv48PageWalkTranslationOrganic) {
   out_db->DecRef();
 }
 
+TEST(RiscVMmuTest, TestSvpbmtReservedFault) {
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
+  state.AddExtension("Svpbmt");
+  
+  auto satp_res = state.csr_set()->GetCsr("satp");
+  EXPECT_TRUE(satp_res.ok());
+  auto* satp_csr = satp_res.value();
+
+  RiscVMmu mmu(&state, physical_memory);
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  
+  uint64_t satp_val = (8ULL << 60) | 1ULL; // Sv39, PPN=1
+  satp_csr->Write(satp_val);
+
+  // L2 PTE
+  auto pte2_db = db_factory.Allocate<uint64_t>(1);
+  pte2_db->Set<uint64_t>(0, (2ULL << 10) | 0x1);
+  physical_memory->Store(0x1008, pte2_db);
+
+  // L1 PTE
+  auto pte1_db = db_factory.Allocate<uint64_t>(1);
+  pte1_db->Set<uint64_t>(0, (3ULL << 10) | 0x1);
+  physical_memory->Store(0x2000, pte1_db);
+
+  // L0 PTE (Leaf) with PBMT = 11 (Reserved)
+  auto pte0_pbmt = db_factory.Allocate<uint64_t>(1);
+  uint64_t pte_val = (4ULL << 10) | 0xF; // V=1, R/W/X=1
+  pte_val |= (3ULL << 61); // PBMT = 11 (Reserved)
+  pte0_pbmt->Set<uint64_t>(0, pte_val);
+  physical_memory->Store(0x3000, pte0_pbmt);
+
+  auto read_db = db_factory.Allocate<uint32_t>(1);
+  
+  auto mcause_res = state.csr_set()->GetCsr("mcause");
+  EXPECT_TRUE(mcause_res.ok());
+  auto* mcause_csr = mcause_res.value();
+  mcause_csr->Write(static_cast<uint64_t>(0));
+
+  mmu.Load(0x40000000, read_db, nullptr, nullptr); 
+  EXPECT_EQ(mcause_csr->AsUint64(), static_cast<uint64_t>(ExceptionCode::kLoadPageFault)) 
+      << "Reserved PBMT=11 MUST cause a Page Fault";
+
+  pte2_db->DecRef();
+  pte1_db->DecRef();
+  pte0_pbmt->DecRef();
+  read_db->DecRef();
+  delete physical_memory;
+}
+
+TEST(RiscVMmuTest, TestSvnapotTranslation) {
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
+  state.AddExtension("Svnapot");
+  
+  auto satp_res = state.csr_set()->GetCsr("satp");
+  EXPECT_TRUE(satp_res.ok());
+  auto* satp_csr = satp_res.value();
+
+  RiscVMmu mmu(&state, physical_memory);
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  
+  uint64_t satp_val = (8ULL << 60) | 1ULL; // Sv39, PPN=1
+  satp_csr->Write(satp_val);
+
+  // L2 PTE
+  auto pte2_db = db_factory.Allocate<uint64_t>(1);
+  pte2_db->Set<uint64_t>(0, (2ULL << 10) | 0x1);
+  physical_memory->Store(0x1008, pte2_db);
+
+  // L1 PTE
+  auto pte1_db = db_factory.Allocate<uint64_t>(1);
+  pte1_db->Set<uint64_t>(0, (3ULL << 10) | 0x1);
+  physical_memory->Store(0x2000, pte1_db);
+
+  // L0 PTE (Leaf) with N = 1 (NAPOT 64KB page)
+  auto pte0_napot = db_factory.Allocate<uint64_t>(1);
+  uint64_t pte_ppn = (4ULL << 4) | 0x8; // PPN[3:0] MUST be 1000 (8) for 64KB NAPOT
+  uint64_t pte_val = (pte_ppn << 10) | 0xF; // V=1, R/W/X=1
+  pte_val |= (1ULL << 63); // N = 1 (NAPOT)
+  pte0_napot->Set<uint64_t>(0, pte_val);
+  physical_memory->Store(0x3008, pte0_napot);
+
+  // Write golden data to physical address.
+  // VA = 0x40001234. Since it's a 64KB page, the offset is 16 bits: 0x1234.
+  // Physical address = ((pte_ppn & ~0xF) * 4096) + 0x1234
+  // pte_ppn & ~0xF = (4 << 4) = 0x40. 0x40 * 4096 = 0x40000.
+  // Paddr = 0x40000 + 0x1234 = 0x41234.
+  auto write_db = db_factory.Allocate<uint32_t>(1);
+  write_db->Set<uint32_t>(0, 0x0B00B1E5);
+  physical_memory->Store(0x41234, write_db);
+
+  auto read_db = db_factory.Allocate<uint32_t>(1);
+  mmu.Load(0x40001234, read_db, nullptr, nullptr); 
+  
+  auto mcause_res = state.csr_set()->GetCsr("mcause");
+  EXPECT_TRUE(mcause_res.ok());
+  auto* mcause_csr = mcause_res.value();
+  
+  EXPECT_EQ(mcause_csr->AsUint64(), 0) << "NAPOT translation should succeed";
+  EXPECT_EQ(read_db->Get<uint32_t>(0), 0x0B00B1E5);
+
+  pte2_db->DecRef();
+  pte1_db->DecRef();
+  pte0_napot->DecRef();
+  write_db->DecRef();
+  read_db->DecRef();
+  delete physical_memory;
+}
+
 }  // namespace
 }  // namespace riscv
 }  // namespace sim
 }  // namespace mpact
-

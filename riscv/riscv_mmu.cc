@@ -104,7 +104,20 @@ bool RiscVMmu::Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint
       if (is_inst_fetch && x == 0) return false; // Fault on execute from non-exec page
       
       // Leaf PTE found
+      uint64_t pbmt = (pte >> 61) & 0x3;
+      if (state_->IsExtensionEnabled("Svpbmt") && pbmt == 3) return false; // Reserved PBMT causes page fault
+
+      uint64_t n = (pte >> 63) & 0x1;
       uint64_t pte_ppn = (pte >> 10) & 0xFFFFFFFFFFF;
+      
+      if (state_->IsExtensionEnabled("Svnapot") && n == 1) { // Svnapot 64KB page
+        if (i != 0) return false; // NAPOT only allowed at leaf level 0
+        if ((pte_ppn & 0xF) != 0x8) return false; // NAPOT PPN[3:0] must be 1000
+        uint64_t pgoff = vaddr & 0xFFFF;
+        *paddr = ((pte_ppn & ~0xF) * 4096) + pgoff;
+        return true;
+      }
+
       if (i > 0) {
         // Superpage alignment check
         uint64_t ppn_mask = (1ULL << (9 * i)) - 1;

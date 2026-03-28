@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/container/flat_hash_set.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
@@ -328,6 +329,10 @@ class RiscVState : public ArchState {
            counter_interrupt_returns_.GetValue();
   }
 
+  // Extension Configuration
+  void AddExtension(absl::string_view ext) { enabled_extensions_.insert(std::string(ext)); }
+  bool IsExtensionEnabled(absl::string_view ext) const { return enabled_extensions_.contains(std::string(ext)); }
+
   // Accessors.
   void set_memory(util::MemoryInterface* memory) { memory_ = memory; }
   util::MemoryInterface* memory() const { return memory_; }
@@ -475,6 +480,8 @@ class RiscVState : public ArchState {
   RiscVCsrInterface* sideleg_ = nullptr;
   generic::SimpleCounter<int64_t> counter_interrupts_taken_;
   generic::SimpleCounter<int64_t> counter_interrupt_returns_;
+
+  absl::flat_hash_set<std::string> enabled_extensions_;
 };
 
 // Specialization for RiscV vector registers.
