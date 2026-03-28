@@ -2,6 +2,9 @@
 
 ## Lessons Learned
 
+### Build & Orchestration
+- **Local Repository Prohibition**: Replacing `http_archive` with `local_repository` or `native.local_repository` in Bazel repository definitions (e.g., `repos.bzl`) is strictly forbidden across all submodules. Doing so breaks hermeticity and cross-system reproducibility.
+
 ### Architecture Quirks
 - **Code Duplication & Refactoring (`rv32g_sim.cc` / `rv64g_sim.cc`)**: Both top-level simulators duplicate logic for `DataBuffer` trace formatting (`log_commits`). Ensure this logic is properly extracted to reusable utilities like `TraceFormatter` to maintain DRY principles and ease maintenance across architectural variants.
 
