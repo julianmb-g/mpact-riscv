@@ -58,27 +58,33 @@ absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
       return absl::InvalidArgumentError("Invalid FDT magic number");
   }
 
-  // Determine loaded ELF bounds
-  uint64_t elf_start = std::numeric_limits<uint64_t>::max();
-  uint64_t elf_end = 0;
+  bool has_20000000_segment = false;
+  uint64_t dtb_start = kDtbAddress;
+  uint64_t dtb_end = dtb_start + dtb_size;
+
   for (const auto& segment : elf_loader.elf_reader()->segments) {
     if (segment->get_type() == ELFIO::PT_LOAD) {
       uint64_t start = segment->get_physical_address();
       uint64_t end = start + segment->get_memory_size();
-      if (start < elf_start) elf_start = start;
-      if (end > elf_end) elf_end = end;
+      
+      // Enforce vmlinux load address covers 0x20000000 (usually entry point)
+      if (0x20000000 >= start && 0x20000000 < end) {
+        has_20000000_segment = true;
+      }
+
+      // Check for intersections
+      if (dtb_size > 0 && start < end) {
+        if (std::max(dtb_start, start) < std::min(dtb_end, end)) {
+          return absl::InvalidArgumentError(absl::StrCat(
+              "DTB memory [0x", absl::Hex(dtb_start), " - 0x", absl::Hex(dtb_end),
+              "] intersects with ELF segment [0x", absl::Hex(start), " - 0x", absl::Hex(end), "]"));
+        }
+      }
     }
   }
 
-  // Boundary intersection check
-  if (dtb_size > 0 && elf_start < elf_end) {
-    uint64_t dtb_start = kDtbAddress;
-    uint64_t dtb_end = dtb_start + dtb_size;
-    if (std::max(dtb_start, elf_start) < std::min(dtb_end, elf_end)) {
-      return absl::InvalidArgumentError(absl::StrCat(
-          "DTB memory [0x", absl::Hex(dtb_start), " - 0x", absl::Hex(dtb_end),
-          "] intersects with ELF memory [0x", absl::Hex(elf_start), " - 0x", absl::Hex(elf_end), "]"));
-    }
+  if (!has_20000000_segment) {
+    return absl::InvalidArgumentError("vmlinux ELF must contain a PT_LOAD segment at 0x20000000");
   }
 
   auto db_factory = state->db_factory();
