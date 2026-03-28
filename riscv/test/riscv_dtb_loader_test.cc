@@ -69,6 +69,22 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     std::string cmd2 = "riscv64-unknown-elf-gcc -nostdlib -Wl,-T," + ld_path + " " + c_path + " -o " + conflict_path_;
     ret = system(cmd2.c_str());
     EXPECT_EQ(ret, 0);
+
+    // Create a touching (non-intersecting) vmlinux.elf
+    touching_path_ = std::string(::testing::TempDir()) + "/touching_vmlinux.elf";
+    std::string ld_touch_path = std::string(::testing::TempDir()) + "/touching.ld";
+    std::ofstream ld_touch_file(ld_touch_path);
+    ld_touch_file << "PHDRS { text PT_LOAD; }\n";
+    ld_touch_file << "SECTIONS { . = 0x20000000; .text : { *(.text) } :text . = 0x20FFFFFC; .data : { *(.data) } :text }\n";
+    ld_touch_file.close();
+
+    std::string t_path = std::string(::testing::TempDir()) + "/touching.s";
+    std::ofstream t_file(t_path);
+    t_file << ".section .text\n.global _start\n_start:\n  wfi\n.section .data\n  .word 0x12345678\n";
+    t_file.close();
+    std::string cmd3 = "riscv64-unknown-elf-gcc -nostdlib -Wl,-T," + ld_touch_path + " " + t_path + " -o " + touching_path_;
+    ret = system(cmd3.c_str());
+    EXPECT_EQ(ret, 0);
   }
 
   void TearDown() override {
@@ -82,6 +98,7 @@ class RiscvDtbLoaderTest : public ::testing::Test {
   std::string vmlinux_path_;
   std::string dtb_path_;
   std::string conflict_path_;
+  std::string touching_path_;
   std::vector<uint8_t> dtb_data_;
 };
 
@@ -137,6 +154,13 @@ TEST_F(RiscvDtbLoaderTest, BoundaryIntersectionFails) {
   absl::Status status = RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state_, conflict_path_, dtb_path_);
   EXPECT_TRUE(absl::IsInvalidArgument(status));
   EXPECT_NE(status.message().find("intersects with ELF segment"), std::string::npos);
+}
+
+TEST_F(RiscvDtbLoaderTest, TouchingBoundaryDoesNotIntersect) {
+  // touching_vmlinux.elf ends exactly at 0x21000000, touching the DTB start.
+  // This explicitly asserts non-intersection between the ELF payload and DTB regions.
+  absl::Status status = RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state_, touching_path_, dtb_path_);
+  EXPECT_TRUE(status.ok()) << status.message();
 }
 
 }  // namespace
