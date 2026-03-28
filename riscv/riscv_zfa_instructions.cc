@@ -291,9 +291,9 @@ void RiscVFCvtmodWD(const Instruction* instruction) {
     dest_value = 0;
     invalid = true;
   } else {
-    constexpr double kMinInt32 = -2147483648.0;
-    constexpr double kMaxInt32 = 2147483647.0;
-    constexpr double kTwoPow32 = 4294967296.0;
+    constexpr double kMinInt32 = static_cast<double>(std::numeric_limits<int32_t>::min());
+    constexpr double kMaxInt32 = static_cast<double>(std::numeric_limits<int32_t>::max());
+    constexpr double kTwoPow32 = static_cast<double>(1ULL << 32);
 
     double rtz_a = std::trunc(a);
     if (rtz_a >= kMinInt32 && rtz_a <= kMaxInt32) {
