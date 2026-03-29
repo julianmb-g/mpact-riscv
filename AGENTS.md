@@ -91,3 +91,8 @@
   * **Impact:** Violates DRY principles and complicates maintenance across architectural variants.
   * **Action:** Extract duplicate logic (like trace formatting or `CsrDirtyList` tracking) into reusable utilities and common headers.
 
+# Local Lessons Learned (mpact-riscv)
+
+## Tier 1: Testing Boundaries & Fraud
+* **Impact:** Blanket exception swallowing (`except Exception: pass`) or skipping (`GTEST_SKIP`) missing artifacts hides invalid variable bindings and boundary bugs.
+* **Action:** Never skip execution tests if standard payloads (`vmlinux_placeholder.elf`) are missing. Route payloads natively through the `RiscvTop` execution loop and organically step the CPU instead of just verifying memory writes.
