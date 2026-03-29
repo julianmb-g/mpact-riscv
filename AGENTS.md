@@ -107,3 +107,8 @@
   * **Impact:** Tightening architectural constraints (like checking A/D bits natively) organically exposes fragile mock test environments.
   * **Action:** When introducing strict PTE permission constraints (Svadu, Svpbmt), ALL legacy MMU tests must be proactively patched to include required mock permission bits (e.g., `| 0xC0`) rather than disabling the constraint check itself.
 
+
+* **FDT Magic Number Strictness & Missing Artifact Mandate**
+  * **Quote:** "Ensure the test asserts the OpenSBI boot handshake (0xd00dfeed) and strictly uses FAIL() if the authentic pre-compiled vmlinux payload is missing."
+  * **Impact:** Using `GTEST_SKIP()` or dummy generators when essential artifacts are absent masks the systemic failure to cross-compile payloads, allowing testing fraud to bypass CI execution constraints.
+  * **Action:** Boot tests must strictly utilize `FAIL()` on missing artifacts and physically assert the `0xd00dfeed` OpenSBI handoff magic number is loaded into memory.

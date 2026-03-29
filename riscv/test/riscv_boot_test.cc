@@ -140,7 +140,9 @@ TEST_F(RiscVBootTest, TestPrecompiledVmlinuxBootSequence) {
   // Enforce organic failure without GTEST_SKIP() when missing authentic ELF
   mpact::sim::util::ElfProgramLoader loader(memory_);
   auto load_status = loader.LoadProgram("riscv/test/testfiles/vmlinux.elf");
-  ASSERT_TRUE(load_status.ok()) << "MANDATE: Forbid GTEST_SKIP() when artifact is missing; enforce organic failure. " << load_status.status().message();
+  if (!load_status.ok()) {
+    FAIL() << "MANDATE: Forbid GTEST_SKIP() when artifact is missing; enforce organic failure. " << load_status.status().message();
+  }
 
   uint64_t expected_hartid = 0x0;
   uint64_t expected_dtb = 0x21000000ULL;

@@ -30,6 +30,12 @@ absl::Status WriteBootHandoffRegisters(RiscVTop* riscv_top, uint64_t hartid, uin
   if (!a1_write.ok()) {
     return a1_write;
   }
+
+   
+   
+   
+   
+
   return absl::OkStatus();
 }
 
