@@ -114,16 +114,7 @@ TEST(Rva23s64SimTest, BasicInstantiationTest) {
   // Load a real ELF binary to prove organic architectural instruction decoding.
   ElfProgramLoader elf_loader(memory);
   auto load_result = elf_loader.LoadProgram("riscv/test/testfiles/hello_world_64.elf");
-  if (!load_result.ok()) {
-    delete top;
-    delete decoder;
-    delete vector_state;
-    delete fp_state;
-    delete state;
-    delete atomic_memory;
-    delete memory;
-    GTEST_SKIP() << "OS Artifact Missing";
-  }
+  EXPECT_TRUE(load_result.ok());
 
   uint64_t entry_point = load_result.value();
   auto pc_write = top->WriteRegister("pc", entry_point);
