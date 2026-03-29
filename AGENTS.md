@@ -92,3 +92,9 @@
   * **Impact:** Violates architectural requirements by duplicating code instead of leveraging upstream.
   * **Action:** Extract the Zve32f instruction set strictly from the reference mpact-riscv `.isa` and `.bin_fmt` files and migrate them.
 
+
+### Tier 1: Critical Blocker
+* **MANDATE 3**: Any new feature or pipeline (like Zfa rounding in `mpact-riscv`) MUST enforce a strict Test Pyramid: an executing ELF payload evaluated by the top-level simulator. Isolated string matching or individual instruction evaluations without cross-component hardware integration are flagged as systemic testing illusions.
+
+### Tier 2: Clarification Needed
+* **Opaque OS Boot Register Handoff Illusion**: The E2E OS boot test must execute an authentic OS payload that organically *reads* `a0` and `a1` and writes their values out to a verifiable memory address, proving that the simulated CPU genuinely stepped through the handoff payload and didn't just blindly execute `NOP` space.
