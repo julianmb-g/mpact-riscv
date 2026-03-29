@@ -94,9 +94,10 @@ class ClintPlicHardwareInterruptTest : public ::testing::Test {
     mtimecmp_db->DecRef();
 
     // Setup RiscV CPU state
-    // Enable Machine External (11) and Machine Timer (7) in MIE
+    // Enable Machine External (11), Machine Timer (7), and Machine Software (3) in MIE
     state_->mie()->set_meie(1);
     state_->mie()->set_mtie(1);
+    state_->mie()->set_msie(1);
     // Enable machine interrupts globally: MSTATUS.MIE=1 (bit 3)
     auto status = riscv_top_->WriteRegister("mstatus", 0x8);
     EXPECT_TRUE(status.ok());
@@ -194,6 +195,32 @@ TEST_F(ClintPlicHardwareInterruptTest, ClintMachineTimerInterruptDelivery) {
   EXPECT_TRUE(trap_taken_);
   EXPECT_TRUE(trap_is_interrupt_);
   EXPECT_EQ(trap_exception_code_, 7); // Machine Timer Interrupt
+  EXPECT_EQ(trap_epc_, 0x100C);
+}
+
+// Test CLINT Machine Software Interrupt (Exception Code 3)
+TEST_F(ClintPlicHardwareInterruptTest, ClintSoftwareInterruptDelivery) {
+  auto res = riscv_top_->Step(2); // Execute nop, nop
+  EXPECT_TRUE(res.ok());
+  EXPECT_EQ(state_->pc_operand()->AsUint32(0), 0x1008);
+  EXPECT_FALSE(trap_taken_);
+
+  // Write 1 to MSIP (Machine Software Interrupt Pending) register at offset 0
+  auto* db = state_->db_factory()->Allocate<uint32_t>(1);
+  db->Set<uint32_t>(0, 1);
+  clint_->Store(0x0, db);
+  db->DecRef();
+
+  // Interrupt should now be pending from CLINT
+  EXPECT_TRUE(state_->is_interrupt_available());
+  
+  // Step WFI and immediately trap
+  res = riscv_top_->Step(1);
+  EXPECT_TRUE(res.ok());
+  
+  EXPECT_TRUE(trap_taken_);
+  EXPECT_TRUE(trap_is_interrupt_);
+  EXPECT_EQ(trap_exception_code_, 3); // Machine Software Interrupt
   EXPECT_EQ(trap_epc_, 0x100C);
 }
 

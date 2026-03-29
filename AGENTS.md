@@ -92,3 +92,8 @@
   * **Action:** Ensure the boot test executes an authentic OS payload reading `a0`/`a1` and writing values to verified memory.
 ### Architectural Design & API Contracts
 *   **Mandate:** Ensure all unbuilt requirements and architectural designs reflect clear HW/SW boundaries, exact file paths, and strict API/ABI contracts. Use Mermaid for topology when defining mpact-riscv.
+
+* **CLINT/PLIC Hardware Interrupt State Management**
+  * **Quote:** "Test CLINT Machine Software Interrupt without setting MIE flags."
+  * **Impact:** Missing `state_->mie()->set_msie(1)` causes software interrupts (Exception Code 3) to be silently dropped despite MSIP assertion, breaking test boundaries.
+  * **Action:** When validating hardware interrupts like CLINT MSIP, ensure the architectural Machine Interrupt Enable (MIE) bit for the specific source (`MSIE`, `MTIE`, `MEIE`) is explicitly activated in `RiscVState` prior to stepping the simulator.
