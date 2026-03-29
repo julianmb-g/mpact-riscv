@@ -26,6 +26,7 @@
 #include "mpact/sim/util/memory/atomic_memory.h"
 #include "utils/assembler/native_assembler_wrapper.h"
 #include "absl/log/check.h"
+#include "riscv/riscv64g_bin_encoder.h"
 
 namespace {
 
@@ -112,9 +113,13 @@ TEST_F(Rva23ExtensionsTest, AuthenticZfaExecutionFroundS) {
   ASSERT_TRUE(write_status.ok());
 
   // fround.s fa0, fa0, rmm -> 0x40454553
-  // NativeTextualAssembler throws "No getter for source op enum value 56" for Zfa,
-  // falling back to direct instruction injection to unblock execution validation.
-  WriteInstruction(0x1000, 0x40454553);
+  NativeTextualAssembler assembler;
+  auto fround_res = assembler.Assemble("fround.s fa0, fa0, rmm\n");
+  ASSERT_TRUE(fround_res.ok()) << fround_res.status().message();
+  ASSERT_EQ(fround_res.value().size(), 4);
+  uint32_t fround_inst;
+  std::memcpy(&fround_inst, fround_res.value().data(), sizeof(uint32_t));
+  WriteInstruction(0x1000, fround_inst);
   
   auto step_status = top_->Step(1);
   EXPECT_TRUE(step_status.ok());
@@ -135,10 +140,15 @@ TEST_F(Rva23ExtensionsTest, AuthenticZfaExecutionFroundS) {
 
 TEST_F(Rva23ExtensionsTest, AuthenticZawrsExecutionWrsNto) {
   // wrs.nto -> 0x00d00073
-  // NativeTextualAssembler throws "No getter" for Zawrs,
-  // falling back to direct instruction injection.
-  WriteInstruction(0x1000, 0x00d00073);
-  WriteInstruction(0x1004, 0x00000013); // nop
+  NativeTextualAssembler assembler;
+  auto wrs_res = assembler.Assemble("wrs.nto\nnop\n");
+  ASSERT_TRUE(wrs_res.ok()) << wrs_res.status().message();
+  ASSERT_EQ(wrs_res.value().size(), 8);
+  uint32_t wrs_inst, nop_inst;
+  std::memcpy(&wrs_inst, wrs_res.value().data(), sizeof(uint32_t));
+  std::memcpy(&nop_inst, wrs_res.value().data() + 4, sizeof(uint32_t));
+  WriteInstruction(0x1000, wrs_inst);
+  WriteInstruction(0x1004, nop_inst);
   
   auto step_status = top_->Step(1);
   EXPECT_TRUE(step_status.ok());

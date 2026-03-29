@@ -41,7 +41,7 @@ using AddSymbolCallback =
 
 class NativeAssemblerWrapperImpl : public OpcodeAssemblerInterface {
  public:
-  NativeAssemblerWrapperImpl(::mpact::sim::riscv::isa64::Riscv64gSlotMatcher* matcher)
+  NativeAssemblerWrapperImpl(::mpact::sim::riscv::isa_rva23u64::Rva23u64SlotMatcher* matcher)
       : label_re_("^(\\S+)\\s*:"), matcher_(matcher) {}
   ~NativeAssemblerWrapperImpl() override = default;
 
@@ -72,12 +72,12 @@ class NativeAssemblerWrapperImpl : public OpcodeAssemblerInterface {
 
  private:
   RE2 label_re_;
-  ::mpact::sim::riscv::isa64::Riscv64gSlotMatcher* matcher_;
+  ::mpact::sim::riscv::isa_rva23u64::Rva23u64SlotMatcher* matcher_;
 };
 
 NativeTextualAssembler::NativeTextualAssembler() {
-  bin_encoder_interface_ = std::make_unique<::mpact::sim::riscv::isa64::RiscV64GBinEncoderInterface>();
-  slot_matcher_ = std::make_unique<::mpact::sim::riscv::isa64::Riscv64gSlotMatcher>(bin_encoder_interface_.get());
+  bin_encoder_interface_ = std::make_unique<::mpact::sim::riscv::isa_rva23u64::Rva23u64BinEncoderInterface>();
+  slot_matcher_ = std::make_unique<::mpact::sim::riscv::isa_rva23u64::Rva23u64SlotMatcher>(bin_encoder_interface_.get());
   auto status = slot_matcher_->Initialize();
   CHECK_OK(status);
   assembler_wrapper_ = std::make_unique<NativeAssemblerWrapperImpl>(slot_matcher_.get());

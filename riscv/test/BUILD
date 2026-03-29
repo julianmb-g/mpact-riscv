@@ -1053,6 +1053,8 @@ cc_test(
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
+        "//riscv:riscv64g_bin_fmt",
+        "//riscv:riscv64g_decoder",
         "//riscv:rva23u64_decoder",
         "//utils/assembler:native_assembler",
         "@com_google_absl//absl/log:check",

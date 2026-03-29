@@ -10,7 +10,8 @@ cc_library(
     hdrs = ["native_assembler_wrapper.h"],
     copts = ["-O3"],
     deps = [
-        "//riscv:riscv64g_encoder",
+        "//riscv:rva23u64_bin_encoder",
+        "//riscv:rva23u64_decoder",
         "@com_github_serge1_elfio//:elfio",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

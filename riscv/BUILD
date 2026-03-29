@@ -2046,3 +2046,27 @@ cc_library(
         "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
     ],
 )
+cc_library(
+    name = "rva23u64_bin_encoder",
+    srcs = [
+        "rva23u64_bin_encoder_interface.cc",
+        "riscv_bin_setters.cc",
+    ],
+    hdrs = [
+        "rva23u64_bin_encoder_interface.h",
+        "riscv_bin_setters.h",
+    ],
+    deps = [
+        ":rva23u64_bin_fmt",
+        ":rva23u64_isa",
+        ":riscv_getters",
+        "@com_google_absl//absl/base:no_destructor",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_mpact-sim//mpact/sim/generic:type_helpers",
+        "@com_google_mpact-sim//mpact/sim/util/asm",
+        "@com_googlesource_code_re2//:re2",
+    ],
+)

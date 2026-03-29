@@ -24,8 +24,8 @@
 #include "absl/status/statusor.h"
 #include "mpact/sim/util/asm/simple_assembler.h"
 #include "mpact/sim/util/asm/opcode_assembler_interface.h"
-#include "riscv/riscv64g_bin_encoder_interface.h"
-#include "riscv/riscv64g_encoder.h"
+#include "riscv/rva23u64_bin_encoder_interface.h"
+#include "riscv/rva23u64_encoder.h"
 
 namespace mpact::sim::assembler {
 
@@ -39,8 +39,8 @@ class NativeTextualAssembler {
                                  const std::vector<std::string>& operands, 
                                  uint32_t* encoded_out);
  private:
-  std::unique_ptr<::mpact::sim::riscv::isa64::RiscV64GBinEncoderInterface> bin_encoder_interface_;
-  std::unique_ptr<::mpact::sim::riscv::isa64::Riscv64gSlotMatcher> slot_matcher_;
+  std::unique_ptr<::mpact::sim::riscv::isa_rva23u64::Rva23u64BinEncoderInterface> bin_encoder_interface_;
+  std::unique_ptr<::mpact::sim::riscv::isa_rva23u64::Rva23u64SlotMatcher> slot_matcher_;
   std::unique_ptr<::mpact::sim::util::assembler::OpcodeAssemblerInterface> assembler_wrapper_;
   std::unique_ptr<::mpact::sim::util::assembler::SimpleAssembler> core_assembler_;
 };
