@@ -103,8 +103,42 @@ bool RiscVMmu::Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint
       if (is_store && w == 0) return false; // Fault on write to read/exec only page
       if (is_inst_fetch && x == 0) return false; // Fault on execute from non-exec page
       
+
       // Leaf PTE found
+      uint64_t a_bit = (pte >> 6) & 0x1;
+      uint64_t d_bit = (pte >> 7) & 0x1;
+      bool need_ad_update = false;
+
+      if (a_bit == 0 || (is_store && d_bit == 0)) {
+        bool svadu_enabled = state_->IsExtensionEnabled("Svadu");
+        bool menvcfg_adue = false;
+        static mpact::sim::riscv::RiscVCsrInterface* cached_menvcfg = nullptr;
+        if (!cached_menvcfg) {
+          auto menvcfg_res = state_->csr_set()->GetCsr("menvcfg");
+          if (menvcfg_res.ok()) cached_menvcfg = menvcfg_res.value();
+        }
+        if (cached_menvcfg != nullptr) {
+          menvcfg_adue = ((cached_menvcfg->AsUint64() >> 61) & 1) != 0;
+        }
+        
+        if (svadu_enabled && menvcfg_adue) {
+          need_ad_update = true;
+          pte |= (1ULL << 6); // Set A bit
+          if (is_store) pte |= (1ULL << 7); // Set D bit
+        } else {
+          return false; // Fault due to missing A or D bit without Svadu enabled
+        }
+      }
+
+      if (need_ad_update) {
+        auto pte_update_db = mpact::sim::generic::DataBufferFactory().Allocate<uint64_t>(1);
+        pte_update_db->Set<uint64_t>(0, pte);
+        physical_memory_->Store(pte_addr, pte_update_db);
+        pte_update_db->DecRef();
+      }
+
       uint64_t pbmt = (pte >> 61) & 0x3;
+
       if (state_->IsExtensionEnabled("Svpbmt") && pbmt == 3) return false; // Reserved PBMT causes page fault
 
       uint64_t n = (pte >> 63) & 0x1;

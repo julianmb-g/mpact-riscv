@@ -112,7 +112,7 @@ TEST(RiscVMmuTest, TestMmuReadOnlyPageStoreViolation) {
 
   // Read-only page L0 PTE at PPN 4
   auto pte0_ro = db_factory.Allocate<uint64_t>(1);
-  pte0_ro->Set<uint64_t>(0, (4ULL << 10) | 0x3); // V=1, R=1, W=0
+  pte0_ro->Set<uint64_t>(0, (4ULL << 10) | 0xC3); // V=1, R=1, W=0, A=1, D=1
   physical_memory->Store(0x3000, pte0_ro);
 
   auto write_db = db_factory.Allocate<uint32_t>(1);
@@ -235,7 +235,7 @@ TEST(RiscVMmuTest, Sv39PageWalkTranslation) {
   // Let L0 PTE map to physical PPN 4 (0x4000). Leaf.
   // Permissions: V=1, R=1, W=1, X=0 (RW page).
   auto pte0_db = db_factory.Allocate<uint64_t>(1);
-  pte0_db->Set<uint64_t>(0, (4ULL << 10) | 0x7); // V=1, R=1, W=1
+  pte0_db->Set<uint64_t>(0, (4ULL << 10) | 0xC7); // V=1, R=1, W=1, A=1, D=1
   physical_memory->Store(0x3000, pte0_db);
 
   // Write some data at physical address 0x4000
@@ -292,7 +292,7 @@ TEST(RiscVMmuTest, TestSsnpmPointerMaskingExemption) {
 
   // L0 PTE at PPN 4. Valid, Readable, Writable, Executable.
   auto pte0 = db_factory.Allocate<uint64_t>(1);
-  pte0->Set<uint64_t>(0, (4ULL << 10) | 0xF); // V=1, R=1, W=1, X=1
+  pte0->Set<uint64_t>(0, (4ULL << 10) | 0xCF); // V=1, R=1, W=1, X=1, A=1, D=1
   physical_memory->Store(0x3000, pte0);
 
   // Base virtual address 0x40000000 (canonical)
@@ -377,7 +377,7 @@ TEST(RiscVMmuTest, Sv48PageWalkTranslation) {
   uint64_t vpn_0 = (vaddr >> 12) & 0x1FF;
   uint64_t pte0_addr = pte1_ppn * 4096 + vpn_0 * 8;
   uint64_t pte0_ppn = 0x500;
-  uint64_t pte0_val = (pte0_ppn << 10) | 0xF; // V=1, R=1, W=1, X=1 (leaf)
+  uint64_t pte0_val = (pte0_ppn << 10) | 0xCF; // V=1, R=1, W=1, X=1, A=1, D=1 (leaf)
 
   // Write all PTEs
   auto db_factory = mpact::sim::generic::DataBufferFactory();
@@ -452,7 +452,7 @@ TEST(RiscVMmuTest, Sv57PageWalkTranslation) {
   uint64_t vpn_0 = (vaddr >> 12) & 0x1FF;
   uint64_t pte0_addr = pte1_ppn * 4096 + vpn_0 * 8;
   uint64_t pte0_ppn = 0x600;
-  uint64_t pte0_val = (pte0_ppn << 10) | 0xF;
+  uint64_t pte0_val = (pte0_ppn << 10) | 0xCF;
 
   auto db_factory = mpact::sim::generic::DataBufferFactory();
   auto db = db_factory.Allocate<uint64_t>(1);
@@ -506,7 +506,7 @@ TEST(RiscVMmuTest, TestSv39MmuPageFault) {
 
   // L0 PTE at PPN 4. Valid, Readable, Writable, NOT Executable.
   auto pte0_nx = db_factory.Allocate<uint64_t>(1);
-  pte0_nx->Set<uint64_t>(0, (4ULL << 10) | 0x3); // V=1, R=1, W=1, X=0
+  pte0_nx->Set<uint64_t>(0, (4ULL << 10) | 0xC3); // V=1, R=1, W=1, X=0, A=1, D=1
   physical_memory->Store(0x3000, pte0_nx);
 
   auto read_db = db_factory.Allocate<uint32_t>(1);
@@ -599,7 +599,7 @@ TEST_F(RiscVMmuSv48TranslationTest, Sv48PageWalkTranslationOrganic) {
   // Leaf level (level 0)
   uint64_t pte0_addr = pte1_ppn * 4096 + ((vaddr >> 12) & 0x1FF) * 8;
   uint64_t pte0_ppn = 0x500;
-  uint64_t pte0_val = (pte0_ppn << 10) | 0xF; // Valid + R/W/X
+  uint64_t pte0_val = (pte0_ppn << 10) | 0xCF; // Valid + R/W/X + A/D
   write_db = db_factory->Allocate<uint64_t>(1);
   write_db->Set<uint64_t>(0, pte0_val);
   physical_memory->Store(pte0_addr, write_db);
@@ -647,7 +647,7 @@ TEST(RiscVMmuTest, TestSvpbmtReservedFault) {
 
   // L0 PTE (Leaf) with PBMT = 11 (Reserved)
   auto pte0_pbmt = db_factory.Allocate<uint64_t>(1);
-  uint64_t pte_val = (4ULL << 10) | 0xF; // V=1, R/W/X=1
+  uint64_t pte_val = (4ULL << 10) | 0xCF; // V=1, R/W/X=1, A=1, D=1
   pte_val |= (3ULL << 61); // PBMT = 11 (Reserved)
   pte0_pbmt->Set<uint64_t>(0, pte_val);
   physical_memory->Store(0x3000, pte0_pbmt);
@@ -698,7 +698,7 @@ TEST(RiscVMmuTest, TestSvnapotTranslation) {
   // L0 PTE (Leaf) with N = 1 (NAPOT 64KB page)
   auto pte0_napot = db_factory.Allocate<uint64_t>(1);
   uint64_t pte_ppn = (4ULL << 4) | 0x8; // PPN[3:0] MUST be 1000 (8) for 64KB NAPOT
-  uint64_t pte_val = (pte_ppn << 10) | 0xF; // V=1, R/W/X=1
+  uint64_t pte_val = (pte_ppn << 10) | 0xCF; // V=1, R/W/X=1, A=1, D=1
   pte_val |= (1ULL << 63); // N = 1 (NAPOT)
   pte0_napot->Set<uint64_t>(0, pte_val);
   physical_memory->Store(0x3008, pte0_napot);
@@ -730,7 +730,113 @@ TEST(RiscVMmuTest, TestSvnapotTranslation) {
   delete physical_memory;
 }
 
+
+TEST(RiscVMmuTest, TestSvaduPageFault) {
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
+  // Do NOT add Svadu
+  
+  auto satp_res = state.csr_set()->GetCsr("satp");
+  auto* satp_csr = satp_res.value();
+
+  RiscVMmu mmu(&state, physical_memory);
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  
+  satp_csr->Write(static_cast<uint64_t>((8ULL << 60) | 1ULL));
+
+  auto pte2_db = db_factory.Allocate<uint64_t>(1);
+  pte2_db->Set<uint64_t>(0, (2ULL << 10) | 0x1);
+  physical_memory->Store(0x1008, pte2_db);
+
+  auto pte1_db = db_factory.Allocate<uint64_t>(1);
+  pte1_db->Set<uint64_t>(0, (3ULL << 10) | 0x1);
+  physical_memory->Store(0x2000, pte1_db);
+
+  // V=1, R=1, W=1, X=0, but A=0, D=0
+  auto pte0 = db_factory.Allocate<uint64_t>(1);
+  pte0->Set<uint64_t>(0, (4ULL << 10) | 0x7); 
+  physical_memory->Store(0x3000, pte0);
+
+  auto read_db = db_factory.Allocate<uint32_t>(1);
+  
+  auto mcause_csr = state.csr_set()->GetCsr("mcause").value();
+  mcause_csr->Write(static_cast<uint64_t>(0));
+
+  mmu.Load(0x40000000, read_db, nullptr, nullptr); 
+
+  EXPECT_EQ(mcause_csr->AsUint64(), static_cast<uint64_t>(ExceptionCode::kLoadPageFault));
+
+  pte2_db->DecRef();
+  pte1_db->DecRef();
+  pte0->DecRef();
+  read_db->DecRef();
+  delete physical_memory;
+}
+
+TEST(RiscVMmuTest, TestSvaduHardwareUpdate) {
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
+  state.AddExtension("Svadu");
+  
+  auto satp_res = state.csr_set()->GetCsr("satp");
+  auto* satp_csr = satp_res.value();
+
+  auto menvcfg_res = state.csr_set()->GetCsr("menvcfg");
+  auto* menvcfg_csr = menvcfg_res.value();
+  // Enable ADUE in menvcfg (bit 61)
+  menvcfg_csr->Write(static_cast<uint64_t>(1ULL << 61));
+
+  RiscVMmu mmu(&state, physical_memory);
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  
+  satp_csr->Write(static_cast<uint64_t>((8ULL << 60) | 1ULL));
+
+  auto pte2_db = db_factory.Allocate<uint64_t>(1);
+  pte2_db->Set<uint64_t>(0, (2ULL << 10) | 0x1);
+  physical_memory->Store(0x1008, pte2_db);
+
+  auto pte1_db = db_factory.Allocate<uint64_t>(1);
+  pte1_db->Set<uint64_t>(0, (3ULL << 10) | 0x1);
+  physical_memory->Store(0x2000, pte1_db);
+
+  // V=1, R=1, W=1, X=0, A=0, D=0 (Missing A and D)
+  auto pte0 = db_factory.Allocate<uint64_t>(1);
+  pte0->Set<uint64_t>(0, (4ULL << 10) | 0x7); 
+  physical_memory->Store(0x3000, pte0);
+
+  // Target physical page payload
+  auto write_db = db_factory.Allocate<uint32_t>(1);
+  write_db->Set<uint32_t>(0, 0x12345678);
+  physical_memory->Store(0x4000, write_db);
+
+  auto read_db = db_factory.Allocate<uint32_t>(1);
+  
+  auto mcause_csr = state.csr_set()->GetCsr("mcause").value();
+  mcause_csr->Write(static_cast<uint64_t>(0));
+
+  // Perform Store to trigger A and D updates
+  mmu.Store(0x40000000, read_db); 
+
+  EXPECT_EQ(mcause_csr->AsUint64(), 0) << "Hardware update must prevent Page Fault";
+
+  auto pte0_read = db_factory.Allocate<uint64_t>(1);
+  physical_memory->Load(0x3000, pte0_read, nullptr, nullptr);
+  
+  uint64_t pte_updated = pte0_read->Get<uint64_t>(0);
+  EXPECT_TRUE((pte_updated & (1ULL << 6)) != 0) << "A bit was not updated";
+  EXPECT_TRUE((pte_updated & (1ULL << 7)) != 0) << "D bit was not updated";
+
+  pte2_db->DecRef();
+  pte1_db->DecRef();
+  pte0->DecRef();
+  read_db->DecRef();
+  write_db->DecRef();
+  pte0_read->DecRef();
+  delete physical_memory;
+}
+
 }  // namespace
 }  // namespace riscv
 }  // namespace sim
 }  // namespace mpact
+

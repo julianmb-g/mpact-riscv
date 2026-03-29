@@ -97,3 +97,8 @@
   * **Quote:** "Test CLINT Machine Software Interrupt without setting MIE flags."
   * **Impact:** Missing `state_->mie()->set_msie(1)` causes software interrupts (Exception Code 3) to be silently dropped despite MSIP assertion, breaking test boundaries.
   * **Action:** When validating hardware interrupts like CLINT MSIP, ensure the architectural Machine Interrupt Enable (MIE) bit for the specific source (`MSIE`, `MTIE`, `MEIE`) is explicitly activated in `RiscVState` prior to stepping the simulator.
+
+* **Svadu (Hardware A/D bit updates) and Mock PTE Dependencies**
+  * **Quote:** "Adding new A and D bit fault checks completely broke old MMU tests because they used mock PTEs without 0xC0."
+  * **Impact:** Tightening architectural constraints (like checking A/D bits natively) organically exposes fragile mock test environments.
+  * **Action:** When introducing strict PTE permission constraints (Svadu, Svpbmt), ALL legacy MMU tests must be proactively patched to include required mock permission bits (e.g., `| 0xC0`) rather than disabling the constraint check itself.
