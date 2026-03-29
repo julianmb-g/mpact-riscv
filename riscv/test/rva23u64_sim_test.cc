@@ -361,7 +361,7 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
   std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x20000000 -nostdlib " + asm_path + " -o " + vmlinux_path;
   int ret = system(cmd.c_str());
   if (ret != 0) {
-    GTEST_SKIP() << "Compiler not available, skipping true E2E boot test.";
+    FAIL() << "Compiler not available, failing true E2E boot test per AGENTS.md mandate (no GTEST_SKIP).";
   }
 
   auto* memory = new ::mpact::sim::util::FlatDemandMemory();
