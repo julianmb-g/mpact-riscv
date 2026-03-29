@@ -90,3 +90,5 @@
   * **Quote:** "The E2E OS boot test must execute an authentic OS payload that organically reads `a0` and `a1` and writes their values out to a verifiable memory address."
   * **Impact:** Masks boot payload execution failures and allows tests to blindly execute `NOP` space, evading genuine step-through verification.
   * **Action:** Ensure the boot test executes an authentic OS payload reading `a0`/`a1` and writing values to verified memory.
+### Architectural Design & API Contracts
+*   **Mandate:** Ensure all unbuilt requirements and architectural designs reflect clear HW/SW boundaries, exact file paths, and strict API/ABI contracts. Use Mermaid for topology when defining mpact-riscv.
