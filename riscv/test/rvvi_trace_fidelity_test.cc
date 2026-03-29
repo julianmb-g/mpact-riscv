@@ -109,11 +109,11 @@ TEST(RvviTraceFidelityTest, RVVIStateInvarianceTest_SumOfDeltas) {
   EXPECT_EQ(recomputed_x5_state, 50) << "Architectural trace oracle fidelity failed: sum of deltas mismatch";
 }
 TEST(RvviTraceFidelityTest, SpscRingBufferDeadlockThreshold) {
-  mpact::sim::riscv::rvvi::SpscRingBuffer<int, 2> buffer(5);
+  mpact::sim::riscv::rvvi::SpscRingBuffer<int, 2> buffer(100000);
   
   buffer.Push(1); // Capacity is technically N-1 = 1 item max for lock-free
   
-  // Next push should block immediately and deadlock after exactly 5 yields
+  // Next push should block immediately and deadlock after exactly 100000 yields
   EXPECT_THROW({
     buffer.Push(2);
   }, std::runtime_error);
