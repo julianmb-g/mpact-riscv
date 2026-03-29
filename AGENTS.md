@@ -98,3 +98,10 @@
 
 ### Tier 2: Clarification Needed
 * **Opaque OS Boot Register Handoff Illusion**: The E2E OS boot test must execute an authentic OS payload that organically *reads* `a0` and `a1` and writes their values out to a verifiable memory address, proving that the simulated CPU genuinely stepped through the handoff payload and didn't just blindly execute `NOP` space.
+
+### Tier 1: Critical Blocker
+
+* **Authentic RVA23 Validation Artifact Trapping**
+  * **Quote:** "Using `GTEST_SKIP()` when the `vmlinux_placeholder.elf` artifact is missing."
+  * **Impact:** Muting the test prevents organic discovery of missing build artifacts or compilation failures, silently eviscerating RVA23 boot validation boundaries.
+  * **Action:** Agents MUST forbid `GTEST_SKIP()` in Boot Sequence validation tests and replace it with hard failure assertions (`ASSERT_TRUE(load_status.ok())`) to ensure organic pipeline trapping.

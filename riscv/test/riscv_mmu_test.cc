@@ -479,6 +479,63 @@ TEST(RiscVMmuTest, Sv57PageWalkTranslation) {
   delete physical_memory;
 }
 
+TEST(RiscVMmuTest, TestSv39MmuPageFault) {
+  auto* physical_memory = new mpact::sim::util::FlatDemandMemory();
+  RiscVState state("test", RiscVXlen::RV64, physical_memory);
+  
+  auto satp_res = state.csr_set()->GetCsr("satp");
+  ASSERT_TRUE(satp_res.ok());
+  auto* satp_csr = satp_res.value();
+
+  RiscVMmu mmu(&state, physical_memory);
+  auto db_factory = mpact::sim::generic::DataBufferFactory();
+  
+  // Set satp.MODE = 8 (Sv39), PPN = 1 (Page at physical 0x1000)
+  uint64_t satp_val = (8ULL << 60) | 1ULL;
+  satp_csr->Write(satp_val);
+
+  // Setup L2 PTE (vpn[2]=1) pointing to L1 at PPN 2
+  auto pte2_db = db_factory.Allocate<uint64_t>(1);
+  pte2_db->Set<uint64_t>(0, (2ULL << 10) | 0x1);
+  physical_memory->Store(0x1008, pte2_db);
+
+  // Setup L1 PTE (vpn[1]=0) pointing to L0 at PPN 3
+  auto pte1_db = db_factory.Allocate<uint64_t>(1);
+  pte1_db->Set<uint64_t>(0, (3ULL << 10) | 0x1);
+  physical_memory->Store(0x2000, pte1_db);
+
+  // L0 PTE at PPN 4. Valid, Readable, Writable, NOT Executable.
+  auto pte0_nx = db_factory.Allocate<uint64_t>(1);
+  pte0_nx->Set<uint64_t>(0, (4ULL << 10) | 0x3); // V=1, R=1, W=1, X=0
+  physical_memory->Store(0x3000, pte0_nx);
+
+  auto read_db = db_factory.Allocate<uint32_t>(1);
+  
+  auto mcause_res = state.csr_set()->GetCsr("mcause");
+  ASSERT_TRUE(mcause_res.ok());
+  auto* mcause_csr = mcause_res.value();
+  
+  auto mtval_res = state.csr_set()->GetCsr("mtval");
+  ASSERT_TRUE(mtval_res.ok());
+  auto* mtval_csr = mtval_res.value();
+
+  mcause_csr->Write(static_cast<uint64_t>(0));
+  mtval_csr->Write(static_cast<uint64_t>(0));
+
+  state.set_is_fetching(true);
+  mmu.Load(0x40000000, read_db, nullptr, nullptr); // Fetch on NX page
+  state.set_is_fetching(false);
+
+  EXPECT_EQ(mcause_csr->AsUint64(), static_cast<uint64_t>(ExceptionCode::kInstructionPageFault));
+  EXPECT_EQ(mtval_csr->AsUint64(), 0x40000000);
+
+  pte2_db->DecRef();
+  pte1_db->DecRef();
+  pte0_nx->DecRef();
+  read_db->DecRef();
+  delete physical_memory;
+}
+
 
 class RiscVMmuSv48TranslationTest : public ::testing::Test {
  protected:
