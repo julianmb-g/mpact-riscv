@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "riscv/riscv_boot.h"
-
 #include <cstdint>
 #include <string>
 
@@ -22,6 +20,7 @@
 #include "mpact/sim/util/memory/flat_demand_memory.h"
 #include "mpact/sim/util/program_loader/elf_program_loader.h"
 #include "riscv/riscv32_decoder.h"
+#include "riscv/riscv_boot.h"
 #include "riscv/riscv_register.h"
 #include "riscv/riscv_register_aliases.h"
 #include "riscv/riscv_state.h"
