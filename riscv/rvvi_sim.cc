@@ -20,9 +20,14 @@ extern "C" {
   }
 }
 
+extern "C" __attribute__((weak)) void rvvi_set_daemon_alive(bool alive);
+
 void AsyncFormattingDaemon::Start() {
   if (running_.exchange(true)) {
     return;
+  }
+  if (rvvi_set_daemon_alive) {
+    rvvi_set_daemon_alive(true);
   }
   worker_thread_ = std::thread(&AsyncFormattingDaemon::DaemonLoop, this);
 }
@@ -36,6 +41,9 @@ void AsyncFormattingDaemon::Stop() {
     cv_.notify_all();       // Instantly wake up the daemon if it's waiting
   }
   g_trace_buffer.Abort(); // Unblock ring buffer
+  if (rvvi_set_daemon_alive) {
+    rvvi_set_daemon_alive(false);
+  }
   if (worker_thread_.joinable()) {
     worker_thread_.join();
   }
