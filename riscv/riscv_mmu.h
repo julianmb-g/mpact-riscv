@@ -54,6 +54,7 @@ class RiscVMmu : public mpact::sim::util::MemoryInterface {
 
   RiscVState* state_;
   mpact::sim::util::MemoryInterface* physical_memory_;
+  mpact::sim::riscv::RiscVCsrInterface* cached_menvcfg_ = nullptr;
 };
 
 }  // namespace riscv

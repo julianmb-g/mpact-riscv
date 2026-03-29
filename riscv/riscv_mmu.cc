@@ -112,13 +112,12 @@ bool RiscVMmu::Translate(uint64_t vaddr, bool is_store, bool is_inst_fetch, uint
       if (a_bit == 0 || (is_store && d_bit == 0)) {
         bool svadu_enabled = state_->IsExtensionEnabled("Svadu");
         bool menvcfg_adue = false;
-        static mpact::sim::riscv::RiscVCsrInterface* cached_menvcfg = nullptr;
-        if (!cached_menvcfg) {
+        if (!cached_menvcfg_) {
           auto menvcfg_res = state_->csr_set()->GetCsr("menvcfg");
-          if (menvcfg_res.ok()) cached_menvcfg = menvcfg_res.value();
+          if (menvcfg_res.ok()) cached_menvcfg_ = menvcfg_res.value();
         }
-        if (cached_menvcfg != nullptr) {
-          menvcfg_adue = ((cached_menvcfg->AsUint64() >> 61) & 1) != 0;
+        if (cached_menvcfg_ != nullptr) {
+          menvcfg_adue = ((cached_menvcfg_->AsUint64() >> 61) & 1) != 0;
         }
         
         if (svadu_enabled && menvcfg_adue) {
