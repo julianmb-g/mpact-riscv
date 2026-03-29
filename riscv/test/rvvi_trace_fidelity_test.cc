@@ -15,7 +15,7 @@ TEST(RvviTraceFidelityTest, test_trace_struct_abi_alignment_64_bytes) {
 }
 
 TEST(RvviTraceFidelityTest, test_spsc_ring_buffer_backpressure_yield) {
-  SpscRingBuffer<int, 4> buffer;
+  SpscRingBuffer<int, 4> buffer(50); // Use 50ms for faster test run
   // Fill the buffer to force backpressure
   buffer.Push(1);
   buffer.Push(2);
@@ -109,11 +109,11 @@ TEST(RvviTraceFidelityTest, RVVIStateInvarianceTest_SumOfDeltas) {
   EXPECT_EQ(recomputed_x5_state, 50) << "Architectural trace oracle fidelity failed: sum of deltas mismatch";
 }
 TEST(RvviTraceFidelityTest, SpscRingBufferDeadlockThreshold) {
-  mpact::sim::riscv::rvvi::SpscRingBuffer<int, 2> buffer(100000);
+  mpact::sim::riscv::rvvi::SpscRingBuffer<int, 2> buffer(50);
   
   buffer.Push(1); // Capacity is technically N-1 = 1 item max for lock-free
   
-  // Next push should block immediately and deadlock after exactly 100000 yields
+  // Next push should block immediately and deadlock after exactly timeout
   EXPECT_THROW({
     buffer.Push(2);
   }, std::runtime_error);

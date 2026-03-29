@@ -2002,6 +2002,8 @@ cc_library(
     copts = ["-O3"],
     visibility = ["//visibility:public"],
     deps = [
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
         "@com_google_mpact-sim//mpact/sim/generic:core",
         "@com_google_mpact-sim//mpact/sim/util/memory",
     ],

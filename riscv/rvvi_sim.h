@@ -32,21 +32,21 @@ static_assert(sizeof(TracePacket) == 16, "ABI Violation: TracePacket must be exa
 template <typename T, size_t Capacity>
 class SpscRingBuffer {
  public:
-  explicit SpscRingBuffer(int max_yields = 100000) : head_(0), tail_(0), abort_(false), max_yields_(max_yields) {}
+  explicit SpscRingBuffer(int max_timeout_ms = 5000) : head_(0), tail_(0), abort_(false), max_timeout_ms_(max_timeout_ms) {}
 
   void Push(const T& item) {
     size_t next_head = (head_.load(std::memory_order_relaxed) + 1) % Capacity;
-    int yield_count = 0;
+    auto start_time = absl::Now();
     
     // Explicit backpressure handling (blocking yield) with abort safety
     while (next_head == tail_.load(std::memory_order_acquire)) {
       if (abort_.load(std::memory_order_acquire)) {
         throw std::runtime_error("SPSC Ring Buffer aborted due to consumer failure");
       }
-      if (++yield_count > max_yields_) {
+      if (absl::ToInt64Milliseconds(absl::Now() - start_time) > max_timeout_ms_) {
         throw std::runtime_error("SPSC Formatting Daemon Deadlock");
       }
-      std::this_thread::yield();
+      absl::SleepFor(absl::Milliseconds(1));
     }
     buffer_[head_.load(std::memory_order_relaxed)] = item;
     head_.store(next_head, std::memory_order_release);
@@ -81,7 +81,7 @@ class SpscRingBuffer {
   std::atomic<size_t> head_;
   std::atomic<size_t> tail_;
   std::atomic<bool> abort_;
-  int max_yields_;
+  int max_timeout_ms_;
 };
 
 class RvviMemoryMapper : public util::MemoryInterface {
