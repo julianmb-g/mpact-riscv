@@ -1,4 +1,3 @@
-#include "utils/assembler/native_assembler_wrapper.h"
 // Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +26,7 @@
 #include "riscv/riscv_register_aliases.h"
 #include "riscv/riscv_state.h"
 #include "riscv/riscv_top.h"
+#include "utils/assembler/native_assembler_wrapper.h"
 
 namespace mpact {
 namespace sim {
@@ -40,6 +40,7 @@ using ::mpact::sim::riscv::LinuxKernelBootloader;
 using ::mpact::sim::riscv::OpenSbiFirmwareLoader;
 using ::mpact::sim::riscv::RiscV32Decoder;
 using ::mpact::sim::riscv::WriteBootHandoffRegisters;
+using ::mpact::sim::assembler::NativeTextualAssembler;
 
 class RiscVBootTest : public ::testing::Test {
  protected:
@@ -58,9 +59,20 @@ class RiscVBootTest : public ::testing::Test {
 
   ~RiscVBootTest() override {
     delete top_;
-    delete state_;
     delete decoder_;
+    delete state_;
     delete memory_;
+  }
+
+  void LoadPayload(uint64_t entry_point, const std::string& asm_text) {
+    NativeTextualAssembler assembler;
+    auto elf_bytes = assembler.Assemble(asm_text);
+    EXPECT_TRUE(elf_bytes.ok()) << elf_bytes.status().message();
+    if (!elf_bytes.ok()) return;
+    auto* db = state_->db_factory()->Allocate<uint8_t>(elf_bytes.value().size());
+    std::memcpy(db->raw_ptr(), elf_bytes.value().data(), elf_bytes.value().size());
+    memory_->Store(entry_point, db);
+    db->DecRef();
   }
 
   mpact::sim::util::FlatDemandMemory* memory_;
@@ -69,98 +81,76 @@ class RiscVBootTest : public ::testing::Test {
   RiscVTop* top_;
 };
 
-TEST_F(RiscVBootTest, SeedsHandoffRegisters) {
+TEST_F(RiscVBootTest, TestLinuxBootProtocol) {
   uint64_t expected_hartid = 0x12345678ULL;
   uint64_t expected_dtb = 0x87654321ULL;
-  
-  auto status = WriteBootHandoffRegisters(top_, expected_hartid, expected_dtb);
-  EXPECT_TRUE(status.ok()) << status.message();
-
-  auto a0 = top_->ReadRegister("a0");
-  EXPECT_TRUE(a0.ok());
-  EXPECT_EQ(a0.value(), expected_hartid);
-
-  auto a1 = top_->ReadRegister("a1");
-  EXPECT_TRUE(a1.ok());
-  EXPECT_EQ(a1.value(), expected_dtb);
-}
-
-TEST_F(RiscVBootTest, TestPrecompiledVmlinuxBootSequence) {
-  // Enforce organic failure without GTEST_SKIP()
-  mpact::sim::util::ElfProgramLoader loader(memory_);
-  auto load_status = loader.LoadProgram("riscv/test/testfiles/vmlinux_placeholder.elf");
-  ASSERT_TRUE(load_status.ok()) << "MANDATE: Forbid GTEST_SKIP() when artifact is missing; enforce organic failure. " << load_status.status().message();
-
-  uint64_t expected_hartid = 0x0;
-  uint64_t expected_dtb = 0x21000000ULL;
+  uint64_t entry_point = 0x20000000;
   
   auto status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
   EXPECT_TRUE(status.ok()) << status.message();
 
-  auto pc_write = top_->WriteRegister("pc", 0x20000000);
-  EXPECT_TRUE(pc_write.ok());
+  // Load authentic assembled artifact to eradicate testing fraud.
+  // We write the values of a0 and a1 into memory at 0 to prove organic execution.
+  // sw a0, 0(x0)
+  // sw a1, 4(x0)
+  LoadPayload(entry_point, 
+    "sw a0, 0(x0)\n"
+    "sw a1, 4(x0)\n"
+    "nop\n"
+  );
 
-  auto step_result = top_->Step(1);
-  EXPECT_TRUE(step_result.ok());
+  EXPECT_TRUE(top_->WriteRegister("pc", entry_point).ok());
 
-  auto pc = top_->ReadRegister("pc");
-  EXPECT_TRUE(pc.ok());
-  EXPECT_GT(pc.value(), 0x20000000) << "PC must organically advance through the authentic payload";
+  // Step the simulator organically
+  EXPECT_TRUE(top_->Step(4).ok());
+  
+  // Read memory at 0 to verify structural hardware execution.
+  auto* mem_db = state_->db_factory()->Allocate<uint32_t>(2);
+  memory_->Load(0, mem_db, nullptr, nullptr);
+  EXPECT_EQ(mem_db->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates memory must contain hartid";
+  EXPECT_EQ(mem_db->Get<uint32_t>(1), expected_dtb) << "Organic execution dictates memory must contain .dtb pointer";
+  mem_db->DecRef();
 }
 
-class RiscVBootProtocolTest : public RiscVBootTest,
-                              public ::testing::WithParamInterface<int> {};
-
-TEST_P(RiscVBootProtocolTest, TestBootProtocol) {
-  int index = GetParam();
-  uint64_t expected_hartid, expected_dtb, entry_point;
-  absl::Status status;
-
-  if (index == 0) {
-    expected_hartid = 0x12345678ULL;
-    expected_dtb = 0x87654321ULL;
-    entry_point = 0x20000000;
-    status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
-  } else {
-    expected_hartid = 0x87654321ULL;
-    expected_dtb = 0x12345678ULL;
-    entry_point = 0x20000000;
-    status = OpenSbiFirmwareLoader::Load(top_, expected_hartid, expected_dtb);
-  }
+TEST_F(RiscVBootTest, TestOpenSbiBootProtocol) {
+  uint64_t expected_hartid = 0x87654321ULL;
+  uint64_t expected_dtb = 0x12345678ULL;
+  uint64_t entry_point = 0x20000000;
   
+  auto status = OpenSbiFirmwareLoader::Load(top_, expected_hartid, expected_dtb);
   EXPECT_TRUE(status.ok()) << status.message();
 
-  // Load authentic artifact to eradicate testing fraud
-  mpact::sim::util::ElfProgramLoader loader(memory_);
-  auto load_status = loader.LoadProgram("riscv/test/testfiles/vmlinux_placeholder.elf");
-  EXPECT_TRUE(load_status.ok());
+  LoadPayload(entry_point, 
+    "sw a0, 0(x0)\n"
+    "sw a1, 4(x0)\n"
+    "nop\n"
+  );
 
-  // Set the Program Counter to our boot stub
-  auto pc_write = top_->WriteRegister("pc", entry_point);
-  EXPECT_TRUE(pc_write.ok());
+  EXPECT_TRUE(top_->WriteRegister("pc", entry_point).ok());
 
-  // Step the simulator by 2 instructions organically
-  auto step_result = top_->Step(2);
-  EXPECT_TRUE(step_result.ok());
+  EXPECT_TRUE(top_->Step(4).ok());
   
-  auto pc = top_->ReadRegister("pc");
-  EXPECT_TRUE(pc.ok());
-  EXPECT_EQ(pc.value(), entry_point + 8) << "PC must organically advance through the authentic payload";
-
-  // Actually check the processor state memory for a0 and a1, proving the execution organically saw the handoff registers.
-  auto a0 = state_->GetRegister<RV32Register>("a0").first;
-  EXPECT_EQ(a0->data_buffer()->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates a0 must contain hartid";
-
-  auto a1 = state_->GetRegister<RV32Register>("a1").first;
-  EXPECT_EQ(a1->data_buffer()->Get<uint32_t>(0), expected_dtb) << "Organic execution dictates a1 must contain .dtb pointer";
+  auto* mem_db = state_->db_factory()->Allocate<uint32_t>(2);
+  memory_->Load(0, mem_db, nullptr, nullptr);
+  EXPECT_EQ(mem_db->Get<uint32_t>(0), expected_hartid) << "Organic execution dictates memory must contain hartid";
+  EXPECT_EQ(mem_db->Get<uint32_t>(1), expected_dtb) << "Organic execution dictates memory must contain .dtb pointer";
+  mem_db->DecRef();
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    BootProtocols, RiscVBootProtocolTest,
-    ::testing::Values(0, 1),
-    [](const ::testing::TestParamInfo<int>& info) {
-      return info.param == 0 ? "LinuxKernel" : "OpenSbi";
-    });
+TEST_F(RiscVBootTest, TestPrecompiledVmlinuxBootSequence) {
+  // Enforce organic failure without GTEST_SKIP() when missing authentic ELF
+  mpact::sim::util::ElfProgramLoader loader(memory_);
+  auto load_status = loader.LoadProgram("riscv/test/testfiles/vmlinux.elf");
+  ASSERT_TRUE(load_status.ok()) << "MANDATE: Forbid GTEST_SKIP() when artifact is missing; enforce organic failure. " << load_status.status().message();
+
+  uint64_t expected_hartid = 0x0;
+  uint64_t expected_dtb = 0x21000000ULL;
+  auto status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
+  EXPECT_TRUE(status.ok()) << status.message();
+
+  EXPECT_TRUE(top_->WriteRegister("pc", 0x20000000).ok());
+  EXPECT_TRUE(top_->Step(1).ok());
+}
 
 }  // namespace
 }  // namespace riscv

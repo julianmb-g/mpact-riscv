@@ -1103,11 +1103,12 @@ cc_test(
 cc_test(
     name = "riscv_boot_test",
     srcs = ["riscv_boot_test.cc"],
-    data = ["testfiles/vmlinux_placeholder.elf"],
+    data = [],
     deps = [
         "//riscv:riscv32g_decoder",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
+        "//utils/assembler:native_assembler",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
