@@ -14,10 +14,10 @@
   * **Impact:** False positive 100% unit tests that fail to simulate RTL component boundaries.
   * **Action:** Tests mimicking external memory MUST instantiate REAL synthesized DDR controllers and SRAM RTL block responders. Diagnose AXI Memory Interface drops directly. Eviscerating memory boundaries to trap timeouts is strictly forbidden.
 
-* **OS Boot Sequence & Memory Offset Bounds**
+* [FLAG: invalid] **OS Boot Sequence & Memory Offset Bounds**
   * **Quote:** "Validating that bytes are written to memory does not prove the simulator can actually execute the OpenSBI boot handshake."
   * **Impact:** Fails to prevent overlapping memory regions and invalid Device Tree Blobs (DTB) from silently crashing the bootloader.
-  * **Action:** Enforce strict physical load addresses (e.g., `vmlinux` at `0x20000000`, DTB at `0x21000000`) and assert non-intersection. Boot tests must instantiate the top-level simulator and execute the trace natively. FDT magic numbers must be strictly checked and OS payloads physically routed. If OS artifacts are completely missing, enforce organic failure (e.g., `absl::IsNotFound` or `unittest.SkipTest`).
+  * **Action:** Enforce strict physical load addresses (e.g., `vmlinux` at `0x20000000`, DTB at `0x21000000`) and assert non-intersection. Boot tests must instantiate the top-level simulator and execute the trace natively. FDT magic numbers must be strictly checked and OS payloads physically routed. [FLAG: invalid] If OS artifacts are completely missing, enforce organic failure (e.g., `absl::IsNotFound` or `unittest.SkipTest`).
 
 * **CLI Argument Boundary Verification**
   * **Quote:** "Execution binaries (e.g., `coralnpu_v2_sim.cc`) must be organically tested with `argc == 0, 1, and 3+`."
@@ -96,10 +96,10 @@
   * **Impact:** Fragments submodule-specific execution constraints.
   * **Action:** Immediately integrate audit restorations into the primary strict execution mandates and remove the restoration headers.
 
-* **OS Boot Entry Point Boundary Evasion**
+* [FLAG: stale] **OS Boot Entry Point Boundary Evasion**
   * **Quote:** "Mutating if (0x20000000 >= start && 0x20000000 < end) to if (0x20000000 > start && 0x20000000 < end)"
   * **Impact:** This surviving mutant falsely rejects valid ELF payloads that begin exactly at the `0x20000000` entry point address, proving the E2E hardware verification is failing to organically test perfect edge-case boundary mapping for the OS boot payload.
-  * **Action:** `riscv_dtb_loader_test` MUST generate a rigorous ELF payload that perfectly aligns exactly to `0x20000000` to verify boundary conditions are inclusive natively.
+  * **Action:** [FLAG: stale] `riscv_dtb_loader_test` MUST generate a rigorous ELF payload that perfectly aligns exactly to `0x20000000` to verify boundary conditions are inclusive natively.
 
 * **Isolated Execution Boundary Evaluation**
   * **Quote:** "The test evaluates the C++ loader function natively on `FlatDemandMemory` but never executes the loaded payload via the simulator's CPU loop."
