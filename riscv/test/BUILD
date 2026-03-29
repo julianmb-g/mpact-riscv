@@ -1331,3 +1331,22 @@ cc_test(
         "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
+
+cc_test(
+    name = "riscv_vector_fp_organic_test",
+    size = "small",
+    srcs = ["riscv_vector_fp_organic_test.cc"],
+    deps = [
+        "//riscv:riscv64gv_bin_fmt",
+        "//riscv:rva23u64_isa",
+        "//riscv:riscv_state",
+        "//riscv:riscv_top",
+        "//riscv:riscv_fp_state",
+        "//riscv:rva23u64_decoder",
+        "//utils/assembler:native_assembler",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
