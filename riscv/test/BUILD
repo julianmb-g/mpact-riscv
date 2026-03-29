@@ -1294,10 +1294,15 @@ cc_test(
     srcs = ["riscv_dtb_loader_test.cc"],
     data = [
         "testfiles/hello_world.elf",
+        "testfiles/vmlinux.elf",
     ],
     deps = [
         "//riscv:riscv_dtb_loader",
         "//riscv:riscv_state",
+        "//riscv:riscv_top",
+        "//riscv:riscv64g_decoder",
+        "//utils/assembler:native_assembler",
+        "@com_github_serge1_elfio//:elfio",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",

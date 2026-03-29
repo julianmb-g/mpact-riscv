@@ -69,6 +69,16 @@ constexpr std::initializer_list<const std::pair<absl::string_view, uint64_t>>
 };
 
 constexpr std::initializer_list<const std::pair<absl::string_view, uint64_t>>
+    kVectorRegisterList = {
+        {"v0", 0},   {"v1", 1},   {"v2", 2},    {"v3", 3},    {"v4", 4},
+        {"v5", 5},   {"v6", 6},   {"v7", 7},    {"v8", 8},    {"v9", 9},
+        {"v10", 10}, {"v11", 11}, {"v12", 12},  {"v13", 13},  {"v14", 14},
+        {"v15", 15}, {"v16", 16}, {"v17", 17},  {"v18", 18},  {"v19", 19},
+        {"v20", 20}, {"v21", 21}, {"v22", 22},  {"v23", 23},  {"v24", 24},
+        {"v25", 25}, {"v26", 26}, {"v27", 27},  {"v28", 28},  {"v29", 29},
+        {"v30", 30}, {"v31", 31}};
+
+constexpr std::initializer_list<const std::pair<absl::string_view, uint64_t>>
     kFRegisterList = {
         {"f0", 0},   {"f1", 1},   {"f2", 2},    {"f3", 3},    {"f4", 4},
         {"f5", 5},   {"f6", 6},   {"f7", 7},    {"f8", 8},    {"f9", 9},
