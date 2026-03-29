@@ -24,6 +24,8 @@
 #include "riscv/riscv_register_aliases.h"
 #include "mpact/sim/util/memory/flat_demand_memory.h"
 #include "mpact/sim/util/memory/atomic_memory.h"
+#include "utils/assembler/native_assembler_wrapper.h"
+#include "absl/log/check.h"
 
 namespace {
 
@@ -37,6 +39,7 @@ using ::mpact::sim::riscv::RV64Register;
 using ::mpact::sim::riscv::RVFpRegister;
 using ::mpact::sim::util::FlatDemandMemory;
 using ::mpact::sim::util::AtomicMemory;
+using ::mpact::sim::assembler::NativeTextualAssembler;
 
 class Rva23ExtensionsTest : public ::testing::Test {
  protected:
@@ -56,19 +59,19 @@ class Rva23ExtensionsTest : public ::testing::Test {
     std::string reg_name;
     for (int i = 0; i < 32; i++) {
       reg_name = absl::StrCat(RiscVState::kXregPrefix, i);
-      (void)state_->AddRegister<RV64Register>(reg_name);
-      (void)state_->AddRegisterAlias<RV64Register>(
-          reg_name, ::mpact::sim::riscv::kXRegisterAliases[i]);
+      CHECK_NE(state_->AddRegister<RV64Register>(reg_name), nullptr);
+      CHECK_OK(state_->AddRegisterAlias<RV64Register>(
+          reg_name, ::mpact::sim::riscv::kXRegisterAliases[i]));
     }
     for (int i = 0; i < 32; i++) {
       reg_name = absl::StrCat(RiscVState::kFregPrefix, i);
-      (void)state_->AddRegister<RVFpRegister>(reg_name);
-      (void)state_->AddRegisterAlias<RVFpRegister>(
-          reg_name, ::mpact::sim::riscv::kFRegisterAliases[i]);
+      CHECK_NE(state_->AddRegister<RVFpRegister>(reg_name), nullptr);
+      CHECK_OK(state_->AddRegisterAlias<RVFpRegister>(
+          reg_name, ::mpact::sim::riscv::kFRegisterAliases[i]));
     }
 
     top_ = new RiscVTop("test_top", state_, decoder_);
-    top_->WriteRegister("pc", 0x1000).IgnoreError();
+    CHECK_OK(top_->WriteRegister("pc", 0x1000));
   }
 
   ~Rva23ExtensionsTest() override {
@@ -98,7 +101,6 @@ class Rva23ExtensionsTest : public ::testing::Test {
 };
 
 TEST_F(Rva23ExtensionsTest, AuthenticZfaExecutionFroundS) {
-  // fround.s fa0, fa0, rmm -> 0x40454553
   // Test native E2E integration, proving decoder and execution boundary are linked.
   
   float initial_val = 2.5f;
@@ -109,6 +111,9 @@ TEST_F(Rva23ExtensionsTest, AuthenticZfaExecutionFroundS) {
   auto write_status = top_->WriteRegister("f10", nan_boxed);
   ASSERT_TRUE(write_status.ok());
 
+  // fround.s fa0, fa0, rmm -> 0x40454553
+  // NativeTextualAssembler throws "No getter for source op enum value 56" for Zfa,
+  // falling back to direct instruction injection to unblock execution validation.
   WriteInstruction(0x1000, 0x40454553);
   
   auto step_status = top_->Step(1);
@@ -130,6 +135,8 @@ TEST_F(Rva23ExtensionsTest, AuthenticZfaExecutionFroundS) {
 
 TEST_F(Rva23ExtensionsTest, AuthenticZawrsExecutionWrsNto) {
   // wrs.nto -> 0x00d00073
+  // NativeTextualAssembler throws "No getter" for Zawrs,
+  // falling back to direct instruction injection.
   WriteInstruction(0x1000, 0x00d00073);
   WriteInstruction(0x1004, 0x00000013); // nop
   
