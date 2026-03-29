@@ -102,3 +102,8 @@
   * **Quote:** "Adding new A and D bit fault checks completely broke old MMU tests because they used mock PTEs without 0xC0."
   * **Impact:** Tightening architectural constraints (like checking A/D bits natively) organically exposes fragile mock test environments.
   * **Action:** When introducing strict PTE permission constraints (Svadu, Svpbmt), ALL legacy MMU tests must be proactively patched to include required mock permission bits (e.g., `| 0xC0`) rather than disabling the constraint check itself.
+
+* **Static Pointer Caching & Dangling References**
+  * **Quote:** "Using `static mpact::sim::riscv::RiscVCsrInterface* cached_menvcfg` to cache a CSR pointer across multiple tests."
+  * **Impact:** State components like `RiscVState` are recreated per test. Static locals persist across the test suite, leading to dangling pointers, memory corruption, and segmentation faults when subsequent tests access the destroyed memory.
+  * **Action:** Never use `static` local variables to cache pointers to objects with instance-level lifecycles. Always cache these pointers as member variables (e.g., `cached_menvcfg_` in the class definition) and initialize them in the constructor.
