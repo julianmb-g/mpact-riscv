@@ -1332,6 +1332,27 @@ cc_test(
 )
 
 cc_test(
+    name = "riscv_smcntrpmf_test",
+    srcs = ["riscv_smcntrpmf_test.cc"],
+    copts = [
+        "-O3",
+        "-Ithird_party/mpact-riscv",
+    ],
+    deps = [
+        "//riscv:riscv_state",
+        "//riscv:riscv_top",
+        "//riscv:rva23s64_decoder",
+        "//riscv:rva23s64_sim",
+        "//riscv:riscv_fp_state",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
+
+cc_test(
+
     name = "riscv_smstateen_test",
     srcs = ["riscv_smstateen_test.cc"],
     deps = [

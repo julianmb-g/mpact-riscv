@@ -175,6 +175,12 @@ void CreateCsrs(RiscVState* state, std::vector<RiscVCsrInterface*>& csr_vec) {
   // stimecmp
   CHECK_NE(CreateCsr<STimeCmpCsr>(state, csr_vec, state, nullptr), nullptr);
 
+  // mcyclecfg and minstretcfg (Smcntrpmf)
+  auto *mcyclecfg = CreateCsr<MCycleCfgCsr>(state, state->mcyclecfg_, csr_vec, state);
+  CHECK_NE(mcyclecfg, nullptr);
+  auto *minstretcfg = CreateCsr<MInstRetCfgCsr>(state, state->minstretcfg_, csr_vec, state);
+  CHECK_NE(minstretcfg, nullptr);
+
   // menvcfg
   CHECK_NE(CreateCsr<RiscVSimpleCsr<T>>(state, csr_vec, "menvcfg",
                                         RiscVCsrEnum::kMenvcfg, 0, state),
@@ -902,6 +908,26 @@ InterruptCode RiscVState::PickInterrupt(uint32_t interrupts) {
     return InterruptCode::kUserTimerInterrupt;
 
   return InterruptCode::kNone;
+}
+
+bool RiscVState::IsMCycleInhibited() const {
+  if (!IsExtensionEnabled("Smcntrpmf") || !mcyclecfg_) return false;
+  uint64_t cfg = mcyclecfg_->GetUint64();
+  int priv = static_cast<int>(privilege_mode());
+  if (priv == 3) return (cfg & (1ULL << 62)) != 0; // MINH
+  if (priv == 1) return (cfg & (1ULL << 61)) != 0; // SINH
+  if (priv == 0) return (cfg & (1ULL << 60)) != 0; // UINH
+  return false;
+}
+
+bool RiscVState::IsMInstRetInhibited() const {
+  if (!IsExtensionEnabled("Smcntrpmf") || !minstretcfg_) return false;
+  uint64_t cfg = minstretcfg_->GetUint64();
+  int priv = static_cast<int>(privilege_mode());
+  if (priv == 3) return (cfg & (1ULL << 62)) != 0; // MINH
+  if (priv == 1) return (cfg & (1ULL << 61)) != 0; // SINH
+  if (priv == 0) return (cfg & (1ULL << 60)) != 0; // UINH
+  return false;
 }
 
 }  // namespace riscv

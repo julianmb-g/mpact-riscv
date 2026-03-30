@@ -60,6 +60,22 @@ class SStateEn0Csr : public RiscVSimpleCsr<uint64_t> {
   void Write(uint64_t value) override;
   void Write(uint32_t value) override;
 };
+
+// Smcntrpmf extension CSRs
+class MCycleCfgCsr : public RiscVSimpleCsr<uint64_t> {
+ public:
+  MCycleCfgCsr(RiscVState *state);
+  void Write(uint64_t value) override;
+  void Write(uint32_t value) override;
+};
+
+class MInstRetCfgCsr : public RiscVSimpleCsr<uint64_t> {
+ public:
+  MInstRetCfgCsr(RiscVState *state);
+  void Write(uint64_t value) override;
+  void Write(uint32_t value) override;
+};
+
 class RiscVSimModeCsr : public RiscVSimpleCsr<uint32_t> {
  public:
   RiscVSimModeCsr(std::string name, RiscVCsrEnum index, RiscVState* state)

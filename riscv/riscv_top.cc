@@ -89,6 +89,8 @@ RiscVTop::RiscVTop(std::string name, RiscVState* state,
       rv_decoder_(decoder),
       counter_num_instructions_("num_instructions", 0),
       counter_num_cycles_("num_cycles", 0),
+      counter_mcycle_("mcycle", 0),
+      counter_minstret_("minstret", 0),
       icache_config_("icache", ""),
       dcache_config_("dcache", "") {
   CHECK_OK(AddConfig(&icache_config_));
@@ -141,6 +143,10 @@ void RiscVTop::Initialize() {
       << "Failed to register instruction counter";
   CHECK_OK(AddCounter(&counter_num_cycles_))
       << "Failed to register cycle counter";
+  CHECK_OK(AddCounter(&counter_mcycle_))
+      << "Failed to register mcycle counter";
+  CHECK_OK(AddCounter(&counter_minstret_))
+      << "Failed to register minstret counter";
   // Register opcode counters.
   int num_opcodes = rv_decoder_->GetNumOpcodes();
   counter_opcode_.resize(num_opcodes);
@@ -153,12 +159,12 @@ void RiscVTop::Initialize() {
   }
 
   // Connect counters to instret(h) and mcycle(h) CSRs.
-  CHECK_OK(SetCsrCounter("minstret", counter_num_instructions_));
-  CHECK_OK(SetCsrCounter("mcycle", counter_num_cycles_));
+  CHECK_OK(SetCsrCounter("minstret", counter_minstret_));
+  CHECK_OK(SetCsrCounter("mcycle", counter_mcycle_));
 
   // Connect Zicntr counters to cycle(h), time(h), and instret(h) CSRs.
-  CHECK_OK(SetCsrCounter("instret", counter_num_instructions_));
-  CHECK_OK(SetCsrCounter("cycle", counter_num_cycles_));
+  CHECK_OK(SetCsrCounter("instret", counter_minstret_));
+  CHECK_OK(SetCsrCounter("cycle", counter_mcycle_));
   CHECK_OK(SetCsrCounter("time", counter_num_cycles_));
 
   // Add Zihpm counters - Unprivileged.
@@ -259,6 +265,7 @@ absl::Status RiscVTop::StepPastBreakpoint() {
     state_->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
                  *ExceptionCode::kIllegalInstruction, pc, nullptr);
     counter_num_cycles_.Increment(1);
+    if (!state_->IsMCycleInhibited()) counter_mcycle_.Increment(1);
     state_->AdvanceDelayLines();
     (void)rv_action_point_manager_->ap_memory_interface()
         ->WriteBreakpointInstruction(bpt_pc);
@@ -279,11 +286,13 @@ absl::Status RiscVTop::StepPastBreakpoint() {
   do {
     executed = ExecuteInstruction(real_inst);
     counter_num_cycles_.Increment(1);
+    if (!state_->IsMCycleInhibited()) counter_mcycle_.Increment(1);
     state_->AdvanceDelayLines();
   } while (!executed);
   // Increment counters.
   counter_opcode_[real_inst->opcode()].Increment(1);
   counter_num_instructions_.Increment(1);
+  if (!state_->IsMInstRetInhibited()) counter_minstret_.Increment(1);
   real_inst->DecRef();
   // Re-enable the breakpoint.
   (void)rv_action_point_manager_->ap_memory_interface()
@@ -350,6 +359,7 @@ absl::StatusOr<int> RiscVTop::Step(int num) {
       state_->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
                    *ExceptionCode::kIllegalInstruction, pc, nullptr);
       counter_num_cycles_.Increment(1);
+      if (!state_->IsMCycleInhibited()) counter_mcycle_.Increment(1);
       state_->AdvanceDelayLines();
 
       uint64_t pc_val = pc_operand->AsUint64(0);
@@ -372,6 +382,7 @@ absl::StatusOr<int> RiscVTop::Step(int num) {
     do {
       executed = ExecuteInstruction(inst);
       counter_num_cycles_.Increment(1);
+      if (!state_->IsMCycleInhibited()) counter_mcycle_.Increment(1);
       state_->AdvanceDelayLines();
       // Check for interrupt.
       if (state_->is_interrupt_available()) {
@@ -387,6 +398,7 @@ absl::StatusOr<int> RiscVTop::Step(int num) {
     // Update counters.
     counter_opcode_[inst->opcode()].Increment(1);
     counter_num_instructions_.Increment(1);
+    if (!state_->IsMInstRetInhibited()) counter_minstret_.Increment(1);
     // Get the next pc value.
     auto pc_val = state_->pc_operand()->AsUint64(0);
     if (state_->branch()) {
@@ -472,6 +484,7 @@ absl::Status RiscVTop::Run() {
         state_->Trap(/*is_interrupt=*/false, /*trap_value=*/0,
                      *ExceptionCode::kIllegalInstruction, pc, nullptr);
         counter_num_cycles_.Increment(1);
+        if (!state_->IsMCycleInhibited()) counter_mcycle_.Increment(1);
         state_->AdvanceDelayLines();
 
         uint64_t pc_val = pc_operand->AsUint64(0);
@@ -494,6 +507,7 @@ absl::Status RiscVTop::Run() {
         // and try again.
         executed = ExecuteInstruction(inst);
         counter_num_cycles_.Increment(1);
+        if (!state_->IsMCycleInhibited()) counter_mcycle_.Increment(1);
         if (executed && !commit_watchers_.empty()) {
           auto* db = state_->db_factory()->Allocate<uint32_t>(1);
           state_->memory()->Load(pc, db, nullptr, nullptr);
@@ -518,6 +532,7 @@ absl::Status RiscVTop::Run() {
       // Update counters.
       counter_opcode_[inst->opcode()].Increment(1);
       counter_num_instructions_.Increment(1);
+      if (!state_->IsMInstRetInhibited()) counter_minstret_.Increment(1);
       // Get the next pc value.
       uint64_t pc_val = pc_operand->AsUint64(0);
       if (state_->branch()) {

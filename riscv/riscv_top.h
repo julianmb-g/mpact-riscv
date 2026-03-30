@@ -224,6 +224,8 @@ class RiscVTop : public generic::Component, public RiscVDebugInterface {
   std::vector<generic::SimpleCounter<uint64_t>> counter_opcode_;
   generic::SimpleCounter<uint64_t> counter_num_instructions_;
   generic::SimpleCounter<uint64_t> counter_num_cycles_;
+  generic::SimpleCounter<uint64_t> counter_mcycle_;
+  generic::SimpleCounter<uint64_t> counter_minstret_;
   // Placeholders for the counters required for the Zihpm extension.
   std::vector<generic::SimpleCounter<uint64_t>> counter_hardware_perf_;
   // Counter used for profiling by connecting it to a profiler. This allows

@@ -78,6 +78,33 @@ void SStateEn0Csr::Write(uint64_t value) {
 void SStateEn0Csr::Write(uint32_t value) {
   Write(static_cast<uint64_t>(value));
 }
+
+MCycleCfgCsr::MCycleCfgCsr(RiscVState *state)
+    : RiscVSimpleCsr<uint64_t>("mcyclecfg", 0x321, 0ULL, -1ULL, -1ULL, state) {}
+
+void MCycleCfgCsr::Write(uint64_t value) {
+  // Only MINH, SINH, UINH, VSINH, VUINH bits are implemented.
+  uint64_t mask = (1ULL << 62) | (1ULL << 61) | (1ULL << 60) | (1ULL << 59) | (1ULL << 58);
+  Set(value & mask);
+}
+
+void MCycleCfgCsr::Write(uint32_t value) {
+  Write(static_cast<uint64_t>(value));
+}
+
+MInstRetCfgCsr::MInstRetCfgCsr(RiscVState *state)
+    : RiscVSimpleCsr<uint64_t>("minstretcfg", 0x322, 0ULL, -1ULL, -1ULL, state) {}
+
+void MInstRetCfgCsr::Write(uint64_t value) {
+  // Only MINH, SINH, UINH, VSINH, VUINH bits are implemented.
+  uint64_t mask = (1ULL << 62) | (1ULL << 61) | (1ULL << 60) | (1ULL << 59) | (1ULL << 58);
+  Set(value & mask);
+}
+
+void MInstRetCfgCsr::Write(uint32_t value) {
+  Write(static_cast<uint64_t>(value));
+}
+
 uint32_t RiscVSimModeCsr::GetUint32() {
   return static_cast<uint32_t>(state_->privilege_mode());
 }

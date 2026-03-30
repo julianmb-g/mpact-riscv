@@ -159,3 +159,6 @@
 ## Trace Fidelity
 * **RVVI Oracle Fidelity ("Sum of Deltas" Theorem)**: When validating hardware tracing APIs, it is strictly forbidden to use cosmetic evaluation limits like `EXPECT_EQ(output, "PASS")`. Implement explicit temporal limits and mathematically accumulate structural deltas to natively re-derive and verify the final hardware state.
 * **Zfa Execution Void**: Complex Zfa semantics tests MUST NOT exclusively evaluate raw `generic::Instruction` objects with explicitly mocked operands. You MUST ensure an authentic, cross-compiled ELF utilizing Zfa arithmetic routes securely through the `rv64g_sim` instruction loop.
+
+### Orchestration Execution Insights (Cycle 166 - Smcntrpmf)
+* **Testing Fraud vs. Authentic Performance Counters**: When testing `Smcntrpmf` counting inhibitions (`mcyclecfg`, `minstretcfg`), never test by statically incrementing variables or injecting manual values into registers. You MUST instantiate `RiscVTop` using `FlatDemandMemory` and execute raw sequential RISC-V instructions (`0x00000013` NOPs) natively through `Step()` to mathematically prove the architectural counter pauses organically in the specified privilege mode.

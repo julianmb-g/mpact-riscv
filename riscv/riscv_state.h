@@ -329,6 +329,10 @@ class RiscVState : public ArchState {
            counter_interrupt_returns_.GetValue();
   }
 
+  // Smcntrpmf: Check if mcycle/minstret increment should be inhibited.
+  bool IsMCycleInhibited() const;
+  bool IsMInstRetInhibited() const;
+
   // Extension Configuration
   void AddExtension(absl::string_view ext) { enabled_extensions_.insert(std::string(ext)); }
   bool IsExtensionEnabled(absl::string_view ext) const { return enabled_extensions_.contains(std::string(ext)); }
@@ -408,6 +412,8 @@ class RiscVState : public ArchState {
   RiscVMIsa* misa() const { return misa_; }
   RiscVMIp* mip() const { return mip_; }
   RiscVMIe* mie() const { return mie_; }
+  RiscVCsrInterface* mcyclecfg() const { return mcyclecfg_; }
+  RiscVCsrInterface* minstretcfg() const { return minstretcfg_; }
   RiscVCsrInterface* jvt() const { return jvt_; }
   RiscVCsrInterface* mtvec() const { return mtvec_; }
   RiscVCsrInterface* mtval() const { return mtval_; }
@@ -463,6 +469,8 @@ class RiscVState : public ArchState {
   RiscVMIsa* misa_ = nullptr;
   RiscVMIp* mip_ = nullptr;
   RiscVMIe* mie_ = nullptr;
+  RiscVCsrInterface* mcyclecfg_ = nullptr;
+  RiscVCsrInterface* minstretcfg_ = nullptr;
   RiscVPmp* pmp_ = nullptr;
   RiscVCsrInterface* jvt_ = nullptr;
   RiscVCsrInterface* mtvec_ = nullptr;
