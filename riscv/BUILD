@@ -2070,3 +2070,12 @@ cc_library(
         "@com_googlesource_code_re2//:re2",
     ],
 )
+
+cc_binary(
+    name = "libmpact_rvvi.so",
+    linkshared = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":rvvi_sim",
+    ],
+)

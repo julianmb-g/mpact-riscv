@@ -117,3 +117,6 @@
   * **Quote:** "Complex Zfa semantics tests in riscv_zfa_instructions_test.cc claim comprehensive test vectors but exclusively evaluate raw generic::Instruction objects with explicitly mocked operands."
   * **Impact:** Zero integration coverage ensuring an authentic, cross-compiled ELF utilizing Zfa arithmetic routes securely through the rv64g_sim instruction loop.
   * **Action:** Zfa execution tests MUST cross-compile authentic Zfa assembly, load the ELF into the RiscVTop simulator natively, and verify the architectural state/trap handling natively through the CPU loop rather than directly invoking generic::Instruction mocks.
+
+### Orchestration Execution Insights (Cycle 165 - Build Agent)
+* **RVVI Plugin Architecture Target Availability**: Building `libmpact_rvvi.so` requires explicitly declaring a `cc_binary` target with `linkshared = True` in `mpact-riscv/riscv/BUILD`, linking against the existing trace interfaces to satisfy external simulation environment bounds.
