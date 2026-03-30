@@ -64,7 +64,7 @@
   * **Impact:** Isolated string matching or individual instruction evaluations without cross-component hardware integration are flagged as systemic testing illusions.
   * **Action:** Ensure new features strictly test via an executing ELF payload at the top-level simulator.
 
-* **Zicbom Standard Profile Execution Mocking**
+* [FLAG: stale] **Zicbom Standard Profile Execution Mocking**
   * **Quote:** "The test directly injects the semantic function into a mocked instruction object and manually executes it, completely bypassing the Instruction Decoder. In `riscv_zicbo_instructions_test.cc`, `instruction_->set_semantic_function(&mpact::sim::riscv::RiscVCboZero); instruction_->Execute(nullptr);`"
   * **Impact:** Total evasion of the E2E execution boundary. Mocks the instruction object bypassing the decoder and memory interface.
   * **Action:** Write a strict E2E test that cross-compiles Zicbom assembly (`cbo.zero`, `cbo.clean`), loads the ELF into the `RiscvTop` simulator naturally, and verifies the architectural state/trap handling natively through the CPU loop.
@@ -159,6 +159,9 @@
 ## Trace Fidelity
 * **RVVI Oracle Fidelity ("Sum of Deltas" Theorem)**: When validating hardware tracing APIs, it is strictly forbidden to use cosmetic evaluation limits like `EXPECT_EQ(output, "PASS")`. Implement explicit temporal limits and mathematically accumulate structural deltas to natively re-derive and verify the final hardware state.
 * **Zfa Execution Void**: Complex Zfa semantics tests MUST NOT exclusively evaluate raw `generic::Instruction` objects with explicitly mocked operands. You MUST ensure an authentic, cross-compiled ELF utilizing Zfa arithmetic routes securely through the `rv64g_sim` instruction loop.
+
+### Orchestration Execution Insights (Cycle 166 - Smcntrpmf)
+* **Testing Fraud vs. Authentic Performance Counters**: When testing `Smcntrpmf` counting inhibitions (`mcyclecfg`, `minstretcfg`), never test by statically incrementing variables or injecting manual values into registers. You MUST instantiate `RiscVTop` using `FlatDemandMemory` and execute raw sequential RISC-V instructions (`0x00000013` NOPs) natively through `Step()` to mathematically prove the architectural counter pauses organically in the specified privilege mode.
 
 ### Orchestration Execution Insights (Cycle 166 - Smcntrpmf)
 * **Testing Fraud vs. Authentic Performance Counters**: When testing `Smcntrpmf` counting inhibitions (`mcyclecfg`, `minstretcfg`), never test by statically incrementing variables or injecting manual values into registers. You MUST instantiate `RiscVTop` using `FlatDemandMemory` and execute raw sequential RISC-V instructions (`0x00000013` NOPs) natively through `Step()` to mathematically prove the architectural counter pauses organically in the specified privilege mode.
