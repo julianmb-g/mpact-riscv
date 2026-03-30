@@ -1280,10 +1280,12 @@ cc_test(
     deps = [
         "//riscv:riscv32_htif_semihost",
         "//riscv:riscv32g_decoder",
+        "//riscv:riscv64g_decoder",
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
         "//riscv:rvvi_sim",
+        "//utils/assembler:native_assembler",
         "@com_google_googletest//:gtest_main",
         "@com_google_mpact-sim//mpact/sim/util/memory",
         "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
