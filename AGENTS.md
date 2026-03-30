@@ -154,3 +154,8 @@
   * **Quote:** "Boot tests must execute an authentic OS payload that organically reads a0 (hartid) and a1 (.dtb) and asserts non-intersection bounds checks."
   * **Impact:** Validating `EXPECT_TRUE(status.ok())` from `LinuxKernelBootloader::Load` without physically asserting memory at `0x21000000` is a cosmetic test. It fails to guarantee the FDT magic number `0xd00dfeed` is accessible to the NPU execution.
   * **Action:** Boot handshake execution tests MUST physically inject `0xd00dfeed` into the mapped DTB memory and `EXPECT_EQ(mem_db->Get<uint32_t>(0), 0xd00dfeed)` before starting the execution loop, asserting it does not intersect with the `vmlinux` payload.
+# mpact-riscv Submodule Execution Directives
+
+## Trace Fidelity
+* **RVVI Oracle Fidelity ("Sum of Deltas" Theorem)**: When validating hardware tracing APIs, it is strictly forbidden to use cosmetic evaluation limits like `EXPECT_EQ(output, "PASS")`. Implement explicit temporal limits and mathematically accumulate structural deltas to natively re-derive and verify the final hardware state.
+* **Zfa Execution Void**: Complex Zfa semantics tests MUST NOT exclusively evaluate raw `generic::Instruction` objects with explicitly mocked operands. You MUST ensure an authentic, cross-compiled ELF utilizing Zfa arithmetic routes securely through the `rv64g_sim` instruction loop.
