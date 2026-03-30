@@ -112,3 +112,8 @@
   * **Quote:** "Ensure the test asserts the OpenSBI boot handshake (0xd00dfeed) and strictly uses FAIL() if the authentic pre-compiled vmlinux payload is missing."
   * **Impact:** Using `GTEST_SKIP()` or dummy generators when essential artifacts are absent masks the systemic failure to cross-compile payloads, allowing testing fraud to bypass CI execution constraints.
   * **Action:** Boot tests must strictly utilize `FAIL()` on missing artifacts and physically assert the `0xd00dfeed` OpenSBI handoff magic number is loaded into memory.
+
+* **The Mocked Boundary Illusion: mpact-riscv ZFA Execution Void**
+  * **Quote:** "Complex Zfa semantics tests in riscv_zfa_instructions_test.cc claim comprehensive test vectors but exclusively evaluate raw generic::Instruction objects with explicitly mocked operands."
+  * **Impact:** Zero integration coverage ensuring an authentic, cross-compiled ELF utilizing Zfa arithmetic routes securely through the rv64g_sim instruction loop.
+  * **Action:** Zfa execution tests MUST cross-compile authentic Zfa assembly, load the ELF into the RiscVTop simulator natively, and verify the architectural state/trap handling natively through the CPU loop rather than directly invoking generic::Instruction mocks.
