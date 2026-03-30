@@ -152,3 +152,6 @@
 
 ### Orchestration Execution Insights (Cycle 167)
 * **Oversized Vector Trace Atomicity**: A single 64-byte `TraceEvent` cannot contain the full state delta for operations that mutate multiple registers simultaneously (e.g., `vl8re8.v`). Multi-register updates must be atomized within the fixed 64-byte constraint by introducing a `fragment_index` / `is_last` flag to the ABI.
+
+### Orchestration Execution Insights (Cycle 167 - Vector Atomicity)
+* **Oversized Vector Trace Atomicity Implementation:** When splitting a massive vector update (e.g. 256 bits/32 bytes) into 64-byte `rvvi_trace_event_t` payloads, the ABI dictates maintaining strict `RVVI_TRACE_ALIGN` (64 bytes). The struct was modified to include `fragment_index` and `is_last` flags replacing 2 bytes of padding. The `rvviDutVrSet` hook leverages these fields to iteratively push atomized 64-byte chunks into the `g_rvvi_trace_buffer` SPSC ring buffer, enabling downstream consumers to reconstruct large register states without breaking lock-free atomicity.

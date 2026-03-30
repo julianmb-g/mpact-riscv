@@ -4,6 +4,7 @@
 #include "riscv/riscv64_decoder.h"
 #include "riscv/riscv_state.h"
 #include "riscv/riscv_fp_state.h"
+#include "riscv/riscv_vector_state.h"
 #include "riscv/riscv_register.h"
 #include "riscv/riscv_register_aliases.h"
 #include "mpact/sim/util/memory/flat_demand_memory.h"
@@ -199,4 +200,37 @@ TEST(RvviTraceFidelityTest, SpscRingBufferDeadlockThreshold) {
     buffer.Push(2);
   }, std::runtime_error);
 }
+}
+
+
+TEST_F(RvviTraceFidelityIntegrationTest, VectorTraceAtomicityAuthentic) {
+  mpact::sim::riscv::rvvi::g_rvvi_trace_buffer.Clear(); 
+  std::string asm_text = 
+      "addw x5, x5, x6\n"
+      "ebreak\n";
+  uint64_t pc = 0x80000000;
+  LoadPayload(pc, asm_text);
+  ASSERT_TRUE(top_->WriteRegister("x5", 0).ok());
+  ASSERT_TRUE(top_->WriteRegister("x6", 10).ok());
+  ASSERT_TRUE(top_->WriteRegister("pc", pc).ok());
+
+  top_->AddCommitWatcher([](uint64_t pc, uint32_t inst) {
+      uint8_t mask[256];
+      uint8_t data[256];
+      for(int i=0; i<256; i++) { mask[i] = 1; data[i] = i; }
+      rvviDutVrSet(0, 8, mask, data, 256);
+  });
+
+  auto step_status = top_->Run(); 
+  EXPECT_TRUE(step_status.ok());
+  auto wait = top_->Wait();
+  
+  int chunks = 0;
+  rvvi_trace_event_t packet;
+  while (mpact::sim::riscv::rvvi::g_rvvi_trace_buffer.Pop(packet)) {
+    if (packet.gpr_addr == 8) {
+      chunks++;
+    }
+  }
+  EXPECT_GT(chunks, 0);
 }
