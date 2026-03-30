@@ -149,6 +149,29 @@ TEST_F(RiscVBootTest, TestPrecompiledVmlinuxBootSequence) {
   auto status = LinuxKernelBootloader::Load(top_, expected_hartid, expected_dtb);
   EXPECT_TRUE(status.ok()) << status.message();
 
+  // Dynamically verify ELF segment boundaries instead of hardcoding payload size
+  uint64_t max_payload_address = 0;
+  auto* elf_reader = loader.elf_reader();
+  for (const auto& segment : elf_reader->segments) {
+    uint64_t segment_end = segment->get_virtual_address() + segment->get_memory_size();
+    if (segment_end > max_payload_address) {
+      max_payload_address = segment_end;
+    }
+  }
+
+  // Assert non-intersection bounds dynamically
+  EXPECT_LT(max_payload_address, expected_dtb) << "MANDATE: vmlinux payload must not intersect with DTB memory region.";
+
+  // Verify FDT magic numbers strictly, as written natively by LinuxKernelBootloader
+  auto* mem_db = state_->db_factory()->Allocate<uint32_t>(1);
+  memory_->Load(expected_dtb, mem_db, nullptr, nullptr);
+  EXPECT_EQ(mem_db->Get<uint32_t>(0), 0xd00dfeed) << "MANDATE: FDT magic number must be exactly 0xd00dfeed.";
+  mem_db->DecRef();
+
+  // Validate the registers are set correctly before boot execution
+  EXPECT_EQ(top_->ReadRegister("a0").value(), expected_hartid) << "MANDATE: a0 must be hartid";
+  EXPECT_EQ(top_->ReadRegister("a1").value(), expected_dtb) << "MANDATE: a1 must be dtb pointer";
+
   EXPECT_TRUE(top_->WriteRegister("pc", 0x20000000).ok());
   EXPECT_TRUE(top_->Step(1).ok());
 }

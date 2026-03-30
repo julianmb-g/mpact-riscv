@@ -26,7 +26,9 @@ TEST(RiscVZawrsInstructionsTest, AuthenticE2EExecution) {
 
   ElfProgramLoader elf_loader(memory);
   auto load_result = elf_loader.LoadProgram("riscv/test/testfiles/zawrs.elf");
-  EXPECT_TRUE(load_result.ok());
+  if (!load_result.ok()) {
+    FAIL() << "MANDATE: Forbid GTEST_SKIP() when artifact is missing; enforce organic failure. " << load_result.status().message();
+  }
   uint64_t entry_point = load_result.value();
 
   EXPECT_TRUE(top->WriteRegister("pc", entry_point).ok());

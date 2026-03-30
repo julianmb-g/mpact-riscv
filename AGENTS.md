@@ -148,3 +148,9 @@
 * **RVVI SPSC Formatting Daemon Crash Deadlock**: The ring buffer must include a cross-thread health check (`std::atomic<bool> daemon_alive`) to cleanly abort the main simulator loop if the consumer thread terminates.
 * **Oversized Vector Trace Atomicity**: A single 64-byte `TraceEvent` cannot contain the full state delta for massive vector loads (e.g., `vl8re8.v`). Multi-register architectural updates must be atomized using `fragment_index`/`is_last` boolean flags.
 * **Pre-compiled OS Boot Fallback Mechanism**: Purge placeholder payload logic. Formally enforce that all Linux boot tests MUST organically `FAIL()` if the authentic `.elf` payload is missing.
+
+### Orchestration Execution Insights (Cycle 166 - Boot Validation)
+* **Boot Protocol Memory Validation Strictness**:
+  * **Quote:** "Boot tests must execute an authentic OS payload that organically reads a0 (hartid) and a1 (.dtb) and asserts non-intersection bounds checks."
+  * **Impact:** Validating `EXPECT_TRUE(status.ok())` from `LinuxKernelBootloader::Load` without physically asserting memory at `0x21000000` is a cosmetic test. It fails to guarantee the FDT magic number `0xd00dfeed` is accessible to the NPU execution.
+  * **Action:** Boot handshake execution tests MUST physically inject `0xd00dfeed` into the mapped DTB memory and `EXPECT_EQ(mem_db->Get<uint32_t>(0), 0xd00dfeed)` before starting the execution loop, asserting it does not intersect with the `vmlinux` payload.

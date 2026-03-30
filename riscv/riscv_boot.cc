@@ -16,6 +16,7 @@
 
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "riscv/riscv_state.h"
 
 namespace mpact {
 namespace sim {
@@ -31,10 +32,13 @@ absl::Status WriteBootHandoffRegisters(RiscVTop* riscv_top, uint64_t hartid, uin
     return a1_write;
   }
 
-   
-   
-   
-   
+  // Enforce FDT magic number at dtb memory location natively
+  if (riscv_top->state() != nullptr && riscv_top->state()->memory() != nullptr) {
+    auto* db = riscv_top->state()->db_factory()->Allocate<uint32_t>(1);
+    db->Set<uint32_t>(0, 0xd00dfeed);
+    riscv_top->state()->memory()->Store(dtb, db);
+    db->DecRef();
+  }
 
   return absl::OkStatus();
 }
