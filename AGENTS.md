@@ -155,3 +155,6 @@
 
 ### Orchestration Execution Insights (Cycle 167 - Vector Atomicity)
 * **Oversized Vector Trace Atomicity Implementation:** When splitting a massive vector update (e.g. 256 bits/32 bytes) into 64-byte `rvvi_trace_event_t` payloads, the ABI dictates maintaining strict `RVVI_TRACE_ALIGN` (64 bytes). The struct was modified to include `fragment_index` and `is_last` flags replacing 2 bytes of padding. The `rvviDutVrSet` hook leverages these fields to iteratively push atomized 64-byte chunks into the `g_rvvi_trace_buffer` SPSC ring buffer, enabling downstream consumers to reconstruct large register states without breaking lock-free atomicity.
+
+### Orchestration Execution Insights (Cycle 167)
+* **CI Evasion & OOM Risks**: Test targets must use `size='large'` instead of `size='enormous'` to prevent orchestrator OOM deadlocks. Tests must not bypass physical recompilation by merely returning cached states for broken dependencies.
