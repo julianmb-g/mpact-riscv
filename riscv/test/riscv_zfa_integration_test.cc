@@ -170,4 +170,52 @@ TEST_F(RiscVZfaIntegrationTest, FmaxmS_EqualMagnitude) {
   EXPECT_EQ(result_val.value() & 0xFFFFFFFF, 0x40000000); // positive wins
 }
 
+TEST_F(RiscVZfaIntegrationTest, FroundS_RMM_OrganicExecution) {
+  std::string asm_text = 
+      ".text\n"
+      "fround.s f2, f0, rmm\n"
+      "ebreak\n";
+
+  uint64_t pc = 0x10000;
+  LoadPayload(pc, asm_text);
+  
+  auto status_reg = state_->GetRegister<RV64Register>("mstatus").first;
+  status_reg->data_buffer()->Set<uint64_t>(0, 0x2000);
+
+  // 2.5f = 0x40200000 -> rounded to nearest ties to max magnitude (rmm) -> 3.0f = 0x40400000
+  uint32_t val_f0 = 0x40200000;
+  uint64_t boxed_f0 = 0xffffffff00000000ULL | val_f0;
+  ASSERT_TRUE(top_->WriteRegister("f0", boxed_f0).ok());
+
+  RunProgram(pc);
+
+  auto result_val = top_->ReadRegister("f2");
+  ASSERT_TRUE(result_val.ok());
+  EXPECT_EQ(result_val.value() & 0xFFFFFFFF, 0x40400000); // 3.0f
+}
+
+TEST_F(RiscVZfaIntegrationTest, FcvtmodWD_OrganicExecution) {
+  std::string asm_text = 
+      ".text\n"
+      "fcvtmod.w.d a0, f0, rtz\n"
+      "ebreak\n";
+
+  uint64_t pc = 0x10000;
+  LoadPayload(pc, asm_text);
+  
+  auto status_reg = state_->GetRegister<RV64Register>("mstatus").first;
+  status_reg->data_buffer()->Set<uint64_t>(0, 0x2000);
+
+  // -2147483649.0 = 0xc1e0000000200000ULL
+  // Truncating cast to int32 (modulo 2^32) -> 2147483647 (0x7FFFFFFF)
+  uint64_t val_f0 = 0xc1e0000000200000ULL;
+  ASSERT_TRUE(top_->WriteRegister("f0", val_f0).ok());
+
+  RunProgram(pc);
+
+  auto result_val = top_->ReadRegister("a0");
+  ASSERT_TRUE(result_val.ok());
+  EXPECT_EQ(result_val.value(), 0x7FFFFFFF); // 2147483647
+}
+
 } // namespace
