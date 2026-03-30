@@ -64,11 +64,6 @@
   * **Impact:** Isolated string matching or individual instruction evaluations without cross-component hardware integration are flagged as systemic testing illusions.
   * **Action:** Ensure new features strictly test via an executing ELF payload at the top-level simulator.
 
-* [FLAG: stale] **Zicbom Standard Profile Execution Mocking**
-  * **Quote:** "The test directly injects the semantic function into a mocked instruction object and manually executes it, completely bypassing the Instruction Decoder. In `riscv_zicbo_instructions_test.cc`, `instruction_->set_semantic_function(&mpact::sim::riscv::RiscVCboZero); instruction_->Execute(nullptr);`"
-  * **Impact:** Total evasion of the E2E execution boundary. Mocks the instruction object bypassing the decoder and memory interface.
-  * **Action:** Write a strict E2E test that cross-compiles Zicbom assembly (`cbo.zero`, `cbo.clean`), loads the ELF into the `RiscvTop` simulator naturally, and verifies the architectural state/trap handling natively through the CPU loop.
-
 ### Tier 2: System Architecture
 
 * **Bazel Hermeticity & Ledger Preservation**
@@ -85,16 +80,23 @@
   * **Quote:** "The E2E OS boot test must execute an authentic OS payload that organically reads `a0` and `a1` and writes their values out to a verifiable memory address."
   * **Impact:** Masks boot payload execution failures and allows tests to blindly execute `NOP` space, evading genuine step-through verification.
   * **Action:** Ensure the boot test executes an authentic OS payload reading `a0`/`a1` and writing values to verified memory.
+
 * **Zve32f Architecture Extraction**
   * **Quote:** "Redefining floating point instructions from scratch for CoralNPU M3."
   * **Impact:** Violates architectural requirements by duplicating code instead of leveraging upstream.
   * **Action:** Extract the Zve32f instruction set strictly from the reference mpact-riscv `.isa` and `.bin_fmt` files and migrate them.
 
 ### Architectural Design & API Contracts
+
 * **CLINT/PLIC Hardware Interrupt State Management**
   * **Quote:** "Test CLINT Machine Software Interrupt without setting MIE flags."
   * **Impact:** Missing `state_->mie()->set_msie(1)` causes software interrupts (Exception Code 3) to be silently dropped despite MSIP assertion, breaking test boundaries.
   * **Action:** When validating hardware interrupts like CLINT MSIP, ensure the architectural Machine Interrupt Enable (MIE) bit for the specific source (`MSIE`, `MTIE`, `MEIE`) is explicitly activated in `RiscVState` prior to stepping the simulator.
+
+* **FDT Magic Number Strictness & Missing Artifact Mandate**
+  * **Quote:** "Ensure the test asserts the OpenSBI boot handshake (0xd00dfeed) and strictly uses FAIL() if the authentic pre-compiled vmlinux payload is missing."
+  * **Impact:** Using `GTEST_SKIP()` or dummy generators when essential artifacts are absent masks the systemic failure to cross-compile payloads, allowing testing fraud to bypass CI execution constraints.
+  * **Action:** Boot tests must strictly utilize `FAIL()` on missing artifacts and physically assert the `0xd00dfeed` OpenSBI handoff magic number is loaded into memory.
 
 *   **Mandate:** Ensure all unbuilt requirements and architectural designs reflect clear HW/SW boundaries, exact file paths, and strict API/ABI contracts. Use Mermaid for topology when defining mpact-riscv.
 
@@ -102,16 +104,11 @@
   * **Quote:** "Using `static mpact::sim::riscv::RiscVCsrInterface* cached_menvcfg` to cache a CSR pointer across multiple tests."
   * **Impact:** State components like `RiscVState` are recreated per test. Static locals persist across the test suite, leading to dangling pointers, memory corruption, and segmentation faults when subsequent tests access the destroyed memory.
   * **Action:** Never use `static` local variables to cache pointers to objects with instance-level lifecycles. Always cache these pointers as member variables (e.g., `cached_menvcfg_` in the class definition) and initialize them in the constructor.
+
 * **Svadu (Hardware A/D bit updates) and Mock PTE Dependencies**
   * **Quote:** "Adding new A and D bit fault checks completely broke old MMU tests because they used mock PTEs without 0xC0."
   * **Impact:** Tightening architectural constraints (like checking A/D bits natively) organically exposes fragile mock test environments.
   * **Action:** When introducing strict PTE permission constraints (Svadu, Svpbmt), ALL legacy MMU tests must be proactively patched to include required mock permission bits (e.g., `| 0xC0`) rather than disabling the constraint check itself.
-
-
-* **FDT Magic Number Strictness & Missing Artifact Mandate**
-  * **Quote:** "Ensure the test asserts the OpenSBI boot handshake (0xd00dfeed) and strictly uses FAIL() if the authentic pre-compiled vmlinux payload is missing."
-  * **Impact:** Using `GTEST_SKIP()` or dummy generators when essential artifacts are absent masks the systemic failure to cross-compile payloads, allowing testing fraud to bypass CI execution constraints.
-  * **Action:** Boot tests must strictly utilize `FAIL()` on missing artifacts and physically assert the `0xd00dfeed` OpenSBI handoff magic number is loaded into memory.
 
 * **The Mocked Boundary Illusion: mpact-riscv ZFA Execution Void**
   * **Quote:** "Complex Zfa semantics tests in riscv_zfa_instructions_test.cc claim comprehensive test vectors but exclusively evaluate raw generic::Instruction objects with explicitly mocked operands."
@@ -119,49 +116,36 @@
   * **Action:** Zfa execution tests MUST cross-compile authentic Zfa assembly, load the ELF into the RiscVTop simulator natively, and verify the architectural state/trap handling natively through the CPU loop rather than directly invoking generic::Instruction mocks.
 
 ### Orchestration Execution Insights (Cycle 165 - Build Agent)
-* **RVVI Plugin Architecture Target Availability**: Building `libmpact_rvvi.so` requires explicitly declaring a `cc_binary` target with `linkshared = True` in `mpact-riscv/riscv/BUILD`, linking against the existing trace interfaces to satisfy external simulation environment bounds.
 
+* **RVVI Plugin Architecture Target Availability**: Building `libmpact_rvvi.so` requires explicitly declaring a `cc_binary` target with `linkshared = True` in `mpact-riscv/riscv/BUILD`, linking against the existing trace interfaces to satisfy external simulation environment bounds.
 
 ### Globally Relevant Execution Rules (Appended)
 
-* **Dangerous Commands & Missing Teardown (Bazel Deadlocks)**
-  * **Quote:** "Launching massive monolithic Bazel test suites concurrently without pkill -f bazel or resource constraints guarantees CI orchestrator timeouts."
-  * **Impact:** CI timeout due to Bazel server memory exhaustion.
-  * **Action:** Prepend and append `pkill -f "bazel" || true` to all Bazel batch executions. Apply strict `--local_resources=cpu=8 --local_resources=memory=HOST_RAM*0.5` flags.
-
-* **Safe C++ API Boundaries**
-  * **Quote:** "Natively generated APIs must utilize `absl::flat_hash_map::find()` rather than `.at(index)`."
-  * **Impact:** Using `.at(index)` triggers C++ exceptions and `std::abort()` crashes on cache misses.
-  * **Action:** Use `.find()` and gracefully return an `absl::NotFoundError` if an element misses.
-
-* **Toolchain Isolation & Hermetic Boundaries**
-  * **Quote:** "The RISC-V cross-compilers... must be installed on the host machine. Hermetic Build Exemption..."
-  * **Impact:** Autonomous agents will pollute the hermetic Bazel workspace with host toolchains if not explicitly bounded.
-  * **Action:** Agents must strictly enforce Cross-Compiler Testing Matrix & Toolchain Isolation. Exclusively `tinygrad` is allowed to use host cross-compilers; all other Bazel submodules must use strict hermetic toolchains.
-
-* **Backward Compatibility & Crash Tracing**
-  * **Quote:** "Abstracting root cause locations hides the source of crashes. Legacy keyword arguments must be strictly preserved via `**kwargs`."
-  * **Impact:** Causes cascading API contract breakages and obscures exact component failures.
-  * **Action:** Explicitly fix files instead of relying on broad mocking. Ensure safe fallbacks via `**kwargs` when refactoring core APIs.
-
 ### Orchestration Execution Insights (Cycle 166)
-* **RVVI SPSC Formatting Daemon Crash Deadlock**: The ring buffer must include a cross-thread health check (`std::atomic<bool> daemon_alive`) to cleanly abort the main simulator loop if the consumer thread terminates.
+
 * **Oversized Vector Trace Atomicity**: A single 64-byte `TraceEvent` cannot contain the full state delta for massive vector loads (e.g., `vl8re8.v`). Multi-register architectural updates must be atomized using `fragment_index`/`is_last` boolean flags.
+
 * **Pre-compiled OS Boot Fallback Mechanism**: Purge placeholder payload logic. Formally enforce that all Linux boot tests MUST organically `FAIL()` if the authentic `.elf` payload is missing.
 
+* **RVVI SPSC Formatting Daemon Crash Deadlock**: The ring buffer must include a cross-thread health check (`std::atomic<bool> daemon_alive`) to cleanly abort the main simulator loop if the consumer thread terminates.
+
 ### Orchestration Execution Insights (Cycle 166 - Boot Validation)
+
 * **Boot Protocol Memory Validation Strictness**:
   * **Quote:** "Boot tests must execute an authentic OS payload that organically reads a0 (hartid) and a1 (.dtb) and asserts non-intersection bounds checks."
   * **Impact:** Validating `EXPECT_TRUE(status.ok())` from `LinuxKernelBootloader::Load` without physically asserting memory at `0x21000000` is a cosmetic test. It fails to guarantee the FDT magic number `0xd00dfeed` is accessible to the NPU execution.
   * **Action:** Boot handshake execution tests MUST physically inject `0xd00dfeed` into the mapped DTB memory and `EXPECT_EQ(mem_db->Get<uint32_t>(0), 0xd00dfeed)` before starting the execution loop, asserting it does not intersect with the `vmlinux` payload.
+
 # mpact-riscv Submodule Execution Directives
 
 ## Trace Fidelity
+
 * **RVVI Oracle Fidelity ("Sum of Deltas" Theorem)**: When validating hardware tracing APIs, it is strictly forbidden to use cosmetic evaluation limits like `EXPECT_EQ(output, "PASS")`. Implement explicit temporal limits and mathematically accumulate structural deltas to natively re-derive and verify the final hardware state.
+
 * **Zfa Execution Void**: Complex Zfa semantics tests MUST NOT exclusively evaluate raw `generic::Instruction` objects with explicitly mocked operands. You MUST ensure an authentic, cross-compiled ELF utilizing Zfa arithmetic routes securely through the `rv64g_sim` instruction loop.
 
 ### Orchestration Execution Insights (Cycle 166 - Smcntrpmf)
+
 * **Testing Fraud vs. Authentic Performance Counters**: When testing `Smcntrpmf` counting inhibitions (`mcyclecfg`, `minstretcfg`), never test by statically incrementing variables or injecting manual values into registers. You MUST instantiate `RiscVTop` using `FlatDemandMemory` and execute raw sequential RISC-V instructions (`0x00000013` NOPs) natively through `Step()` to mathematically prove the architectural counter pauses organically in the specified privilege mode.
 
 ### Orchestration Execution Insights (Cycle 166 - Smcntrpmf)
-* **Testing Fraud vs. Authentic Performance Counters**: When testing `Smcntrpmf` counting inhibitions (`mcyclecfg`, `minstretcfg`), never test by statically incrementing variables or injecting manual values into registers. You MUST instantiate `RiscVTop` using `FlatDemandMemory` and execute raw sequential RISC-V instructions (`0x00000013` NOPs) natively through `Step()` to mathematically prove the architectural counter pauses organically in the specified privilege mode.
