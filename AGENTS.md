@@ -149,3 +149,6 @@
 * **Testing Fraud vs. Authentic Performance Counters**: When testing `Smcntrpmf` counting inhibitions (`mcyclecfg`, `minstretcfg`), never test by statically incrementing variables or injecting manual values into registers. You MUST instantiate `RiscVTop` using `FlatDemandMemory` and execute raw sequential RISC-V instructions (`0x00000013` NOPs) natively through `Step()` to mathematically prove the architectural counter pauses organically in the specified privilege mode.
 
 ### Orchestration Execution Insights (Cycle 166 - Smcntrpmf)
+
+### Orchestration Execution Insights (Cycle 167)
+* **Oversized Vector Trace Atomicity**: A single 64-byte `TraceEvent` cannot contain the full state delta for operations that mutate multiple registers simultaneously (e.g., `vl8re8.v`). Multi-register updates must be atomized within the fixed 64-byte constraint by introducing a `fragment_index` / `is_last` flag to the ABI.
