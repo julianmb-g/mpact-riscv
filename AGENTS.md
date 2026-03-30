@@ -143,3 +143,8 @@
   * **Quote:** "Abstracting root cause locations hides the source of crashes. Legacy keyword arguments must be strictly preserved via `**kwargs`."
   * **Impact:** Causes cascading API contract breakages and obscures exact component failures.
   * **Action:** Explicitly fix files instead of relying on broad mocking. Ensure safe fallbacks via `**kwargs` when refactoring core APIs.
+
+### Orchestration Execution Insights (Cycle 166)
+* **RVVI SPSC Formatting Daemon Crash Deadlock**: The ring buffer must include a cross-thread health check (`std::atomic<bool> daemon_alive`) to cleanly abort the main simulator loop if the consumer thread terminates.
+* **Oversized Vector Trace Atomicity**: A single 64-byte `TraceEvent` cannot contain the full state delta for massive vector loads (e.g., `vl8re8.v`). Multi-register architectural updates must be atomized using `fragment_index`/`is_last` boolean flags.
+* **Pre-compiled OS Boot Fallback Mechanism**: Purge placeholder payload logic. Formally enforce that all Linux boot tests MUST organically `FAIL()` if the authentic `.elf` payload is missing.
