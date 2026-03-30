@@ -112,3 +112,5 @@
   * **Quote:** "When validating hardware tracing APIs, it is strictly forbidden to use cosmetic evaluation limits like `EXPECT_EQ(output, "PASS")`."
   * **Impact:** Cosmetic validation fails to prove state deltas.
   * **Action:** Implement explicit temporal limits and mathematically accumulate structural deltas to natively re-derive and verify the final hardware state.
+### New Findings (QA Audit)
+* **Zfa Execution Validation:** Complex Zfa semantics (e.g., `fround.s`, `fcvtmod.w.d`) tests MUST cross-compile authentic Zfa assembly, load the ELF into the simulator natively, and verify the architectural state/trap handling natively through the CPU loop rather than invoking generic Instruction mocks.
