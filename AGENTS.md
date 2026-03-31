@@ -22,3 +22,4 @@
 * **Struct Alignment & ABI**: Constrain `rvvi_trace_event_t` to strict 64-byte alignment with `#ifndef` guards. Prune contradictory legacy definitions. Use native assignments or `std::memcpy` instead of `absl::StrAppendFormat`.
 
 
+* **Zfa Cross-Compiled E2E Evaluation**: Validating advanced Zfa semantics requires fully cross-compiled Zfa assembly ELFs executing cleanly through the top-level CPU simulation. Instantiating raw `generic::Instruction` mocks is forbidden.

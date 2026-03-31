@@ -1050,11 +1050,11 @@ cc_test(
     srcs = ["rva23_extensions_test.cc"],
     copts = ["-O3"],
     deps = [
+        "//riscv:riscv64g_bin_fmt",
+        "//riscv:riscv64g_decoder",
         "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
-        "//riscv:riscv64g_bin_fmt",
-        "//riscv:riscv64g_decoder",
         "//riscv:rva23u64_decoder",
         "//utils/assembler:native_assembler",
         "@com_google_absl//absl/log:check",
@@ -1316,10 +1316,10 @@ cc_test(
         "testfiles/vmlinux.elf",
     ],
     deps = [
+        "//riscv:riscv64g_decoder",
         "//riscv:riscv_dtb_loader",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
-        "//riscv:riscv64g_decoder",
         "//utils/assembler:native_assembler",
         "@com_github_serge1_elfio//:elfio",
         "@com_google_absl//absl/status",
@@ -1339,11 +1339,11 @@ cc_test(
         "-Ithird_party/mpact-riscv",
     ],
     deps = [
+        "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
         "//riscv:rva23s64_decoder",
         "//riscv:rva23s64_sim",
-        "//riscv:riscv_fp_state",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
@@ -1352,7 +1352,6 @@ cc_test(
 )
 
 cc_test(
-
     name = "riscv_smstateen_test",
     srcs = ["riscv_smstateen_test.cc"],
     deps = [
@@ -1383,16 +1382,16 @@ cc_test(
     srcs = ["riscv_vector_fp_organic_test.cc"],
     deps = [
         "//riscv:riscv64gv_bin_fmt",
-        "//riscv:rva23u64_isa",
+        "//riscv:riscv_fp_state",
         "//riscv:riscv_state",
         "//riscv:riscv_top",
-        "//riscv:riscv_fp_state",
         "//riscv:rva23u64_decoder",
+        "//riscv:rva23u64_isa",
         "//utils/assembler:native_assembler",
-        "@com_google_mpact-sim//mpact/sim/util/memory",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
 
