@@ -4,7 +4,6 @@
 
 ### Core Execution Integrity
 * **Cosmetic RVVI Trivialization Ban**: Tests must natively execute and format RVVI traces. Do not immediately send "quit" to interactive CLI wrappers to bypass trace generation logic.
-* **64-bit RMW Cycle Trap**: Implement thread-safety lock logic and atomize multi-register vector updates using strictly aligned 64-byte payload boolean flags (`fragment_index`, `is_last`).
 * **Isolated Execution Evaluation**: Asserting memory writes without checking the CPU orchestrator executes the bytes is testing fraud. Payload loading tests MUST instantiate the `RiscvTop` execution loop and step the CPU natively.
 * **Test Pyramid & Execution Verification (MANDATE 3)**: New features MUST enforce a strict Test Pyramid: an executing ELF payload evaluated natively by the top-level simulator. Isolated string matching or individual instruction evals without hardware integration are flagged.
 
@@ -19,8 +18,9 @@
 * **Zve32f Architecture Extraction**: Do not redefine floating-point instructions from scratch for CoralNPU M3. Extract the Zve32f instruction set strictly from the reference mpact-riscv `.isa` and `.bin_fmt` files.
 
 ### Structural Alignment & Memory Management
+* **64-bit RMW Cycle Trap**: Implement thread-safety lock logic and atomize multi-register vector updates using strictly aligned 64-byte payload boolean flags (`fragment_index`, `is_last`).
 * **Simulator Memory Mappers Lifecycle**: Guard mappers with `std::unique_ptr`. Update the base `MemoryInterface` pointer before initializing subsequent structures to prevent memory leaks and dangling mappers.
 * **Struct Alignment & ABI**: Constrain `rvvi_trace_event_t` to strict 64-byte alignment with `#ifndef` guards. Prune contradictory legacy definitions. Use native assignments or `std::memcpy` instead of `absl::StrAppendFormat`.
 
 ### Memory Map Boundaries & 64-bit RMW
-* **64-bit Read-Modify-Write (RMW) Trap Testing**: Execution validation tests must verify that unaligned 64-bit stores (e.g., `sd`) that overlap an 8-byte cache block line boundary correctly trigger the internal `DoRmwStore` mechanism. This ensures thread-safety `rmw_mutex_` locks are exercised natively when concurrent host threads manipulate `FlatDemandMemory`. Do not rely on atomic instructions (`amoadd.d`) for testing basic RMW traps as these organically trap to `0x0` upon encountering unsupported bounds.
+* **64-bit Read-Modify-Write (RMW) Trap Testing Context**: Execution validation tests must verify that unaligned 64-bit stores (e.g., `sd`) that overlap an 8-byte cache block line boundary correctly trigger the internal `DoRmwStore` mechanism. This ensures thread-safety `rmw_mutex_` locks are exercised natively when concurrent host threads manipulate `FlatDemandMemory`. Do not rely on atomic instructions (`amoadd.d`) for testing basic RMW traps as these organically trap to `0x0` upon encountering unsupported bounds.
