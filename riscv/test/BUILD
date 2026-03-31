@@ -1412,3 +1412,20 @@ cc_test(
         "@com_google_mpact-sim//mpact/sim/util/memory",
     ],
 )
+
+cc_test(
+    name = "riscv_trap_integration_test",
+    size = "small",
+    srcs = ["riscv_trap_integration_test.cc"],
+    deps = [
+        "//riscv:riscv_fp_state",
+        "//riscv:riscv_state",
+        "//riscv:riscv_top",
+        "//riscv:rva23u64_decoder",
+        "//utils/assembler:native_assembler",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_mpact-sim//mpact/sim/util/memory",
+    ],
+)
