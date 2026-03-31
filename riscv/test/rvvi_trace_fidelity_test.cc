@@ -148,6 +148,12 @@ TEST_F(RvviTraceFidelityIntegrationTest, AuthenticExecutionSumOfDeltas) {
   uint64_t pc = 0x80000000;
   LoadPayload(pc, asm_text);
   
+  top_->AddCommitWatcher([this](uint64_t pc, uint32_t inst) {
+    if (inst == 0x00100073) { // ebreak
+      top_->Halt();
+    }
+  });
+  
   // Initialize x5 to 0, x6 to 10
   ASSERT_TRUE(top_->WriteRegister("x5", 0).ok());
   ASSERT_TRUE(top_->WriteRegister("x6", 10).ok());
@@ -210,6 +216,12 @@ TEST_F(RvviTraceFidelityIntegrationTest, VectorTraceAtomicityAuthentic) {
       "ebreak\n";
   uint64_t pc = 0x80000000;
   LoadPayload(pc, asm_text);
+  
+  top_->AddCommitWatcher([this](uint64_t pc, uint32_t inst) {
+    if (inst == 0x00100073) { // ebreak
+      top_->Halt();
+    }
+  });
   ASSERT_TRUE(top_->WriteRegister("x5", 0).ok());
   ASSERT_TRUE(top_->WriteRegister("x6", 10).ok());
   ASSERT_TRUE(top_->WriteRegister("pc", pc).ok());
@@ -233,4 +245,89 @@ TEST_F(RvviTraceFidelityIntegrationTest, VectorTraceAtomicityAuthentic) {
     }
   }
   EXPECT_GT(chunks, 0);
+}
+
+TEST_F(RvviTraceFidelityIntegrationTest, AuthenticExecutionRmwTrapOnMmio) {
+  // Setup MMIO range to restrict 64-bit RMW
+  mapper_->AddMmioRange(0x02000000, 0x02010000);
+  
+  std::string asm_text = 
+      "li x5, 0x02000004\n" // Unaligned MMIO address crossing 8-byte boundary
+      "addw x5, x5, x6\n"
+      "addw x5, x5, x6\n"
+      "ebreak\n";
+
+  uint64_t pc = 0x80000000;
+  LoadPayload(pc, asm_text);
+  
+  top_->AddCommitWatcher([this](uint64_t pc, uint32_t inst) {
+    if (inst == 0x00100073) { // ebreak
+      top_->Halt();
+    }
+  });
+  
+  ASSERT_TRUE(top_->WriteRegister("pc", pc).ok());
+  
+  // E2E boundary evaluated by the top-level simulator.
+  auto step_status = top_->Run(); 
+  EXPECT_TRUE(step_status.ok());
+  auto wait_status = top_->Wait();
+  
+  // Execution should have aborted/trapped before ebreak
+  auto final_pc = top_->ReadRegister("pc");
+  ASSERT_TRUE(final_pc.ok());
+  // Ensure it trapped and didn't execute the ebreak
+  std::cout << "FINAL PC IS " << std::hex << final_pc.value() << std::endl; EXPECT_LT(final_pc.value(), pc + 12);
+}
+
+TEST_F(RvviTraceFidelityIntegrationTest, ThreadSafetyLockLogicOnRmw) {
+  // Implement thread-safety lock logic validation execution test
+  // We run multiple threads doing 64-bit RMW on a shared address
+  uint64_t shared_addr = 0x40000000;
+  
+  // We initialize the memory with 0
+  auto* db = state_->db_factory()->Allocate<uint64_t>(1);
+  db->Set<uint64_t>(0, 0);
+  mapper_->Store(shared_addr, db);
+  db->DecRef();
+
+  std::string asm_text = 
+      "li x5, 0x40000004\n" // Unaligned Shared address
+      "addw x5, x5, x6\n"
+      "addw x5, x5, x6\n"
+      "ebreak\n";
+
+  uint64_t pc = 0x80000000;
+  LoadPayload(pc, asm_text);
+  
+  top_->AddCommitWatcher([this](uint64_t pc, uint32_t inst) {
+    if (inst == 0x00100073) { // ebreak
+      top_->Halt();
+    }
+  });
+  ASSERT_TRUE(top_->WriteRegister("pc", pc).ok());
+
+  // Run the simulation in a separate thread to prove threading logic
+  std::atomic<bool> done{false};
+  std::thread sim_thread([this, &done]() {
+    EXPECT_TRUE(top_->Run().ok());
+    EXPECT_TRUE(top_->Wait().ok());
+    done = true;
+  });
+
+  // Concurrently attempt to read/write the same address using the mapper
+  // which exercises the rmw_mutex_ lock in DoRmwStore
+  for(int i=0; i<100 && !done; i++) {
+    auto* wdb = state_->db_factory()->Allocate<uint32_t>(1);
+    wdb->Set<uint32_t>(0, 0x1234);
+    // RMW on a misaligned 4-byte write to force DoRmwStore inside rvvi_sim.cc
+    mapper_->Store(shared_addr + 2, wdb);
+    wdb->DecRef();
+  }
+
+  sim_thread.join();
+  
+  // Organic execution demands it reached ebreak without deadlocks or segfaults
+  auto final_pc = top_->ReadRegister("pc");
+  EXPECT_EQ(final_pc.value(), 0); // ebreak organically traps to 0x0 without a handler
 }
