@@ -6,6 +6,7 @@ package(default_visibility = ["//visibility:public"])
 
 cc_test(
     name = "native_assembler_test",
+    size = "large",
     srcs = ["native_assembler_test.cc"],
     copts = ["-O3"],
     deps = [

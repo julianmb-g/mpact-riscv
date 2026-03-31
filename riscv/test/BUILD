@@ -1227,7 +1227,7 @@ cc_test(
 
 cc_test(
     name = "riscv_zicbo_e2e_test",
-    size = "small",
+    size = "large",
     srcs = ["riscv_zicbo_e2e_test.cc"],
     deps = [
         "//riscv:riscv_state",
@@ -1288,6 +1288,7 @@ cc_test(
 
 cc_test(
     name = "rvvi_trace_fidelity_test",
+    size = "large",
     srcs = ["rvvi_trace_fidelity_test.cc"],
     data = [
         "testfiles/hello_world.elf",
@@ -1397,7 +1398,7 @@ cc_test(
 
 cc_test(
     name = "riscv_zfa_integration_test",
-    size = "small",
+    size = "large",
     srcs = ["riscv_zfa_integration_test.cc"],
     deps = [
         "//riscv:riscv_fp_state",
