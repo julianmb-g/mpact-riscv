@@ -23,7 +23,7 @@
 * **Struct Alignment & ABI**: Constrain `rvvi_trace_event_t` to strict 64-byte alignment with `#ifndef` guards. Prune contradictory legacy definitions. Use native assignments or `std::memcpy` instead of `absl::StrAppendFormat`.
 
 ### Memory Map Boundaries & 64-bit RMW
-* **64-bit Read-Modify-Write (RMW) Trap Testing Context**: Execution validation tests must verify that unaligned 64-bit stores (e.g., `sd`) that overlap an 8-byte cache block line boundary correctly trigger the internal `DoRmwStore` mechanism. This ensures thread-safety `rmw_mutex_` locks are exercised natively when concurrent host threads manipulate `FlatDemandMemory`. Do not rely on atomic instructions (`amoadd.d`) for testing basic RMW traps as these organically trap to `0x0` upon encountering unsupported bounds.
+[FLAG: stale] * **64-bit Read-Modify-Write (RMW) Trap Testing Context**: Execution validation tests must verify that unaligned 64-bit stores (e.g., `sd`) that overlap an 8-byte cache block line boundary correctly trigger the internal `DoRmwStore` mechanism. This ensures thread-safety `rmw_mutex_` locks are exercised natively when concurrent host threads manipulate `FlatDemandMemory`. Do not rely on atomic instructions (`amoadd.d`) for testing basic RMW traps as these organically trap to `0x0` upon encountering unsupported bounds.
 
 ### Recent Cycle Lessons
-* **Test Size OOM Evasion**: Do not mask execution limits with `size="enormous"` in Bazel build configurations, ensuring physical targets execute deterministically without causing CI SIGTERM evasions.
+[FLAG: stale] * **Test Size OOM Evasion**: Do not mask execution limits with `size="enormous"` in Bazel build configurations, ensuring physical targets execute deterministically without causing CI SIGTERM evasions.
