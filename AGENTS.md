@@ -40,7 +40,7 @@
   * **Quote:** "Instantiating RvviMemoryMapper pointers without structural lifecycle checks."
   * **Impact:** Memory leaks or fatal segmentation faults due to unmapped interfaces.
   * **Action:** Guard mappers with `std::unique_ptr`. Update the base `MemoryInterface` pointer before initializing subsequent structures.
-* **SPSC Ring Buffer Concurrency & Deadlocks**
+* [FLAG: stale] **SPSC Ring Buffer Concurrency & Deadlocks**
   * **Quote:** "SPSC buffer trace synchronization, state export, and backpressure blocking."
   * **Impact:** Fails to natively enforce backpressure, causing infinite timeout loops, CPU starvation, or masking deadlocks.
   * **Action:** Initialize `AsyncFormattingDaemon` and `RvviMemoryMapper` before `riscv_top.Run()`. Implement lock-free SPSC boundaries where producers yield. Evaluate against `kSpscYieldTimeoutMs = 5000` and throw `std::runtime_error` to natively evaluate via `EXPECT_THROW`.
@@ -67,7 +67,7 @@
   * **Quote:** "The E2E OS boot test must execute an authentic OS payload that organically reads `a0` and `a1` and writes their values out to a verifiable memory address."
   * **Impact:** Masks boot payload execution failures and allows tests to blindly execute `NOP` space, evading genuine step-through verification.
   * **Action:** Ensure the boot test executes an authentic OS payload reading `a0`/`a1` and writing values to verified memory.
-* **Zve32f Architecture Extraction**
+* [FLAG: stale] **Zve32f Architecture Extraction**
   * **Quote:** "Redefining floating point instructions from scratch for CoralNPU M3."
   * **Impact:** Violates architectural requirements by duplicating code instead of leveraging upstream.
   * **Action:** Extract the Zve32f instruction set strictly from the reference mpact-riscv `.isa` and `.bin_fmt` files and migrate them.
@@ -113,4 +113,4 @@
   * **Impact:** Cosmetic validation fails to prove state deltas.
   * **Action:** Implement explicit temporal limits and mathematically accumulate structural deltas to natively re-derive and verify the final hardware state.
 ### New Findings (QA Audit)
-* **Zfa Execution Validation:** Complex Zfa semantics (e.g., `fround.s`, `fcvtmod.w.d`) tests MUST cross-compile authentic Zfa assembly, load the ELF into the simulator natively, and verify the architectural state/trap handling natively through the CPU loop rather than invoking generic Instruction mocks.
+* [FLAG: stale] **Zfa Execution Validation:** Complex Zfa semantics (e.g., `fround.s`, `fcvtmod.w.d`) tests MUST cross-compile authentic Zfa assembly, load the ELF into the simulator natively, and verify the architectural state/trap handling natively through the CPU loop rather than invoking generic Instruction mocks.
