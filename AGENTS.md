@@ -1,6 +1,5 @@
 # mpact-riscv Agent Instructions
 
-## Lessons Learned & Orchestration Rules
 
 ### Core Execution Integrity
 * **Cosmetic RVVI Trivialization Ban**: Tests must natively execute and format RVVI traces. Do not immediately send "quit" to interactive CLI wrappers to bypass trace generation logic.
@@ -22,8 +21,4 @@
 * **Simulator Memory Mappers Lifecycle**: Guard mappers with `std::unique_ptr`. Update the base `MemoryInterface` pointer before initializing subsequent structures to prevent memory leaks and dangling mappers.
 * **Struct Alignment & ABI**: Constrain `rvvi_trace_event_t` to strict 64-byte alignment with `#ifndef` guards. Prune contradictory legacy definitions. Use native assignments or `std::memcpy` instead of `absl::StrAppendFormat`.
 
-### Memory Map Boundaries & 64-bit RMW
-[FLAG: stale] * **64-bit Read-Modify-Write (RMW) Trap Testing Context**: Execution validation tests must verify that unaligned 64-bit stores (e.g., `sd`) that overlap an 8-byte cache block line boundary correctly trigger the internal `DoRmwStore` mechanism. This ensures thread-safety `rmw_mutex_` locks are exercised natively when concurrent host threads manipulate `FlatDemandMemory`. Do not rely on atomic instructions (`amoadd.d`) for testing basic RMW traps as these organically trap to `0x0` upon encountering unsupported bounds.
 
-### Recent Cycle Lessons
-[FLAG: stale] * **Test Size OOM Evasion**: Do not mask execution limits with `size="enormous"` in Bazel build configurations, ensuring physical targets execute deterministically without causing CI SIGTERM evasions.
