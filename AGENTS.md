@@ -22,3 +22,6 @@
 * **64-bit RMW Cycle Trap**: Implement thread-safety lock logic and atomize multi-register vector updates using strictly aligned 64-byte payload boolean flags (`fragment_index`, `is_last`).
 * **Simulator Memory Mappers Lifecycle**: Guard mappers with `std::unique_ptr`. Update the base `MemoryInterface` pointer before initializing subsequent structures to prevent memory leaks and dangling mappers.
 * **Struct Alignment & ABI**: Constrain `rvvi_trace_event_t` to strict 64-byte alignment with `#ifndef` guards. Prune contradictory legacy definitions. Use native assignments or `std::memcpy` instead of `absl::StrAppendFormat`.
+
+## Mocked Exception Traps via Callback Interception
+Artificially intercepting exceptions by overriding callbacks (e.g., `set_on_trap`) instead of allowing the hardware to organically route exceptions to the architectural trap handler vector and validating PC/CSR states is a testing illusion.
