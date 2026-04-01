@@ -80,17 +80,6 @@ TEST_F(RiscVTrapIntegrationTest, test_decoder_nullptr_yields_illegal_instruction
   auto status_reg = state_->GetRegister<RV64Register>("mstatus").first;
   status_reg->data_buffer()->Set<uint64_t>(0, 0x2000);
 
-  bool trap_called = false;
-  uint64_t actual_exception_code = 0;
-  
-  state_->set_on_trap(
-      [&](bool is_interrupt, uint64_t trap_value, uint64_t exception_code,
-          uint64_t epc, const ::mpact::sim::generic::Instruction *inst) -> bool {
-        trap_called = true;
-        actual_exception_code = exception_code;
-        return true;
-      });
-
   auto status = top_->WriteRegister("pc", pc);
   ASSERT_TRUE(status.ok()) << status.message();
   
@@ -98,8 +87,10 @@ TEST_F(RiscVTrapIntegrationTest, test_decoder_nullptr_yields_illegal_instruction
   
   // Natively verify that the unmapped opcode organically triggers a trap delegation 
   // via the authentic riscv_top.cc integration boundary.
-  EXPECT_TRUE(trap_called) << "Decoder failed to trap unmapped opcode into an architectural delegation.";
-  EXPECT_EQ(actual_exception_code, static_cast<uint64_t>(ExceptionCode::kIllegalInstruction));
+  EXPECT_EQ(state_->mcause()->AsUint64(), static_cast<uint64_t>(ExceptionCode::kIllegalInstruction))
+      << "Decoder failed to trap unmapped opcode into an architectural delegation (mcause not updated).";
+  EXPECT_EQ(state_->mepc()->AsUint64(), pc)
+      << "mepc was not properly updated to the trapped instruction's PC.";
 }
 
 } // namespace
