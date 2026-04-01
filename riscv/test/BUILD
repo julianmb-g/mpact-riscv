@@ -1018,6 +1018,7 @@ cc_test(
 
 cc_test(
     name = "riscv64_i_instructions_test",
+    size = "small",
     srcs = ["riscv64_i_instructions_test.cc"],
     deps = [
         "//riscv:riscv_g",
@@ -1047,6 +1048,7 @@ config_setting(
 
 cc_test(
     name = "rva23_extensions_test",
+    size = "small",
     srcs = ["rva23_extensions_test.cc"],
     copts = ["-O3"],
     deps = [
@@ -1067,6 +1069,7 @@ cc_test(
 
 cc_test(
     name = "rva23u64_sim_test",
+    size = "small",
     srcs = ["rva23u64_sim_test.cc"],
     copts = ["-O3"],
     data = [
@@ -1106,6 +1109,7 @@ cc_test(
 
 cc_test(
     name = "riscv_boot_test",
+    size = "small",
     srcs = ["riscv_boot_test.cc"],
     data = ["testfiles/vmlinux.elf"],
     deps = [
@@ -1123,6 +1127,7 @@ cc_test(
 
 cc_test(
     name = "rva23s64_sim_test",
+    size = "small",
     srcs = ["rva23s64_sim_test.cc"],
     copts = ["-O3"],
     data = [
@@ -1146,6 +1151,7 @@ cc_test(
 
 cc_test(
     name = "rvvi_sim_test",
+    size = "small",
     srcs = ["rvvi_sim_test.cc"],
     deps = [
         "//riscv:rvvi_sim",
@@ -1157,6 +1163,7 @@ cc_test(
 
 cc_test(
     name = "rvvi_formatting_daemon_test",
+    size = "small",
     srcs = ["rvvi_formatting_daemon_test.cc"],
     deps = [
         "//riscv:rvvi_sim",
@@ -1168,6 +1175,7 @@ cc_test(
 
 cc_test(
     name = "riscv_mmu_test",
+    size = "small",
     srcs = ["riscv_mmu_test.cc"],
     deps = [
         "//riscv:riscv_mmu",
@@ -1180,6 +1188,7 @@ cc_test(
 
 cc_test(
     name = "riscv_sstc_test",
+    size = "small",
     srcs = ["riscv_sstc_test.cc"],
     deps = [
         "//riscv:riscv32g_decoder",
@@ -1334,6 +1343,7 @@ cc_test(
 
 cc_test(
     name = "riscv_smcntrpmf_test",
+    size = "small",
     srcs = ["riscv_smcntrpmf_test.cc"],
     copts = [
         "-O3",
@@ -1354,6 +1364,7 @@ cc_test(
 
 cc_test(
     name = "riscv_smstateen_test",
+    size = "small",
     srcs = ["riscv_smstateen_test.cc"],
     deps = [
         "//riscv:riscv_state",
@@ -1365,6 +1376,7 @@ cc_test(
 
 cc_test(
     name = "riscv_zicfiss_instructions_test",
+    size = "small",
     srcs = ["riscv_zicfiss_instructions_test.cc"],
     deps = [
         "//riscv:riscv_state",
