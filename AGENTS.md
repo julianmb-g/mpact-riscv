@@ -30,3 +30,4 @@ Artificially intercepting exceptions by overriding callbacks (e.g., `set_on_trap
 * **Malformed DTB Payload Obliteration**: The DTB loader must validate the FDT magic number (`0xd00dfeed`) and strictly bounds-check `.dtb` size natively in C++.
 * **FP64 & Static Rounding Bypasses**: Dynamic unsupported width checks must explicitly trap `vsew=64`. Instructions requesting reserved static rounding modes (e.g., `rm = 101` or `110`) must raise Illegal Instruction exceptions.
 * **Zfa Compilation Mocking**: Direct AST instantiation for Zfa validations is forbidden. Authentic E2E validations must cross-compile assembly strings into ELF payloads simulated via `rv64g_sim`.
+* **CSR Architectural Validation**: When eradicating mocked `set_on_trap` callbacks, test authors must rely on natively evaluating architectural CSR registers (like `mcause` and `mepc`) populated by the default execution trap logic rather than intercepting the trap control flow manually.
