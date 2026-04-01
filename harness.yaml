@@ -1,3 +1,4 @@
 build_cmd: "bazel build //..."
-test_cmd: "bazel test //... --nocache_test_results"
+test_cmd: "BAZEL_USE_LLVM_NATIVE_COVERAGE=1 GCOV=llvm-profdata bazel coverage //... --instrumentation_filter=\"^//\" --combined_report=lcov --experimental_generate_llvm_lcov --nocache_test_results && find bazel-testlogs/ -name \"coverage.dat\" -exec cat {} + > merged_coverage.info && genhtml --ignore-errors category,unsupported,empty merged_coverage.info -o coverage_report/"
 lint_cmd: "buildifier -r ."
+setup_cmd: "sudo apt-get update && sudo apt-get install -y lcov"
