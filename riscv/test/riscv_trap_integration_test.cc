@@ -9,7 +9,7 @@
 #include "riscv/riscv_register_aliases.h"
 #include "mpact/sim/util/memory/flat_demand_memory.h"
 #include "mpact/sim/util/memory/atomic_memory.h"
-#include "utils/assembler/native_assembler_wrapper.h"
+#include "mpact/sim/util/program_loader/elf_program_loader.h"
 #include <cmath>
 
 namespace {
@@ -23,7 +23,7 @@ using ::mpact::sim::riscv::RV64Register;
 using ::mpact::sim::riscv::RVFpRegister;
 using ::mpact::sim::util::FlatDemandMemory;
 using ::mpact::sim::util::AtomicMemory;
-using ::mpact::sim::assembler::NativeTextualAssembler;
+using ::mpact::sim::util::ElfProgramLoader;
 using ::mpact::sim::riscv::ExceptionCode;
 
 class RiscVTrapIntegrationTest : public ::testing::Test {
@@ -59,14 +59,11 @@ class RiscVTrapIntegrationTest : public ::testing::Test {
     delete memory_;
   }
 
-  void LoadPayload(uint64_t entry_point, const std::string& asm_text) {
-    NativeTextualAssembler assembler;
-    auto elf_bytes = assembler.Assemble(asm_text);
-    ASSERT_TRUE(elf_bytes.ok()) << elf_bytes.status().message();
-    auto* db = state_->db_factory()->Allocate<uint8_t>(elf_bytes.value().size());
-    std::memcpy(db->raw_ptr(), elf_bytes.value().data(), elf_bytes.value().size());
-    memory_->Store(entry_point, db);
-    db->DecRef();
+  uint64_t LoadPayload(const std::string& elf_path) {
+    ElfProgramLoader loader(memory_);
+    auto result = loader.LoadProgram(elf_path);
+    EXPECT_TRUE(result.ok()) << "Failed to load ELF: " << result.status().message();
+    return result.value();
   }
 
   FlatDemandMemory* memory_;
@@ -78,14 +75,7 @@ class RiscVTrapIntegrationTest : public ::testing::Test {
 };
 
 TEST_F(RiscVTrapIntegrationTest, test_decoder_nullptr_yields_illegal_instruction) {
-  // Inject an unmapped opcode using the textual assembler directly as a data word
-  std::string asm_text = 
-      ".text\n"
-      ".word 0x0000277F\n" // 9999 (0x270F) was the original test, let's inject 9999 here: 0x0000270F
-      "ebreak\n";
-
-  uint64_t pc = 0x10000;
-  LoadPayload(pc, asm_text);
+  uint64_t pc = LoadPayload("riscv/test/testfiles/trap_test.elf");
   
   auto status_reg = state_->GetRegister<RV64Register>("mstatus").first;
   status_reg->data_buffer()->Set<uint64_t>(0, 0x2000);
