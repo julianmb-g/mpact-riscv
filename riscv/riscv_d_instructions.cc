@@ -54,7 +54,7 @@ template <typename T>
 static inline T CanonicalizeNaN(T value) {
   if (!std::isnan(value)) return value;
   auto nan_value = FPTypeInfo<T>::kCanonicalNaN;
-  return ([&](){ T res; std::memcpy(&res, &nan_value, sizeof(T)); return res; })();
+  return *reinterpret_cast<T*>(&nan_value);
 }
 
 }  // namespace internal
@@ -91,7 +91,8 @@ void RiscVDSqrt(const Instruction* instruction) {
         flag_db->Set<uint32_t>(0, *FPExceptions::kInvalidOp);
         flag_db->Submit();
       }
-      return ([&](){ double res; std::memcpy(&res, &FPTypeInfo<double>::kCanonicalNaN, sizeof(double)); return res; })();
+      return *reinterpret_cast<const double*>(
+          &FPTypeInfo<double>::kCanonicalNaN);
     }
 
     // Square root of 0 returns 0, and of -0.0 returns -0.0.
@@ -106,7 +107,8 @@ void RiscVDSqrt(const Instruction* instruction) {
     if (rm_value == *FPRoundingMode::kDynamic) {
       if (!rv_fp->rounding_mode_valid()) {
         LOG(ERROR) << "Invalid rounding mode";
-        return ([&](){ double res; std::memcpy(&res, &FPTypeInfo<double>::kCanonicalNaN, sizeof(double)); return res; })();
+        return *reinterpret_cast<const double*>(
+            &FPTypeInfo<double>::kCanonicalNaN);
       }
       rm_value = *rv_fp->GetRoundingMode();
     }
@@ -131,7 +133,7 @@ void RiscVDMin(const Instruction* instruction) {
         if (FPTypeInfo<double>::IsNaN(a)) {
           if (FPTypeInfo<double>::IsNaN(b)) {
             UInt not_a_number = FPTypeInfo<double>::kCanonicalNaN;
-            return ([&](){ double res; std::memcpy(&res, &not_a_number, sizeof(double)); return res; })();
+            return *reinterpret_cast<double*>(&not_a_number);
           }
           return b;
         }
@@ -154,7 +156,7 @@ void RiscVDMax(const Instruction* instruction) {
         if (FPTypeInfo<double>::IsNaN(a)) {
           if (FPTypeInfo<double>::IsNaN(b)) {
             UInt not_a_number = FPTypeInfo<double>::kCanonicalNaN;
-            return ([&](){ double res; std::memcpy(&res, &not_a_number, sizeof(double)); return res; })();
+            return *reinterpret_cast<double*>(&not_a_number);
           }
           return b;
         }
@@ -187,9 +189,9 @@ void RiscVDMadd(const Instruction* instruction) {
         if (c == 0.0) {
           if ((a == 0.0 && !std::isinf(b)) || (b == 0.0 && !std::isinf(a))) {
             UInt c_sign =
-                ([&](){ UInt res; std::memcpy(&res, &c, sizeof(UInt)); return res; })() >> (FPTypeInfo<T>::kBitSize - 1);
-            UInt ua = ([&](){ UInt res; std::memcpy(&res, &a, sizeof(UInt)); return res; })();
-            UInt ub = ([&](){ UInt res; std::memcpy(&res, &b, sizeof(UInt)); return res; })();
+                *reinterpret_cast<UInt*>(&c) >> (FPTypeInfo<T>::kBitSize - 1);
+            UInt ua = *reinterpret_cast<UInt*>(&a);
+            UInt ub = *reinterpret_cast<UInt*>(&b);
             UInt prod_sign = (ua ^ ub) >> (FPTypeInfo<T>::kBitSize - 1);
             if (prod_sign != c_sign) return 0.0;
             return c;
@@ -216,9 +218,9 @@ void RiscVDMsub(const Instruction* instruction) {
         if (c == 0.0) {
           if ((a == 0.0 && !std::isinf(b)) || (b == 0.0 && !std::isinf(a))) {
             UInt c_sign =
-                -([&](){ UInt res; std::memcpy(&res, &c, sizeof(UInt)); return res; })() >> (FPTypeInfo<T>::kBitSize - 1);
-            UInt ua = ([&](){ UInt res; std::memcpy(&res, &a, sizeof(UInt)); return res; })();
-            UInt ub = ([&](){ UInt res; std::memcpy(&res, &b, sizeof(UInt)); return res; })();
+                -*reinterpret_cast<UInt*>(&c) >> (FPTypeInfo<T>::kBitSize - 1);
+            UInt ua = *reinterpret_cast<UInt*>(&a);
+            UInt ub = *reinterpret_cast<UInt*>(&b);
             UInt prod_sign = (ua ^ ub) >> (FPTypeInfo<T>::kBitSize - 1);
             if (prod_sign == c_sign) return 0.0;
             return -c;
@@ -245,9 +247,9 @@ void RiscVDNmadd(const Instruction* instruction) {
         if (c == 0.0) {
           if ((a == 0.0 && !std::isinf(b)) || (b == 0.0 && !std::isinf(a))) {
             UInt c_sign =
-                ([&](){ UInt res; std::memcpy(&res, &c, sizeof(UInt)); return res; })() >> (FPTypeInfo<T>::kBitSize - 1);
-            UInt ua = ([&](){ UInt res; std::memcpy(&res, &a, sizeof(UInt)); return res; })();
-            UInt ub = ([&](){ UInt res; std::memcpy(&res, &b, sizeof(UInt)); return res; })();
+                *reinterpret_cast<UInt*>(&c) >> (FPTypeInfo<T>::kBitSize - 1);
+            UInt ua = *reinterpret_cast<UInt*>(&a);
+            UInt ub = *reinterpret_cast<UInt*>(&b);
             UInt prod_sign = (ua ^ ub) >> (FPTypeInfo<T>::kBitSize - 1);
             if (prod_sign != c_sign) return 0.0;
             return -c;
@@ -276,9 +278,9 @@ void RiscVDNmsub(const Instruction* instruction) {
         if (c == 0.0) {
           if ((a == 0.0 && !std::isinf(b)) || (b == 0.0 && !std::isinf(a))) {
             UInt c_sign =
-                -([&](){ UInt res; std::memcpy(&res, &c, sizeof(UInt)); return res; })() >> (FPTypeInfo<T>::kBitSize - 1);
-            UInt ua = ([&](){ UInt res; std::memcpy(&res, &a, sizeof(UInt)); return res; })();
-            UInt ub = ([&](){ UInt res; std::memcpy(&res, &b, sizeof(UInt)); return res; })();
+                -*reinterpret_cast<UInt*>(&c) >> (FPTypeInfo<T>::kBitSize - 1);
+            UInt ua = *reinterpret_cast<UInt*>(&a);
+            UInt ub = *reinterpret_cast<UInt*>(&b);
             UInt prod_sign = (ua ^ ub) >> (FPTypeInfo<T>::kBitSize - 1);
             if (prod_sign != c_sign) return 0.0;
             return c;
@@ -310,7 +312,7 @@ void RiscVDCvtSd(const Instruction* instruction) {
     if (FPTypeInfo<double>::IsNaN(a)) {
       typename FPTypeInfo<float>::UIntType uint_value;
       uint_value = FPTypeInfo<float>::kCanonicalNaN;
-      return ([&](){ float res; std::memcpy(&res, &uint_value, sizeof(float)); return res; })();
+      return *reinterpret_cast<float*>(&uint_value);
     }
     return static_cast<float>(a);
   });
@@ -322,7 +324,7 @@ void RiscVDCvtDs(const Instruction* instruction) {
     if (FPTypeInfo<float>::IsNaN(a)) {
       typename FPTypeInfo<double>::UIntType uint_value;
       uint_value = FPTypeInfo<double>::kCanonicalNaN;
-      return ([&](){ double res; std::memcpy(&res, &uint_value, sizeof(double)); return res; })();
+      return *reinterpret_cast<double*>(&uint_value);
     }
     return static_cast<double>(a);
   });
