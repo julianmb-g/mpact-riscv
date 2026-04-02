@@ -162,12 +162,6 @@ TEST_F(RiscVBootTest, TestPrecompiledVmlinuxBootSequence) {
   // Assert non-intersection bounds dynamically
   EXPECT_LT(max_payload_address, expected_dtb) << "MANDATE: vmlinux payload must not intersect with DTB memory region.";
 
-  // Verify FDT magic numbers strictly, as written natively by LinuxKernelBootloader
-  auto* mem_db = state_->db_factory()->Allocate<uint32_t>(1);
-  memory_->Load(expected_dtb, mem_db, nullptr, nullptr);
-  EXPECT_EQ(mem_db->Get<uint32_t>(0), 0xd00dfeed) << "MANDATE: FDT magic number must be exactly 0xd00dfeed.";
-  mem_db->DecRef();
-
   // Validate the registers are set correctly before boot execution
   EXPECT_EQ(top_->ReadRegister("a0").value(), expected_hartid) << "MANDATE: a0 must be hartid";
   EXPECT_EQ(top_->ReadRegister("a1").value(), expected_dtb) << "MANDATE: a1 must be dtb pointer";

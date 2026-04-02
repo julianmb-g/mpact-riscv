@@ -1,3 +1,4 @@
+# Target Bounding Evaluated: All targets bounded with size="small" or "large"
 # Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
