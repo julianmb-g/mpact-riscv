@@ -100,15 +100,15 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     dtb_file.close();
 
     vmlinux_path_ = std::string(::testing::TempDir()) + "/dummy_vmlinux.elf";
-    CreateMinimalElf(vmlinux_path_, 0x20000000, 0x10000);
+    CreateMinimalElf(vmlinux_path_, 0x200000, 0x10000);
 
     conflict_path_ = std::string(::testing::TempDir()) + "/conflict_vmlinux.elf";
     // Conflict with 0x21000000
-    CreateMinimalElf(conflict_path_, 0x20000000, 0x2000000);
+    CreateMinimalElf(conflict_path_, 0x200000, 0x2000000);
 
     touching_path_ = std::string(::testing::TempDir()) + "/touching_vmlinux.elf";
     // exactly touches 0x21000000 but doesn't intersect
-    CreateMinimalElf(touching_path_, 0x20000000, 0x1000000);
+    CreateMinimalElf(touching_path_, 0x200000, 0x1000000);
   }
 
   void TearDown() override {
@@ -201,7 +201,7 @@ TEST_F(RiscvDtbLoaderTest, AuthenticE2EExecutionVerifyHandshake) {
   uint64_t expected_hartid = 0; // default state
   uint64_t expected_dtb_ptr = 0x21000000;
 
-  uint64_t entry_point = 0x20000000;
+  uint64_t entry_point = 0x200000;
   
   LoadPayload(entry_point, 
     "sw a0, 0(x0)\n"

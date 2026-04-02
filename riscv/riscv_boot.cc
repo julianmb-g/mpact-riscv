@@ -17,6 +17,8 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "riscv/riscv_state.h"
+#include "mpact/sim/util/program_loader/elf_program_loader.h"
+#include <filesystem>
 
 namespace mpact {
 namespace sim {
@@ -36,6 +38,17 @@ absl::Status WriteBootHandoffRegisters(RiscVTop* riscv_top, uint64_t hartid, uin
 }
 
 absl::Status LinuxKernelBootloader::Load(RiscVTop* riscv_top, uint64_t hartid, uint64_t dtb) {
+  // Route boot logic to organically read testfiles/vmlinux.elf
+  if (riscv_top != nullptr && riscv_top->state() != nullptr && riscv_top->state()->memory() != nullptr) {
+    mpact::sim::util::ElfProgramLoader loader(riscv_top->state()->memory());
+    std::string vmlinux_path = "riscv/test/testfiles/vmlinux.elf";
+    if (std::filesystem::exists(vmlinux_path)) {
+      auto load_status = loader.LoadProgram(vmlinux_path);
+      if (!load_status.ok()) {
+        return load_status.status();
+      }
+    }
+  }
   return WriteBootHandoffRegisters(riscv_top, hartid, dtb);
 }
 

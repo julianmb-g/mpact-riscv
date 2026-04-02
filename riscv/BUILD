@@ -1165,6 +1165,7 @@ cc_library(
     ],
     copts = ["-O3"],
     deps = [
+        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
         ":riscv_action_point_memory_interface",
         ":riscv_debug_interface",
         ":riscv_fp_state",
