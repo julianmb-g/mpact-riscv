@@ -1,3 +1,4 @@
+exports_files(["testfiles/hello_world.elf"])
 # Target Bounding Evaluated: All targets bounded with size="small" or "large"
 # Copyright 2023 Google LLC
 #
@@ -1296,27 +1297,6 @@ cc_test(
     ],
 )
 
-cc_test(
-    name = "rvvi_trace_fidelity_test",
-    size = "large",
-    srcs = ["rvvi_trace_fidelity_test.cc"],
-    data = [
-        "testfiles/hello_world.elf",
-    ],
-    deps = [
-        "//riscv:riscv32_htif_semihost",
-        "//riscv:riscv32g_decoder",
-        "//riscv:riscv64g_decoder",
-        "//riscv:riscv_fp_state",
-        "//riscv:riscv_state",
-        "//riscv:riscv_top",
-        "//riscv:rvvi_sim",
-        "//utils/assembler:native_assembler",
-        "@com_google_googletest//:gtest_main",
-        "@com_google_mpact-sim//mpact/sim/util/memory",
-        "@com_google_mpact-sim//mpact/sim/util/program_loader:elf_loader",
-    ],
-)
 
 cc_test(
     name = "riscv_dtb_loader_test",

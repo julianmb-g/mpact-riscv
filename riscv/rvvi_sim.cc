@@ -201,43 +201,5 @@ extern "C" void PushTracePacket(uint64_t pc, uint32_t inst, bool valid) {
   mpact::sim::riscv::rvvi::g_trace_buffer.Push(packet);
 }
 
-namespace mpact {
-namespace sim {
-namespace riscv {
-namespace rvvi {
-  SpscRingBuffer<::rvvi_trace_event_t, 1024> g_rvvi_trace_buffer(5000);
-}
-}
-}
-}
 
-extern "C" void rvviDutVrSet(uint32_t hartId, uint32_t vreg, const uint8_t* byte_mask, const uint8_t* data, size_t vlen_bytes) {
-  size_t chunk_size = 8;
-  size_t num_chunks = (vlen_bytes + chunk_size - 1) / chunk_size;
 
-  for (size_t i = 0; i < num_chunks; ++i) {
-    ::rvvi_trace_event_t event = {};
-    event.hart_id = hartId;
-    event.gpr_addr = vreg;
-    
-    uint64_t chunk_payload = 0;
-    uint8_t chunk_mask = 0;
-    
-    for (size_t j = 0; j < chunk_size; ++j) {
-      size_t byte_idx = i * chunk_size + j;
-      if (byte_idx < vlen_bytes) {
-        if (byte_mask[byte_idx]) {
-          chunk_mask |= (1 << j);
-          chunk_payload |= (static_cast<uint64_t>(data[byte_idx]) << (j * 8));
-        }
-      }
-    }
-    
-    event.gpr_data = chunk_payload;
-    event.mem_mask = chunk_mask;
-    event.fragment_index = static_cast<uint8_t>(i);
-    event.is_last = (i == (num_chunks - 1));
-    
-    mpact::sim::riscv::rvvi::g_rvvi_trace_buffer.Push(event);
-  }
-}

@@ -16,48 +16,18 @@
 #include "mpact/sim/generic/data_buffer.h"
 #include <vector>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#ifndef RVVI_TRACE_EVENT_T_DEFINED
-#define RVVI_TRACE_EVENT_T_DEFINED
-
-typedef struct __attribute__((aligned(64))) rvvi_trace_event_t {
-    uint64_t cycle_count;
-    uint64_t pc;
-    uint32_t inst;
-    uint32_t hart_id;
-    uint32_t gpr_addr;
-    uint32_t _pad0;
-    uint64_t gpr_data;
-    uint64_t mem_paddr;
-    uint64_t mem_data;
-    uint8_t  mem_mask;
-    uint8_t  is_trap;
-    uint8_t  fragment_index;
-    bool     is_last;
-    uint8_t  pad[4];
-} rvvi_trace_event_t;
-
-#endif // RVVI_TRACE_EVENT_T_DEFINED
-#ifdef __cplusplus
-}
-#endif
-
-
-
 namespace mpact {
 namespace sim {
 namespace riscv {
 namespace rvvi {
 
-struct TracePacket {
+struct alignas(64) TracePacket {
   uint64_t pc;
   uint32_t instruction;
   bool valid;
-  uint8_t padding[3];
+  uint8_t padding[51];
 };
-static_assert(sizeof(TracePacket) == 16, "ABI Violation: TracePacket must be exactly 16 bytes for SPSC Ring Buffer alignment");
+static_assert(sizeof(TracePacket) == 64, "ABI Violation: TracePacket must be exactly 64 bytes for SPSC Ring Buffer alignment");
 
 template <typename T, size_t Capacity>
 class SpscRingBuffer {
@@ -181,7 +151,6 @@ class RvviMemoryMapper : public util::MemoryInterface {
 
 extern SpscRingBuffer<TracePacket, 1024> g_trace_buffer;
 
-extern SpscRingBuffer<::rvvi_trace_event_t, 1024> g_rvvi_trace_buffer;
 
 class AsyncFormattingDaemon {
  public:
@@ -223,7 +192,6 @@ extern "C" {
 
 
 
-extern "C" void rvviDutVrSet(uint32_t hartId, uint32_t vreg, const uint8_t* byte_mask, const uint8_t* data, size_t vlen_bytes);
 
 
 #ifdef __cplusplus
