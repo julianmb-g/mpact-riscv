@@ -16,3 +16,5 @@
 * **Harness Regex Escaping**: When defining `--instrumentation_filter` in `harness.yaml`, always apply double backslash escaping (`\\^//`) to prevent Bazel unclosed group crashes during test execution.
 
 * **API Boundary Drift & Override Modifiers**: When resolving `-Winconsistent-missing-override` warnings, you MUST verify that the method signature exactly matches the base class interface (e.g., in `riscv_debug_interface.h`). Blindly adding the `override` keyword when the base signature has drifted will result in fatal 'does not override any member functions' compilation failures.
+
+* **API Boundary Drift & Override Modifiers**: When resolving `-Winconsistent-missing-override` warnings, verify the method signature (e.g., `SetDataWatchpoint`) exactly matches the base class interface before unconditionally adding the `override` keyword to prevent 'does not override any member functions' failures.
