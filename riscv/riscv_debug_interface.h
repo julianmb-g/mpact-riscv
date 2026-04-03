@@ -37,10 +37,10 @@ class RiscVDebugInterface : public generic::CoreDebugInterface {
   // given access type (load/store) will halt execution following the completion
   // of that access.
   virtual absl::Status SetDataWatchpoint(uint64_t address, size_t length,
-                                         AccessType access_type) = 0;
+                                         AccessType access_type) override = 0;
   // Clear data watchpoint for the given memory address and access type.
   virtual absl::Status ClearDataWatchpoint(uint64_t address,
-                                           AccessType access_type) = 0;
+                                           AccessType access_type) override = 0;
   // Set an action point at the given address to execute the specified action.
   virtual absl::StatusOr<int> SetActionPoint(
       uint64_t address, absl::AnyInvocable<void(uint64_t, int)> action) = 0;
