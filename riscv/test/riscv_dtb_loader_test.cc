@@ -104,11 +104,11 @@ class RiscvDtbLoaderTest : public ::testing::Test {
 
     conflict_path_ = std::string(::testing::TempDir()) + "/conflict_vmlinux.elf";
     // Conflict with 0x21000000
-    CreateMinimalElf(conflict_path_, 0x200000, 0x2000000);
+    CreateMinimalElf(conflict_path_, 0x200000, 0x20E00001);
 
     touching_path_ = std::string(::testing::TempDir()) + "/touching_vmlinux.elf";
     // exactly touches 0x21000000 but doesn't intersect
-    CreateMinimalElf(touching_path_, 0x200000, 0x1000000);
+    CreateMinimalElf(touching_path_, 0x200000, 0x20E00000);
   }
 
   void TearDown() override {

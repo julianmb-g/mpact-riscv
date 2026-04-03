@@ -358,7 +358,7 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
   s_file.close();
 
   // Compile
-  std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x20000000 -nostdlib " + asm_path + " -o " + vmlinux_path;
+  std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x200000 -nostdlib " + asm_path + " -o " + vmlinux_path;
   int ret = system(cmd.c_str());
   if (ret != 0) {
     FAIL() << "Compiler not available, failing true E2E boot test per AGENTS.md mandate (no GTEST_SKIP).";
@@ -386,7 +386,7 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
   absl::Status status = ::mpact::sim::riscv::RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state, vmlinux_path, dtb_path);
   EXPECT_TRUE(status.ok()) << status.message();
 
-  uint64_t entry_point = 0x20000000;
+  uint64_t entry_point = 0x200000;
   EXPECT_TRUE(top->WriteRegister("pc", entry_point).ok());
 
   // Execute instructions.
@@ -397,9 +397,9 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
   uint64_t mcause = state->csr_set()->GetCsr("mcause").value()->AsUint64();
   uint64_t mtval = state->csr_set()->GetCsr("mtval").value()->AsUint64();
 
-  // If it failed the branch, it would hit WFI at 0x20000014
+  // If it failed the branch, it would hit WFI at 0x200014
   // If it succeeded, it branched to the NOP and advanced PC
-  EXPECT_GT(final_pc, 0x20000018) << "Boot sequence failed. mcause: " << mcause << " mtval: " << mtval;
+  EXPECT_GT(final_pc, 0x200018) << "Boot sequence failed. mcause: " << mcause << " mtval: " << mtval;
 
   delete top;
   delete decoder;

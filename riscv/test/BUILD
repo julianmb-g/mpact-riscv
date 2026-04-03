@@ -1,3 +1,6 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 exports_files(["testfiles/hello_world.elf"])
 # Target Bounding Evaluated: All targets bounded with size="small" or "large"
 # Copyright 2023 Google LLC
@@ -15,9 +18,6 @@ exports_files(["testfiles/hello_world.elf"])
 # limitations under the License.
 
 # Unit tests for RiscV simulator classes.
-
-load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 package(default_applicable_licenses = ["//:license"])
 
@@ -1296,7 +1296,6 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
-
 
 cc_test(
     name = "riscv_dtb_loader_test",
