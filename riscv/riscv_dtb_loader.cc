@@ -67,8 +67,8 @@ absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
       uint64_t start = segment->get_physical_address();
       uint64_t end = start + segment->get_memory_size();
       
-      // Enforce vmlinux load address covers 0x200000 (usually entry point)
-      if (0x200000 >= start && 0x200000 < end) {
+      // Enforce vmlinux load address covers 0x20000000 (usually entry point)
+      if (0x20000000 >= start && 0x20000000 < end) {
         has_20000000_segment = true;
       }
 
@@ -84,7 +84,7 @@ absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
   }
 
   if (!has_20000000_segment) {
-    return absl::InvalidArgumentError("vmlinux ELF must contain a PT_LOAD segment at 0x200000");
+    return absl::InvalidArgumentError("vmlinux ELF must contain a PT_LOAD segment at 0x20000000");
   }
 
   auto db_factory = state->db_factory();
