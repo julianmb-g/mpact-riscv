@@ -21,3 +21,4 @@
 *   **No Testing Illusions**: Do not mock physical TileLink/AXI boundaries with dictionaries. Instantiate genuine SystemVerilog responders.
 *   **Test Runner Watchdogs**: Always use `pytest -x -n 0` to prevent watchdogs from terminating the execution silently.
 * **Linker Evasion**: Enforce correct linker script usage (like linker.ld or vmlinux.ld) across integration tests natively instead of textually injecting test configurations.
+* **Authentic Boot Sequence Bootloader Verification**: The simulator boundary requires that `vmlinux.elf` artifacts possess a valid `PT_LOAD` segment at `0x20000000` (EXTMEM). Random dummy ELFs or unlinked stubs will fail organically. Agents MUST cross-compile their boot payloads statically using `-T testfiles/vmlinux.ld` before executing `RiscvDtbLoader` tests to maintain architectural bounds checking.
