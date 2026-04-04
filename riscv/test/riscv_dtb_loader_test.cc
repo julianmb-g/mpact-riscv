@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include <filesystem>
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "gtest/gtest.h"
@@ -29,52 +30,26 @@ using ::mpact::sim::assembler::NativeTextualAssembler;
 
 class RiscvDtbLoaderTest : public ::testing::Test {
  protected:
-  void CreateMinimalElf(const std::string& path, uint64_t addr, uint64_t mem_size) {
-    // Minimal 64-bit ELF with 1 PT_LOAD segment
-    std::vector<uint8_t> elf(120, 0);
-    // e_ident
-    elf[0] = 0x7F; elf[1] = 'E'; elf[2] = 'L'; elf[3] = 'F';
-    elf[4] = 2; // ELFCLASS64
-    elf[5] = 1; // ELFDATA2LSB
-    elf[6] = 1; // EV_CURRENT
-    // e_type = ET_EXEC (2)
-    elf[16] = 2;
-    // e_machine = EM_RISCV (243)
-    elf[18] = 243;
-    // e_version = 1
-    elf[20] = 1;
-    // e_entry = addr
-    *reinterpret_cast<uint64_t*>(&elf[24]) = addr;
-    // e_phoff = 64
-    *reinterpret_cast<uint64_t*>(&elf[32]) = 64;
-    // e_ehsize = 64
-    *reinterpret_cast<uint16_t*>(&elf[52]) = 64;
-    // e_phentsize = 56
-    *reinterpret_cast<uint16_t*>(&elf[54]) = 56;
-    // e_phnum = 1
-    *reinterpret_cast<uint16_t*>(&elf[56]) = 1;
+  void CreateCrossCompiledElf(const std::string& path, uint64_t addr, uint64_t bss_size, const std::string& asm_text = "nop\n") {
+    std::filesystem::create_directories(".os_build");
+    std::string asm_path = ".os_build/temp_stub.s";
+    
+    struct FileCleaner {
+      std::string p;
+      ~FileCleaner() { std::remove(p.c_str()); }
+    } cleaner{asm_path};
 
-    // Program Header (starts at 64)
-    // p_type = PT_LOAD (1)
-    *reinterpret_cast<uint32_t*>(&elf[64]) = 1;
-    // p_flags = PF_X | PF_R (5)
-    *reinterpret_cast<uint32_t*>(&elf[68]) = 5;
-    // p_offset = 120 (right after headers)
-    *reinterpret_cast<uint64_t*>(&elf[72]) = 120;
-    // p_vaddr = addr
-    *reinterpret_cast<uint64_t*>(&elf[80]) = addr;
-    // p_paddr = addr
-    *reinterpret_cast<uint64_t*>(&elf[88]) = addr;
-    // p_filesz = 0
-    *reinterpret_cast<uint64_t*>(&elf[96]) = 0;
-    // p_memsz = mem_size
-    *reinterpret_cast<uint64_t*>(&elf[104]) = mem_size;
-    // p_align = 0x1000
-    *reinterpret_cast<uint64_t*>(&elf[112]) = 0x1000;
-
-    std::ofstream out(path, std::ios::binary);
-    out.write(reinterpret_cast<const char*>(elf.data()), elf.size());
-    out.close();
+    std::ofstream s_file(asm_path);
+    s_file << ".global _start\n_start:\n" << asm_text;
+    if (bss_size > 0) {
+      s_file << ".section .bss\n.space " << std::to_string(bss_size) << "\n";
+    }
+    s_file.close();
+    std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x" + absl::StrCat(absl::Hex(addr)) + " -nostdlib " + asm_path + " -o " + path;
+    int ret = system(cmd.c_str());
+    if (ret != 0) {
+      FAIL() << "Compiler not available, failing true E2E boot test.";
+    }
   }
 
   void SetUp() override {
@@ -91,7 +66,8 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     }
     top_ = new RiscVTop("test_top", state_, decoder_);
     
-    dtb_path_ = std::string(::testing::TempDir()) + "/dummy.dtb";
+    std::filesystem::create_directories(".os_build");
+    dtb_path_ = ".os_build/dummy.dtb";
 
     std::ofstream dtb_file(dtb_path_, std::ios::binary);
     // 0xd00dfeed magic number + no extra bytes to strictly enforce boundary
@@ -99,16 +75,14 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     dtb_file.write(reinterpret_cast<const char*>(dtb_data_.data()), dtb_data_.size());
     dtb_file.close();
 
-    vmlinux_path_ = std::string(::testing::TempDir()) + "/dummy_vmlinux.elf";
-    CreateMinimalElf(vmlinux_path_, 0x200000, 0x10000);
+    vmlinux_path_ = ".os_build/dummy_vmlinux.elf";
+    CreateCrossCompiledElf(vmlinux_path_, 0x20000000, 0x10000);
 
-    conflict_path_ = std::string(::testing::TempDir()) + "/conflict_vmlinux.elf";
-    // Conflict with 0x21000000
-    CreateMinimalElf(conflict_path_, 0x200000, 0x20E00001);
+    conflict_path_ = ".os_build/conflict_vmlinux.elf";
+    CreateCrossCompiledElf(conflict_path_, 0x20000000, 0x1000000);
 
-    touching_path_ = std::string(::testing::TempDir()) + "/touching_vmlinux.elf";
-    // exactly touches 0x21000000 but doesn't intersect
-    CreateMinimalElf(touching_path_, 0x200000, 0x20E00000);
+    touching_path_ = ".os_build/touching_vmlinux.elf";
+    CreateCrossCompiledElf(touching_path_, 0x20000000, 0xFFE000);
   }
 
   void TearDown() override {
@@ -120,17 +94,6 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     delete decoder_;
     delete state_;
     delete memory_;
-  }
-
-  void LoadPayload(uint64_t entry_point, const std::string& asm_text) {
-    NativeTextualAssembler assembler;
-    auto elf_bytes = assembler.Assemble(asm_text);
-    EXPECT_TRUE(elf_bytes.ok()) << elf_bytes.status().message();
-    if (!elf_bytes.ok()) return;
-    auto* db = state_->db_factory()->Allocate<uint8_t>(elf_bytes.value().size());
-    std::memcpy(db->raw_ptr(), elf_bytes.value().data(), elf_bytes.value().size());
-    memory_->Store(entry_point, db);
-    db->DecRef();
   }
 
   FlatDemandMemory* memory_;
@@ -163,7 +126,7 @@ TEST_F(RiscvDtbLoaderTest, LoadsFirmwareAndSeedsRegisters) {
 }
 
 TEST_F(RiscvDtbLoaderTest, MissingArtifactFailsOrganically) {
-  std::string missing_vmlinux = std::string(::testing::TempDir()) + "/non_existent_vmlinux.elf";
+  std::string missing_vmlinux = ".os_build/non_existent_vmlinux.elf";
   absl::Status status = RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state_, missing_vmlinux, dtb_path_);
   
   EXPECT_TRUE(absl::IsNotFound(status));
@@ -171,7 +134,7 @@ TEST_F(RiscvDtbLoaderTest, MissingArtifactFailsOrganically) {
 }
 
 TEST_F(RiscvDtbLoaderTest, InvalidFdtMagicFails) {
-  std::string bad_dtb_path = std::string(::testing::TempDir()) + "/bad_magic.dtb";
+  std::string bad_dtb_path = ".os_build/bad_magic.dtb";
   std::ofstream dtb_file(bad_dtb_path, std::ios::binary);
   std::vector<uint8_t> bad_data = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
   dtb_file.write(reinterpret_cast<const char*>(bad_data.data()), bad_data.size());
@@ -195,19 +158,21 @@ TEST_F(RiscvDtbLoaderTest, TouchingBoundaryDoesNotIntersect) {
 }
 
 TEST_F(RiscvDtbLoaderTest, AuthenticE2EExecutionVerifyHandshake) {
-  absl::Status status = RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state_, vmlinux_path_, dtb_path_);
-  EXPECT_TRUE(status.ok()) << status.message();
-
-  uint64_t expected_hartid = 0; // default state
-  uint64_t expected_dtb_ptr = 0x21000000;
-
-  uint64_t entry_point = 0x200000;
-  
-  LoadPayload(entry_point, 
+  // We need to compile an ELF containing the handshake test instructions.
+  std::string entry_path = ".os_build/handshake_vmlinux.elf";
+  uint64_t entry_point = 0x20000000;
+  // The test expects these exact instructions at the entry point.
+  CreateCrossCompiledElf(entry_path, entry_point, 0, 
     "sw a0, 0(x0)\n"
     "sw a1, 4(x0)\n"
     "nop\n"
   );
+
+  absl::Status status = RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state_, entry_path, dtb_path_);
+  ASSERT_TRUE(status.ok()) << status.message();
+
+  uint64_t expected_hartid = 0; // default state
+  uint64_t expected_dtb_ptr = 0x21000000;
 
   EXPECT_TRUE(top_->WriteRegister("pc", entry_point).ok());
 
@@ -221,6 +186,7 @@ TEST_F(RiscvDtbLoaderTest, AuthenticE2EExecutionVerifyHandshake) {
   EXPECT_EQ(mem_db->Get<uint32_t>(1), expected_dtb_ptr) << "Organic execution: a1 (dtb pointer) must be stored at 0x4";
   
   mem_db->DecRef();
+  std::remove(entry_path.c_str());
 }
 
 }  // namespace

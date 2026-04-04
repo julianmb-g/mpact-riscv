@@ -324,9 +324,10 @@ TEST(Rva23u64SimTest, ZfaFcvtmodE2EExecutionBoundary) {
 #include "riscv/riscv_dtb_loader.h"
 
 TEST(Rva23u64SimTest, BootSequenceE2E) {
-  std::string vmlinux_path = std::string(::testing::TempDir()) + "/vmlinux_boot_test.elf";
-  std::string dtb_path = std::string(::testing::TempDir()) + "/board_boot_test.dtb";
-  std::string asm_path = std::string(::testing::TempDir()) + "/boot_stub.s";
+  std::filesystem::create_directories(".os_build");
+  std::string vmlinux_path = ".os_build/vmlinux_boot_test.elf";
+  std::string dtb_path = ".os_build/board_boot_test.dtb";
+  std::string asm_path = ".os_build/boot_stub.s";
 
   struct FileCleaner {
     std::string p1, p2, p3;
@@ -358,7 +359,7 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
   s_file.close();
 
   // Compile
-  std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x200000 -nostdlib " + asm_path + " -o " + vmlinux_path;
+  std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x20000000 -nostdlib " + asm_path + " -o " + vmlinux_path;
   int ret = system(cmd.c_str());
   if (ret != 0) {
     FAIL() << "Compiler not available, failing true E2E boot test per AGENTS.md mandate (no GTEST_SKIP).";
@@ -386,7 +387,7 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
   absl::Status status = ::mpact::sim::riscv::RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state, vmlinux_path, dtb_path);
   EXPECT_TRUE(status.ok()) << status.message();
 
-  uint64_t entry_point = 0x200000;
+  uint64_t entry_point = 0x20000000;
   EXPECT_TRUE(top->WriteRegister("pc", entry_point).ok());
 
   // Execute instructions.
@@ -397,9 +398,9 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
   uint64_t mcause = state->csr_set()->GetCsr("mcause").value()->AsUint64();
   uint64_t mtval = state->csr_set()->GetCsr("mtval").value()->AsUint64();
 
-  // If it failed the branch, it would hit WFI at 0x200014
+  // If it failed the branch, it would hit the infinite loop at 0x20000014
   // If it succeeded, it branched to the NOP and advanced PC
-  EXPECT_GT(final_pc, 0x200018) << "Boot sequence failed. mcause: " << mcause << " mtval: " << mtval;
+  EXPECT_GT(final_pc, 0x20000018) << "Boot sequence failed. mcause: " << mcause << " mtval: " << mtval;
 
   delete top;
   delete decoder;
@@ -411,8 +412,9 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
 }
 
 TEST(Rva23u64SimTest, ZicboE2EExecutionBoundary) {
-  std::string vmlinux_path = std::string(::testing::TempDir()) + "/zicbo_test.elf";
-  std::string asm_path = std::string(::testing::TempDir()) + "/zicbo_stub.s";
+  std::filesystem::create_directories(".os_build");
+  std::string vmlinux_path = ".os_build/zicbo_test.elf";
+  std::string asm_path = ".os_build/zicbo_stub.s";
 
   struct FileCleaner {
     std::string p1, p2;
