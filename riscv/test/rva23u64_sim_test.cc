@@ -360,7 +360,7 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
   s_file.close();
 
   // Compile
-  std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x20000000 -nostdlib " + asm_path + " -o " + vmlinux_path;
+  std::string cmd = "riscv64-unknown-elf-gcc -T testfiles/vmlinux.ld -nostdlib " + asm_path + " -o " + vmlinux_path;
   int ret = system(cmd.c_str());
   if (ret != 0) {
     FAIL() << "Compiler not available, failing true E2E boot test per AGENTS.md mandate (no GTEST_SKIP).";
@@ -438,7 +438,7 @@ TEST(Rva23u64SimTest, ZicboE2EExecutionBoundary) {
   s_file.close();
 
   // Compile
-  std::string cmd = "riscv64-unknown-elf-gcc -march=rv64g_zicbom_zicboz -mabi=lp64d -nostdlib " + asm_path + " -o " + vmlinux_path;
+  std::string cmd = "riscv64-unknown-elf-gcc -march=rv64g_zicbom_zicboz -mabi=lp64d -nostdlib -T testfiles/vmlinux.ld " + asm_path + " -o " + vmlinux_path;
   int ret = system(cmd.c_str());
   if (ret != 0) {
     GTEST_SKIP() << "Compiler not available, skipping Zicbo E2E execution test.";

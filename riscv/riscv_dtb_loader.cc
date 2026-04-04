@@ -10,7 +10,7 @@ namespace mpact {
 namespace sim {
 namespace riscv {
 
-constexpr uint64_t kDtbAddress = 0x21000000;
+constexpr uint64_t kDtbAddress = 0x20300000;
 
 absl::Status RiscvDtbLoader::LoadFirmwareAndSeedRegisters(
     RiscVState* state, 

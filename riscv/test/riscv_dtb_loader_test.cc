@@ -46,7 +46,7 @@ class RiscvDtbLoaderTest : public ::testing::Test {
       s_file << ".section .bss\n.space " << std::to_string(bss_size) << "\n";
     }
     s_file.close();
-    std::string cmd = "riscv64-unknown-elf-gcc -Ttext 0x" + absl::StrCat(absl::Hex(addr)) + " -nostdlib " + asm_path + " -o " + path;
+    std::string cmd = "riscv64-unknown-elf-gcc -T testfiles/vmlinux.ld -nostdlib " + asm_path + " -o " + path;
     int ret = system(cmd.c_str());
     if (ret != 0) {
       FAIL() << "Compiler not available, failing true E2E boot test.";
@@ -81,10 +81,10 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     CreateCrossCompiledElf(vmlinux_path_, 0x20000000, 0x10000);
 
     conflict_path_ = tmp_dir + "/conflict_vmlinux.elf";
-    CreateCrossCompiledElf(conflict_path_, 0x20000000, 0x1000000);
+    CreateCrossCompiledElf(conflict_path_, 0x20000000, 0x300010);
 
     touching_path_ = tmp_dir + "/touching_vmlinux.elf";
-    CreateCrossCompiledElf(touching_path_, 0x20000000, 0xFFE000);
+    CreateCrossCompiledElf(touching_path_, 0x20000000, 0x2FFFF8);
   }
 
   void TearDown() override {
@@ -117,14 +117,14 @@ TEST_F(RiscvDtbLoaderTest, LoadsFirmwareAndSeedsRegisters) {
   EXPECT_TRUE(status.ok()) << status.message();
 
   auto db_dtb = state_->db_factory()->Allocate<uint8_t>(dtb_data_.size());
-  memory_->Load(0x21000000, db_dtb, nullptr, nullptr);
+  memory_->Load(0x20300000, db_dtb, nullptr, nullptr);
   for (size_t i = 0; i < dtb_data_.size(); ++i) {
     EXPECT_EQ(db_dtb->Get<uint8_t>(i), dtb_data_[i]);
   }
   db_dtb->DecRef();
 
   EXPECT_EQ(a0->data_buffer()->Get<uint64_t>(0), 0); // hartid
-  EXPECT_EQ(a1->data_buffer()->Get<uint64_t>(0), 0x21000000); // kDtbAddress
+  EXPECT_EQ(a1->data_buffer()->Get<uint64_t>(0), 0x20300000); // kDtbAddress
 }
 
 TEST_F(RiscvDtbLoaderTest, MissingArtifactFailsOrganically) {
@@ -179,7 +179,7 @@ TEST_F(RiscvDtbLoaderTest, AuthenticE2EExecutionVerifyHandshake) {
   ASSERT_TRUE(status.ok()) << status.message();
 
   uint64_t expected_hartid = 0; // default state
-  uint64_t expected_dtb_ptr = 0x21000000;
+  uint64_t expected_dtb_ptr = 0x20300000;
 
   EXPECT_TRUE(top_->WriteRegister("pc", entry_point).ok());
 
