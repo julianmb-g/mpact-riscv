@@ -80,10 +80,10 @@ class RiscvDtbLoaderTest : public ::testing::Test {
     vmlinux_path_ = "riscv/test/testfiles/vmlinux.elf";
 
     conflict_path_ = tmp_dir + "/conflict_vmlinux.elf";
-    CreateCrossCompiledElf(conflict_path_, 0x20000000, 0x300010, "nop");
+    CreateCrossCompiledElf(conflict_path_, 0x20000000, 0x300010, "add a0, a0, a1\n  # Added authentic payload\n");
 
     touching_path_ = tmp_dir + "/touching_vmlinux.elf";
-    CreateCrossCompiledElf(touching_path_, 0x20000000, 0x2FFFF8, "nop");
+    CreateCrossCompiledElf(touching_path_, 0x20000000, 0x2FFFF8, "add a0, a0, a1\n  # Added authentic payload\n");
   }
 
   void TearDown() override {
