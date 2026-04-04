@@ -1,3 +1,7 @@
 /bazel-*
 .vscode
 diff.txt
+
+coverage_report/
+merged_coverage.info
+MODULE.bazel.lock
