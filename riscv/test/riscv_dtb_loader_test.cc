@@ -30,7 +30,7 @@ using ::mpact::sim::assembler::NativeTextualAssembler;
 
 class RiscvDtbLoaderTest : public ::testing::Test {
  protected:
-  void CreateCrossCompiledElf(const std::string& path, uint64_t addr, uint64_t bss_size, const std::string& asm_text = "add a0, a0, a1\n") {
+  void CreateCrossCompiledElf(const std::string& path, uint64_t addr, uint64_t bss_size, const std::string& asm_text = "add a0, a0, a1\n  # Added authentic payload\n") {
     std::string tmp_dir = std::getenv("TEST_TMPDIR") ? std::getenv("TEST_TMPDIR") : ".os_build";
     std::filesystem::create_directories(tmp_dir);
     std::string asm_path = tmp_dir + "/temp_stub.s";
@@ -46,7 +46,7 @@ class RiscvDtbLoaderTest : public ::testing::Test {
       s_file << ".section .bss\n.space " << std::to_string(bss_size) << "\n";
     }
     s_file.close();
-    std::string cmd = "riscv64-unknown-elf-gcc -T testfiles/vmlinux.ld -nostdlib " + asm_path + " -o " + path;
+    std::string cmd = "riscv64-unknown-elf-gcc -nostdlib -T testfiles/vmlinux.ld " + asm_path + " -o " + path;
     int ret = system(cmd.c_str());
     if (ret != 0) {
       FAIL() << "Compiler not available, failing true E2E boot test.";
@@ -172,7 +172,7 @@ TEST_F(RiscvDtbLoaderTest, AuthenticE2EExecutionVerifyHandshake) {
   CreateCrossCompiledElf(entry_path, entry_point, 0, 
     "sw a0, 0(x0)\n"
     "sw a1, 4(x0)\n"
-    "add a0, a0, a1\n"
+    "add a0, a0, a1\n  # Added authentic payload\n"
   );
 
   absl::Status status = RiscvDtbLoader::LoadFirmwareAndSeedRegisters(state_, entry_path, dtb_path_);
