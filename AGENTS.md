@@ -20,3 +20,8 @@
 * **API Boundary Drift & Override Modifiers**: When resolving `-Winconsistent-missing-override` warnings, verify the method signature (e.g., `SetDataWatchpoint`) exactly matches the base class interface before unconditionally adding the `override` keyword to prevent 'does not override any member functions' failures.
 * **LD Hex String Requirements**: When passing memory addresses to `ld` (e.g. via `-Ttext`), always use explicit hexadecimal string formats (e.g. `"0x20000000"` or `absl::StrCat("0x", absl::Hex(addr))`). Converting a base-10 number to a string using `std::to_string()` will cause GCC/ld to improperly interpret the decimal string as an un-prefixed hexadecimal value, leading to disastrous `PT_LOAD` segment misalignment.
 * **Watchdog Exception Integrity:** When implementing overarching C++ timeout exceptions natively, ensure that custom string headers (e.g., `trap_strings.h`) are correctly mapped into Bazel `deps` targets (e.g., `//sim:trap_strings`) to avoid compilation voids.
+# QA & Ledger Execution Mandates
+
+*   **Data-Loss Audit Requirement**: Always perform a data-loss audit before ending the execution cycle.
+*   **Test Runner Watchdogs**: Always use `pytest -x -n 0` to prevent watchdogs from terminating the execution silently.
+*   **No Testing Illusions**: Do not mock physical TileLink/AXI boundaries with dictionaries. Instantiate genuine SystemVerilog responders.
