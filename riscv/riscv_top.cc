@@ -53,6 +53,8 @@
 #include "mpact/sim/util/memory/memory_interface.h"
 #include "mpact/sim/util/memory/memory_watcher.h"
 
+#include "sim/trap_strings.h"
+
 namespace mpact {
 namespace sim {
 namespace riscv {
@@ -583,7 +585,9 @@ absl::Status RiscVTop::Wait() {
   // If there is no notification object, just return.
   if (run_halted_ == nullptr) return absl::OkStatus();
   // Wait for the simulator to finish - i.e., a notification on run_halted_.
-  run_halted_->WaitForNotification();
+  if (!run_halted_->WaitForNotificationWithTimeout(absl::Seconds(120))) {
+    return absl::DeadlineExceededError(kWatchdogTimeoutExceeded);
+  }
   // Now delete the notification object - it is single use only.
   delete run_halted_;
   run_halted_ = nullptr;

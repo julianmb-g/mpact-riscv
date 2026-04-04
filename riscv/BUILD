@@ -1165,6 +1165,7 @@ cc_library(
     ],
     copts = ["-O3"],
     deps = [
+        "//sim:trap_strings",
         ":riscv_action_point_memory_interface",
         ":riscv_debug_interface",
         ":riscv_fp_state",

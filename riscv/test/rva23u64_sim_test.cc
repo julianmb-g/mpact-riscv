@@ -324,10 +324,11 @@ TEST(Rva23u64SimTest, ZfaFcvtmodE2EExecutionBoundary) {
 #include "riscv/riscv_dtb_loader.h"
 
 TEST(Rva23u64SimTest, BootSequenceE2E) {
-  std::filesystem::create_directories(".os_build");
-  std::string vmlinux_path = ".os_build/vmlinux_boot_test.elf";
-  std::string dtb_path = ".os_build/board_boot_test.dtb";
-  std::string asm_path = ".os_build/boot_stub.s";
+  std::string tmp_dir = std::getenv("TEST_TMPDIR") ? std::getenv("TEST_TMPDIR") : ".os_build";
+  std::filesystem::create_directories(tmp_dir);
+  std::string vmlinux_path = tmp_dir + "/vmlinux_boot_test.elf";
+  std::string dtb_path = tmp_dir + "/board_boot_test.dtb";
+  std::string asm_path = tmp_dir + "/boot_stub.s";
 
   struct FileCleaner {
     std::string p1, p2, p3;
@@ -412,9 +413,10 @@ TEST(Rva23u64SimTest, BootSequenceE2E) {
 }
 
 TEST(Rva23u64SimTest, ZicboE2EExecutionBoundary) {
-  std::filesystem::create_directories(".os_build");
-  std::string vmlinux_path = ".os_build/zicbo_test.elf";
-  std::string asm_path = ".os_build/zicbo_stub.s";
+  std::string tmp_dir = std::getenv("TEST_TMPDIR") ? std::getenv("TEST_TMPDIR") : ".os_build";
+  std::filesystem::create_directories(tmp_dir);
+  std::string vmlinux_path = tmp_dir + "/zicbo_test.elf";
+  std::string asm_path = tmp_dir + "/zicbo_stub.s";
 
   struct FileCleaner {
     std::string p1, p2;

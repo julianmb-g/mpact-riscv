@@ -83,6 +83,11 @@ TEST_F(RiscVTrapIntegrationTest, test_decoder_nullptr_yields_illegal_instruction
   auto status = top_->WriteRegister("pc", pc);
   ASSERT_TRUE(status.ok()) << status.message();
   
+  // Initialize architectural trap registers to 0 before stepping to prevent uninitialized state masking.
+  state_->mcause()->Write(static_cast<uint64_t>(0));
+  state_->mtval()->Write(static_cast<uint64_t>(0));
+  state_->mepc()->Write(static_cast<uint64_t>(0));
+
   auto step_status = top_->Step(1);
   
   // Natively verify that the unmapped opcode organically triggers a trap delegation 
