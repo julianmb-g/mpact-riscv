@@ -1239,7 +1239,7 @@ cc_test(
 
 cc_test(
     name = "riscv_zicbo_e2e_test",
-    size = "large",
+    size = "small",
     srcs = ["riscv_zicbo_e2e_test.cc"],
     deps = [
         "//riscv:riscv_state",
@@ -1392,7 +1392,7 @@ cc_test(
 
 cc_test(
     name = "riscv_zfa_integration_test",
-    size = "large",
+    size = "small",
     srcs = ["riscv_zfa_integration_test.cc"],
     deps = [
         "//riscv:riscv_fp_state",
