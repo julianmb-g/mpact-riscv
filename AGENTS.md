@@ -25,3 +25,4 @@
 *   **Data-Loss Audit Requirement**: Always perform a data-loss audit before ending the execution cycle.
 *   **Test Runner Watchdogs**: Always use `pytest -x -n 0` to prevent watchdogs from terminating the execution silently.
 *   **No Testing Illusions**: Do not mock physical TileLink/AXI boundaries with dictionaries. Instantiate genuine SystemVerilog responders.
+* **Linker Evasion**: Enforce correct linker script usage (like linker.ld or vmlinux.ld) across integration tests natively instead of textually injecting test configurations.
