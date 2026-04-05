@@ -1165,11 +1165,11 @@ cc_library(
     ],
     copts = ["-O3"],
     deps = [
-        "//sim:trap_strings",
         ":riscv_action_point_memory_interface",
         ":riscv_debug_interface",
         ":riscv_fp_state",
         ":riscv_state",
+        "//sim:trap_strings",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:any_invocable",
         "@com_google_absl//absl/functional:bind_front",

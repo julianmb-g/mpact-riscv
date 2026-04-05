@@ -1075,12 +1075,12 @@ cc_test(
     srcs = ["rva23u64_sim_test.cc"],
     copts = ["-O3"],
     data = [
-        "//testfiles:vmlinux.ld",
         "testfiles/hello_world_64.elf",
         "testfiles/zawrs.elf",
         "testfiles/zfa_fcvtmod.elf",
         "testfiles/zfa_fround.elf",
         "testfiles/zve32f.elf",
+        "//testfiles:vmlinux.ld",
     ],
     deps = [
         "//riscv:riscv_dtb_loader",
@@ -1303,9 +1303,9 @@ cc_test(
     size = "small",
     srcs = ["riscv_dtb_loader_test.cc"],
     data = [
-        "//testfiles:vmlinux.ld",
         "testfiles/hello_world.elf",
         "testfiles/vmlinux.elf",
+        "//testfiles:vmlinux.ld",
     ],
     deps = [
         "//riscv:riscv64g_decoder",

@@ -16,10 +16,6 @@ workspace(name = "com_google_mpact-riscv")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-
-
-
-
 # First load the immediate repo dependencies (mpact-sim).
 load("@com_google_mpact-riscv//:repos.bzl", "mpact_riscv_repos")
 
