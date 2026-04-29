@@ -66,7 +66,7 @@ constexpr std::initializer_list<const std::pair<absl::string_view, uint64_t>>
         {"x12", 12}, {"x13", 13}, {"x14", 14}, {"x15", 15},
         {"s0", 8},   {"s1", 9},   {"a0", 10},  {"a1", 11},
         {"a2", 12},  {"a3", 13},  {"a4", 14},  {"a5", 15},
-};
+    };
 
 constexpr std::initializer_list<const std::pair<absl::string_view, uint64_t>>
     kFRegisterList = {
@@ -106,7 +106,7 @@ constexpr std::initializer_list<const std::pair<absl::string_view, uint64_t>>
         {"d12", 12}, {"d13", 13}, {"d14", 14}, {"d15", 15},
         {"ds0", 8},  {"ds1", 9},  {"da0", 10}, {"da1", 11},
         {"da2", 12}, {"da3", 13}, {"da4", 14}, {"da5", 15},
-};
+    };
 
 // This is the initializer list for the map from CSR register names to register
 // numbers.
@@ -469,7 +469,7 @@ constexpr std::initializer_list<const std::pair<absl::string_view, uint64_t>>
         {"mhpmevent29h", 0x73d},
         {"mhpmevent30h", 0x73e},
         {"mhpmevent31h", 0x73f},
-};
+    };
 
 // A helper function to convert a text string to an integer. The function takes
 // either numeric literals (hexadecimal or decimal), symbol names, or relocation

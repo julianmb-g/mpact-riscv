@@ -1014,6 +1014,17 @@ void VsSegment(int element_width, const Instruction* inst) {
   auto data8 = data_db->Get<uint64_t>();
 
   auto* data_op = static_cast<RV32VectorSourceOperand*>(inst->Source(0));
+  int max_regs =
+      reg_mul * (num_fields - 1) + num_segments / num_elements_per_reg;
+  if (max_regs > data_op->size()) {
+    LOG(ERROR) << absl::StrCat(
+        "Reserved encoding error - register group too small (", data_op->size(),
+        ") for nf = ", num_fields, " emul =", emul,
+        " segments = ", num_segments, " el per reg = ", num_elements_per_reg,
+        " - requires ", max_regs, " registers.");
+    rv_vector->set_vector_exception();
+    return;
+  }
   uint64_t address = base_address;
   int count = 0;
   for (int segment = start; segment < num_segments; segment++) {
@@ -1106,6 +1117,18 @@ void VsSegmentStrided(int element_width, const Instruction* inst) {
   auto data8 = data_db->Get<uint64_t>();
 
   auto* data_op = static_cast<RV32VectorSourceOperand*>(inst->Source(0));
+  int max_regs =
+      reg_mul * (num_fields - 1) + num_segments / num_elements_per_reg;
+  if (max_regs > data_op->size()) {
+    LOG(ERROR) << absl::StrCat(
+        "Reserved encoding error - register group too small (", data_op->size(),
+        ") for nf = ", num_fields, " emul =", emul,
+        " segments = ", num_segments,
+        " sew = ", rv_vector->selected_element_width(), " - requires ",
+        max_regs, " registers.");
+    rv_vector->set_vector_exception();
+    return;
+  }
   uint64_t segment_address = base_address;
   int count = 0;
   for (int segment = start; segment < num_segments; segment++) {
@@ -1160,7 +1183,7 @@ void VsSegmentStrided(int element_width, const Instruction* inst) {
   rv_vector->clear_vstart();
 }
 
-// Vector indexted segment store. This instruction stores each segment
+// Vector indexed segment store. This instruction stores each segment
 // contiguously at an address formed by adding the index value for that
 // segment (from the index vector source operand) to the base address.
 void VsSegmentIndexed(int index_width, const Instruction* inst) {
@@ -1209,6 +1232,18 @@ void VsSegmentIndexed(int index_width, const Instruction* inst) {
   auto data8 = data_db->Get<uint64_t>();
 
   auto* data_op = static_cast<RV32VectorSourceOperand*>(inst->Source(0));
+  int max_regs =
+      reg_mul * (num_fields - 1) + num_segments / num_elements_per_reg;
+  if (max_regs > data_op->size()) {
+    LOG(ERROR) << absl::StrCat(
+        "Reserved encoding error - register group too small (", data_op->size(),
+        ") for nf = ", num_fields, " emul = ", emul,
+        " segments = ", num_segments,
+        " sew = ", rv_vector->selected_element_width(), " - requires ",
+        max_regs, " registers.");
+    rv_vector->set_vector_exception();
+    return;
+  }
   int count = 0;
   for (int segment = start; segment < num_segments; segment++) {
     // Masks are applied on a segment basis.
