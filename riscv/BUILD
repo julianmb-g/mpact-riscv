@@ -765,6 +765,7 @@ cc_library(
     hdrs = [
         "riscv_generic_decoder.h",
     ],
+    copts = ["-O3"],
     deps = [
         ":riscv_state",
         "@abseil-cpp//absl/log",
@@ -815,6 +816,7 @@ cc_library(
         "riscv_getters_zbb64.h",
         "riscv_getters_zvbb.h",
     ],
+    copts = ["-O3"],
     deps = [
         ":riscv_encoding_common",
         ":riscv_state",
@@ -832,6 +834,7 @@ cc_library(
 cc_library(
     name = "riscv_encoding_common",
     hdrs = ["riscv_encoding_common.h"],
+    copts = ["-O3"],
     deps = ["@mpact-sim//mpact/sim/generic:core"],
 )
 
@@ -982,6 +985,7 @@ cc_library(
         "riscv64g_bin_encoder_interface.h",
         "riscv_bin_setters.h",
     ],
+    copts = ["-O3"],
     deps = [
         ":riscv64g_bin_fmt",
         ":riscv64g_isa",
@@ -1211,6 +1215,7 @@ cc_library(
     hdrs = [
         "riscv_debug_interface.h",
     ],
+    copts = ["-O3"],
     deps = [
         "@abseil-cpp//absl/functional:any_invocable",
         "@abseil-cpp//absl/status",
@@ -1448,6 +1453,7 @@ cc_library(
     hdrs = [
         "riscv_test_mem_watcher.h",
     ],
+    copts = ["-O3"],
     deps = [
         "@abseil-cpp//absl/strings",
         "@mpact-sim//mpact/sim/generic:core",
@@ -1464,6 +1470,7 @@ cc_library(
     hdrs = [
         "riscv_clint.h",
     ],
+    copts = ["-O3"],
     deps = [
         ":riscv_state",
         "@abseil-cpp//absl/log",
@@ -1482,6 +1489,7 @@ cc_library(
     hdrs = [
         "riscv_plic.h",
     ],
+    copts = ["-O3"],
     deps = [
         "@abseil-cpp//absl/container:btree",
         "@abseil-cpp//absl/log",
@@ -1548,6 +1556,7 @@ cc_library(
     hdrs = [
         "riscv_instrumentation_control.h",
     ],
+    copts = ["-O3"],
     deps = [
         ":debug_command_shell",
         ":riscv_top",
@@ -1575,6 +1584,7 @@ cc_library(
         "riscv_renode_cli_top.h",
         "riscv_renode_register_info.h",
     ],
+    copts = ["-O3"],
     deps = [
         ":debug_command_shell",
         ":instrumentation",
@@ -1610,6 +1620,7 @@ cc_library(
 cc_library(
     name = "riscv_zc_getters",
     hdrs = ["riscv_zc_getters.h"],
+    copts = ["-O3"],
     deps = [
         ":riscv_encoding_common",
         ":riscv_getters",
@@ -1623,6 +1634,7 @@ cc_library(
     name = "riscv_b_instructions",
     srcs = ["riscv_b_instructions.cc"],
     hdrs = ["riscv_b_instructions.h"],
+    copts = ["-O3"],
     deps = [
         ":riscv_g",
         ":riscv_state",
