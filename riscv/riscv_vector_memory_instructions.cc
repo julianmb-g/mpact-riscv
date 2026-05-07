@@ -174,7 +174,8 @@ void Vsetvl(bool rd_zero, bool rs1_zero, const Instruction* inst) {
       rv_vector->set_vector_exception();
       return;
     }
-    rv_vector->set_vector_length(new_max_length);
+
+    // When both rs1 and rd are zero, the vector length remains unchanged.
     return;
   }
   if (!rs1_zero) {  // There is a requested vector length.
