@@ -202,75 +202,75 @@ slot riscv_vector {
       semfunc: "absl::bind_front(&VlIndexed, /*index_width*/ 8)", "&VlChild";
 
     // Vector unit-stride segment load
-    vlsege8{(: rs1, vmask, nf:), (: nf : vd)},
-      disasm: "vlseg%nf\\e.v", "%vd, (%rs1), %vmask",
+    vlsege8{(: rs1, vmask, nf:), (: nf : vd_nf)},
+      disasm: "vlseg%nf\\e.v", "%vd_nf, (%rs1), %vmask",
       semfunc: "absl::bind_front(&VlSegment, /*element_width*/ 1)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 1)";
-    vlsege16{(: rs1, vmask, nf:), (: nf : vd)},
-      disasm: "vlseg%nf\\e.v", "%vd, (%rs1), %vmask",
+    vlsege16{(: rs1, vmask, nf:), (: nf : vd_nf)},
+      disasm: "vlseg%nf\\e.v", "%vd_nf, (%rs1), %vmask",
       semfunc: "absl::bind_front(&VlSegment, /*element_width*/ 2)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 2)";
-    vlsege32{(: rs1, vmask, nf:), (: nf : vd)},
-      disasm: "vlseg%nf\\e.v", "%vd, (%rs1), %vmask",
+    vlsege32{(: rs1, vmask, nf:), (: nf : vd_nf)},
+      disasm: "vlseg%nf\\e.v", "%vd_nf, (%rs1), %vmask",
       semfunc: "absl::bind_front(&VlSegment, /*element_width*/ 4)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 4)";
-    vlsege64{(: rs1, vmask, nf:), (: nf : vd)},
-      disasm: "vlseg%nf\\e.v", "%vd, (%rs1), %vmask",
+    vlsege64{(: rs1, vmask, nf:), (: nf : vd_nf)},
+      disasm: "vlseg%nf\\e.v", "%vd_nf, (%rs1), %vmask",
       semfunc: "absl::bind_front(&VlSegment, /*element_width*/ 8)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 8)";
 
     // Vector strided segment load.
-    vlssege8{(: rs1, rs2, vmask, nf: ), (: nf : vd)},
-      disasm: "vlsseg%nf\\e8.v", "%vd, (%rs1), %rs2, %vmask",
+    vlssege8{(: rs1, rs2, vmask, nf: ), (: nf : vd_nf)},
+      disasm: "vlsseg%nf\\e8.v", "%vd_nf, (%rs1), %rs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentStrided, /*element_width*/ 1)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 1)";
-    vlssege16{(: rs1, rs2, vmask, nf: ), (: nf : vd)},/*element_width*/ 
-      disasm: "vlsseg%nf\\e16.v", "%vd, (%rs1), %rs2, %vmask",
+    vlssege16{(: rs1, rs2, vmask, nf: ), (: nf : vd_nf)},
+      disasm: "vlsseg%nf\\e16.v", "%vd_nf, (%rs1), %rs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentStrided, /*element_width*/ 2)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 2)";
-    vlssege32{(: rs1, rs2, vmask, nf: ), (: nf : vd)},
-      disasm: "vlsseg%nf\\e32.v", "%vd, (%rs1), %rs2, %vmask",
+    vlssege32{(: rs1, rs2, vmask, nf: ), (: nf : vd_nf)},
+      disasm: "vlsseg%nf\\e32.v", "%vd_nf, (%rs1), %rs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentStrided, /*element_width*/ 4)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 4)";
-    vlssege64{(: rs1, rs2, vmask, nf: ), (: nf : vd)},
-      disasm: "vlsseg%nf\\e64.v", "%vd, (%rs1), %rs2, %vmask",
+    vlssege64{(: rs1, rs2, vmask, nf: ), (: nf : vd_nf)},
+      disasm: "vlsseg%nf\\e64.v", "%vd_nf, (%rs1), %rs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentStrided, /*element_width*/ 8)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 8)";
 
     // Vector indexed segment load unordered.
-    vluxsegei8{(: rs1, vs2, vmask, nf :), (: nf : vd)},
-      disasm: "vluxseg%nf\\ei1.v", "%vd, (%rs1), %vs2, %vmask",
+    vluxsegei8{(: rs1, vs2, vmask, nf :), (: nf : vd_nf)},
+      disasm: "vluxseg%nf\\ei1.v", "%vd_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentIndexed, /*index_width*/ 1)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 1)";
-    vluxsegei16{(: rs1, vs2, vmask, nf :), (: nf : vd)},
-      disasm: "vluxseg%nf\\ei2.v", "%vd, (%rs1), %vs2, %vmask",
+    vluxsegei16{(: rs1, vs2, vmask, nf :), (: nf : vd_nf)},
+      disasm: "vluxseg%nf\\ei2.v", "%vd_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentIndexed, /*index_width*/ 2)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 2)";
-    vluxsegei32{(: rs1, vs2, vmask, nf :), (: nf : vd)},
-      disasm: "vluxseg%nf\\ei4.v", "%vd, (%rs1), %vs2, %vmask",
+    vluxsegei32{(: rs1, vs2, vmask, nf :), (: nf : vd_nf)},
+      disasm: "vluxseg%nf\\ei4.v", "%vd_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentIndexed, /*index_width*/ 4)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 4)";
-    vluxsegei64{(: rs1, vs2, vmask, nf :), (: nf : vd)},
-      disasm: "vluxseg%nf\\ei8.v", "%vd, (%rs1), %vs2, %vmask",
+    vluxsegei64{(: rs1, vs2, vmask, nf :), (: nf : vd_nf)},
+      disasm: "vluxseg%nf\\ei8.v", "%vd_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentIndexed, /*index_width*/ 8)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 8)";
 
     // Vector indexed segment load ordered.
 
-    vloxsegei8{(: rs1, vs2, vmask, nf :), (: nf : vd)},
-      disasm: "vluxseg%nf\\ei1.v", "%vd, (%rs1), %vs2, %vmask",
+    vloxsegei8{(: rs1, vs2, vmask, nf :), (: nf : vd_nf)},
+      disasm: "vluxseg%nf\\ei1.v", "%vd_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentIndexed, /*index_width*/ 1)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 1)";
-    vloxsegei16{(: rs1, vs2, vmask, nf :), (: nf : vd)},
-      disasm: "vluxseg%nf\\ei2.v", "%vd, (%rs1), %vs2, %vmask",
+    vloxsegei16{(: rs1, vs2, vmask, nf :), (: nf : vd_nf)},
+      disasm: "vluxseg%nf\\ei2.v", "%vd_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentIndexed, /*index_width*/ 2)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 2)";
-    vloxsegei32{(: rs1, vs2, vmask, nf :), (: nf : vd)},
-      disasm: "vluxseg%nf\\ei4.v", "%vd, (%rs1), %vs2, %vmask",
+    vloxsegei32{(: rs1, vs2, vmask, nf :), (: nf : vd_nf)},
+      disasm: "vluxseg%nf\\ei4.v", "%vd_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentIndexed, /*index_width*/ 4)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 4)";
-    vloxsegei64{(: rs1, vs2, vmask, nf :), (: nf : vd)},
-      disasm: "vluxseg%nf\\ei8.v", "%vd, (%rs1), %vs2, %vmask",
+    vloxsegei64{(: rs1, vs2, vmask, nf :), (: nf : vd_nf)},
+      disasm: "vluxseg%nf\\ei8.v", "%vd_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VlSegmentIndexed, /*index_width*/ 8)",
                "absl::bind_front(&VlSegmentChild, /*element_width*/ 8)";
 
@@ -402,59 +402,59 @@ slot riscv_vector {
       semfunc: "absl::bind_front(&VsIndexed, /*index_width*/ 8)";
 
     // Vector unit-stride segment store.
-    vssege8{(: vs3, rs1, vmask, nf:)},
-      disasm: "vsseg%nf\\e.v", "%vs3, (%rs1), %vmask",
+    vssege8{(: vs3_nf, rs1, vmask, nf:)},
+      disasm: "vsseg%nf\\e.v", "%vs3_nf, (%rs1), %vmask",
       semfunc: "absl::bind_front(&VsSegment, /*element_width*/ 1)";
-    vssege16{(: vs3, rs1, vmask, nf:)},
-      disasm: "vsseg%nf\\e.v", "%vs3, (%rs1), %vmask",
+    vssege16{(: vs3_nf, rs1, vmask, nf:)},
+      disasm: "vsseg%nf\\e.v", "%vs3_nf, (%rs1), %vmask",
       semfunc: "absl::bind_front(&VsSegment, /*element_width*/ 2)";
-    vssege32{(: vs3, rs1, vmask, nf:)},
-      disasm: "vsseg%nf\\e.v", "%vs3, (%rs1), %vmask",
+    vssege32{(: vs3_nf, rs1, vmask, nf:)},
+      disasm: "vsseg%nf\\e.v", "%vs3_nf, (%rs1), %vmask",
       semfunc: "absl::bind_front(&VsSegment, /*element_width*/ 4)";
-    vssege64{(: vs3, rs1, vmask, nf:)},
-      disasm: "vsseg%nf\\e.v", "%vs3, (%rs1), %vmask",
+    vssege64{(: vs3_nf, rs1, vmask, nf:)},
+      disasm: "vsseg%nf\\e.v", "%vs3_nf, (%rs1), %vmask",
       semfunc: "absl::bind_front(&VsSegment, /*element_width*/ 8)";
 
     // Vector strided segment store.
-    vsssege8{(: vs3, rs1, rs2, vmask, nf: )},
-      disasm: "vssseg%nf\\e8.v", "%vs3, (%rs1), %rs2, %vmask",
+    vsssege8{(: vs3_nf, rs1, rs2, vmask, nf: )},
+      disasm: "vssseg%nf\\e8.v", "%vs3_nf, (%rs1), %rs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentStrided, /*element_width*/ 1)";
-    vsssege16{(: vs3, rs1, rs2, vmask, nf: )},
-      disasm: "vssseg%nf\\e16.v", "%vs3, (%rs1), %rs2, %vmask",
+    vsssege16{(: vs3_nf, rs1, rs2, vmask, nf: )},
+      disasm: "vssseg%nf\\e16.v", "%vs3_nf, (%rs1), %rs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentStrided, /*element_width*/ 2)";
-    vsssege32{(: vs3, rs1, rs2, vmask, nf: )},
-      disasm: "vssseg%nf\\e32.v", "%vs3, (%rs1), %rs2, %vmask",
+    vsssege32{(: vs3_nf, rs1, rs2, vmask, nf: )},
+      disasm: "vssseg%nf\\e32.v", "%vs3_nf, (%rs1), %rs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentStrided, /*element_width*/ 4)";
-    vsssege64{(: vs3, rs1, rs2, vmask, nf: )},
-      disasm: "vssseg%nf\\e64.v", "%vs3, (%rs1), %rs2, %vmask",
+    vsssege64{(: vs3_nf, rs1, rs2, vmask, nf: )},
+      disasm: "vssseg%nf\\e64.v", "%vs3_nf, (%rs1), %rs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentStrided, /*element_width*/ 8)";
 
     // Vector indexed segment store unordered.
-    vsuxsegei8{(: vs3, rs1, vs2, vmask, nf :)},
-      disasm: "vsuxseg%nf\\ei1.v", "%vs3, (%rs1), %vs2, %vmask",
+    vsuxsegei8{(: vs3_nf, rs1, vs2, vmask, nf :)},
+      disasm: "vsuxseg%nf\\ei1.v", "%vs3_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentStrided, /*element_width*/ 1)";
-    vsuxsegei16{(: vs3, rs1, vs2, vmask, nf :)},
-      disasm: "vsuxseg%nf\\ei2.v", "%vs3, (%rs1), %vs2, %vmask",
+    vsuxsegei16{(: vs3_nf, rs1, vs2, vmask, nf :)},
+      disasm: "vsuxseg%nf\\ei2.v", "%vs3_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentStrided, /*element_width*/ 2)";
-    vsuxsegei32{(: vs3, rs1, vs2, vmask, nf :)},
-      disasm: "vsuxseg%nf\\ei4.v", "%vs3, (%rs1), %vs2, %vmask",
+    vsuxsegei32{(: vs3_nf, rs1, vs2, vmask, nf :)},
+      disasm: "vsuxseg%nf\\ei4.v", "%vs3_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentStrided, /*element_width*/ 4)";
-    vsuxsegei64{(: vs3, rs1, vs2, vmask, nf :)},
-      disasm: "vsuxseg%nf\\ei8.v", "%vs3, (%rs1), %vs2, %vmask",
+    vsuxsegei64{(: vs3_nf, rs1, vs2, vmask, nf :)},
+      disasm: "vsuxseg%nf\\ei8.v", "%vs3_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentStrided, /*element_width*/ 8)";
 
     // Vector indexed segment store ordered.
-    vsoxsegei8{(: vs3, rs1, vs2, vmask, nf :)},
-      disasm: "vsuxseg%nf\\ei1.v", "%vs3, (%rs1), %vs2, %vmask",
+    vsoxsegei8{(: vs3_nf, rs1, vs2, vmask, nf :)},
+      disasm: "vsoxseg%nf\\ei1.v", "%vs3_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentIndexed, /*index_width*/ 1)";
-    vsoxsegei16{(: vs3, rs1, vs2, vmask, nf :)},
-      disasm: "vsuxseg%nf\\ei2.v", "%vs3, (%rs1), %vs2, %vmask",
+    vsoxsegei16{(: vs3_nf, rs1, vs2, vmask, nf :)},
+      disasm: "vsuxseg%nf\\ei2.v", "%vs3_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentIndexed, /*index_width*/ 2)";
-    vsoxsegei32{(: vs3, rs1, vs2, vmask, nf :)},
-      disasm: "vsuxseg%nf\\ei4.v", "%vs3, (%rs1), %vs2, %vmask",
+    vsoxsegei32{(: vs3_nf, rs1, vs2, vmask, nf :)},
+      disasm: "vsuxseg%nf\\ei4.v", "%vs3_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentIndexed, /*index_width*/ 4)";
-    vsoxsegei64{(: vs3, rs1, vs2, vmask, nf :)},
-      disasm: "vsuxseg%nf\\ei8.v", "%vs3, (%rs1), %vs2, %vmask",
+    vsoxsegei64{(: vs3_nf, rs1, vs2, vmask, nf :)},
+      disasm: "vsuxseg%nf\\ei8.v", "%vs3_nf, (%rs1), %vs2, %vmask",
       semfunc: "absl::bind_front(&VsSegmentIndexed, /*index_width*/ 8)";
 
     // Integer OPIVV, OPIVX, OPIVI.

@@ -46,23 +46,38 @@ using ::mpact::sim::generic::operator*;  // NOLINT: is used below.
 constexpr int kNumRegTable[8] = {8, 1, 2, 1, 4, 1, 2, 1};
 
 template <typename RegType>
-inline void GetVRegGroup(RiscVState* state, int reg_num,
+inline void GetVRegGroup(RiscVState* state, int reg_num, int num_fields,
                          std::vector<generic::RegisterBase*>* vreg_group) {
   // The number of registers in a vector register group depends on the register
   // index: 0, 8, 16, 24 each have 8 registers, 4, 12, 20, 28 each have 4,
   // 2, 6, 10, 14, 18, 22, 26, 30 each have two, and all odd numbered register
   // groups have only 1.
+  // For segmented load and store instructions there is a register group per
+  // field. Each register group size is limited by the NumRegTable limit, but
+  // the total number of registers can still be up to 8.
   int num_regs = kNumRegTable[reg_num % 8];
-  for (int i = 0; i < num_regs; i++) {
+  for (int i = 0; i < num_regs * num_fields; i++) {
     auto vreg_name = absl::StrCat(RiscVState::kVregPrefix, reg_num + i);
     vreg_group->push_back(state->GetRegister<RegType>(vreg_name).first);
   }
 }
+
 template <typename RegType>
 inline SourceOperandInterface* GetVectorRegisterSourceOp(RiscVState* state,
                                                          int reg_num) {
   std::vector<generic::RegisterBase*> vreg_group;
-  GetVRegGroup<RegType>(state, reg_num, &vreg_group);
+  GetVRegGroup<RegType>(state, reg_num, /*num_fields=*/1, &vreg_group);
+  auto* v_src_op = new RV32VectorSourceOperand(
+      absl::Span<generic::RegisterBase*>(vreg_group),
+      absl::StrCat(RiscVState::kVregPrefix, reg_num));
+  return v_src_op;
+}
+template <typename RegType>
+inline SourceOperandInterface* GetVectorRegisterSourceOpNf(RiscVState* state,
+                                                           int reg_num,
+                                                           int nf) {
+  std::vector<generic::RegisterBase*> vreg_group;
+  GetVRegGroup<RegType>(state, reg_num, nf, &vreg_group);
   auto* v_src_op = new RV32VectorSourceOperand(
       absl::Span<generic::RegisterBase*>(vreg_group),
       absl::StrCat(RiscVState::kVregPrefix, reg_num));
@@ -73,7 +88,18 @@ template <typename RegType>
 inline DestinationOperandInterface* GetVectorRegisterDestinationOp(
     RiscVState* state, int latency, int reg_num) {
   std::vector<generic::RegisterBase*> vreg_group;
-  GetVRegGroup<RegType>(state, reg_num, &vreg_group);
+  GetVRegGroup<RegType>(state, reg_num, /*num_fields=*/1, &vreg_group);
+  auto* v_dst_op = new RV32VectorDestinationOperand(
+      absl::Span<generic::RegisterBase*>(vreg_group), latency,
+      absl::StrCat(RiscVState::kVregPrefix, reg_num));
+  return v_dst_op;
+}
+
+template <typename RegType>
+inline DestinationOperandInterface* GetVectorRegisterDestinationOpNf(
+    RiscVState* state, int latency, int reg_num, int nf) {
+  std::vector<generic::RegisterBase*> vreg_group;
+  GetVRegGroup<RegType>(state, reg_num, nf, &vreg_group);
   auto* v_dst_op = new RV32VectorDestinationOperand(
       absl::Span<generic::RegisterBase*>(vreg_group), latency,
       absl::StrCat(RiscVState::kVregPrefix, reg_num));
@@ -151,6 +177,12 @@ void AddRiscVVectorSourceGetters(SourceOpGetterMap& getter_map,
     auto num = Extractors::VMem::ExtractVs3(common->inst_word());
     return GetVectorRegisterSourceOp<VectorRegister>(common->state(), num);
   });
+  Insert(getter_map, *Enum::kVs3Nf, [common]() -> SourceOperandInterface* {
+    auto nf = Extractors::VMem::ExtractNf(common->inst_word()) + 1;
+    auto num = Extractors::VMem::ExtractVs3(common->inst_word());
+    return GetVectorRegisterSourceOpNf<VectorRegister>(common->state(), num,
+                                                       nf);
+  });
 
   Insert(getter_map, *Enum::kSimm5, [common]() -> SourceOperandInterface* {
     const auto num =
@@ -219,6 +251,13 @@ void AddRiscVVectorDestGetters(DestOpGetterMap& getter_map,
            auto num = Extractors::VArith::ExtractVd(common->inst_word());
            return GetVectorRegisterDestinationOp<VectorRegister>(
                common->state(), latency, num);
+         });
+  Insert(getter_map, *Enum::kVdNf,
+         [common](int latency) -> DestinationOperandInterface* {
+           auto nf = Extractors::VMem::ExtractNf(common->inst_word()) + 1;
+           auto num = Extractors::VMem::ExtractVd(common->inst_word());
+           return GetVectorRegisterDestinationOpNf<VectorRegister>(
+               common->state(), latency, num, nf);
          });
   Insert(getter_map, *Enum::kFd,
          [common](int latency) -> DestinationOperandInterface* {

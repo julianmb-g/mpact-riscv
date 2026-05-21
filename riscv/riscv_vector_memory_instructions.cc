@@ -108,8 +108,14 @@ absl::Status WriteBackSegmentLoadData(int vector_register_byte_length,
       std::min(vector_register_byte_length / element_size, num_segments);
   int num_regs =
       std::max(1, num_segments * element_size / vector_register_byte_length);
-  // Total number of registers written.
-  int total_regs = num_fields * num_regs;
+  // Compute emul, since this determines how many vector registers have been
+  // allocated for each field.
+  auto* rv_vector = static_cast<RiscVState*>(inst->state())->rv_vector();
+  int emul = element_size * rv_vector->vector_length_multiplier() /
+             rv_vector->selected_element_width();
+  int reg_mul = std::max(1, emul / 8);
+  // Total number of registers that may be written.
+  int total_regs = (num_fields - 1) * reg_mul + num_regs;
   // Verify that the dest_op has enough registers. Else signal error.
   auto* dest_op =
       static_cast<RV32VectorDestinationOperand*>(inst->Destination(0));
@@ -126,8 +132,7 @@ absl::Status WriteBackSegmentLoadData(int vector_register_byte_length,
   int load_data_index = 0;
   // Data is organized by field. So write back in that order.
   for (int field = 0; field < num_fields; field++) {
-    int start_reg =
-        field * num_regs + (start_segment / max_elements_per_vector);
+    int start_reg = field * reg_mul + (start_segment / max_elements_per_vector);
     int offset = start_segment % max_elements_per_vector;
     int remaining_data = num_segments;
     for (int reg = start_reg; reg < start_reg + num_regs; reg++) {
