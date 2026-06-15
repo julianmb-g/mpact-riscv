@@ -65,6 +65,65 @@ using ::mpact::sim::riscv::test::kVs2;
 class RiscVFPReductionInstructionsTest
     : public ::mpact::sim::riscv::test::RiscVFPInstructionsTestBase {
  public:
+  // Tests if vector arithmetic instructions properly canonicalize NaNs.
+  template <typename Vd, typename Vs2, typename Vs1>
+  void CanonicalNaNBitwiseTestHelperReduction(absl::string_view name, int sew) {
+    int byte_sew = sew / 8;
+    constexpr int vs2_size = kVectorLengthInBytes / sizeof(Vs2);
+    constexpr int vs1_size = kVectorLengthInBytes / sizeof(Vs1);
+    Vs2 vs2_value[vs2_size * 8];
+    auto vs2_span = Span<Vs2>(vs2_value);
+    Vs1 vs1_value[vs1_size * 8];
+    auto vs1_span = Span<Vs1>(vs1_value);
+
+    AppendVectorRegisterOperands({kVs2, kVs1, kVmask}, {kVd});
+    auto mask_span = Span<const uint8_t>(kA5Mask);
+    SetVectorRegisterValues<uint8_t>({{kVmaskName, mask_span}});
+
+    // Fill elements with non-canonical NaNs
+    using Vs2Int = typename FPTypeInfo<Vs2>::IntType;
+    using Vs1Int = typename FPTypeInfo<Vs1>::IntType;
+    Vs2Int non_canonical_nan_vs2 =
+        (sizeof(Vs2) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Vs1Int non_canonical_nan_vs1 =
+        (sizeof(Vs1) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Vs2 non_canonical_fp_nan_vs2 =
+        *reinterpret_cast<Vs2*>(&non_canonical_nan_vs2);
+    Vs1 non_canonical_fp_nan_vs1 =
+        *reinterpret_cast<Vs1*>(&non_canonical_nan_vs1);
+
+    for (int i = 0; i < vs2_size * 8; i++)
+      vs2_span[i] = non_canonical_fp_nan_vs2;
+    for (int i = 0; i < vs1_size * 8; i++)
+      vs1_span[i] = non_canonical_fp_nan_vs1;
+
+    for (int i = 0; i < 8; i++) {
+      auto vs2_name = absl::StrCat("v", kVs2 + i);
+      auto vs1_name = absl::StrCat("v", kVs1 + i);
+      SetVectorRegisterValues<Vs2>(
+          {{vs2_name, vs2_span.subspan(vs2_size * i, vs2_size)}});
+      SetVectorRegisterValues<Vs1>(
+          {{vs1_name, vs1_span.subspan(vs1_size * i, vs1_size)}});
+    }
+
+    uint32_t vtype =
+        (kSewSettingsByByteSize[byte_sew] << 3) | kLmulSettings[3];  // LMUL = 1
+    int vlen = kVectorLengthInBytes / byte_sew;
+    ConfigureVectorUnit(vtype, vlen);
+
+    rv_fp_->SetRoundingMode(static_cast<FPRoundingMode>(0));
+    ClearVectorRegisterGroup(kVd, 8);
+
+    instruction_->Execute();
+
+    auto reg_val = vreg_[kVd]->data_buffer()->Get<Vd>(0);
+    using VdInt = typename FPTypeInfo<Vd>::IntType;
+    VdInt result_bits = *reinterpret_cast<VdInt*>(&reg_val);
+    VdInt expected_bits = FPTypeInfo<Vd>::kCanonicalNaN;
+    EXPECT_EQ(result_bits, expected_bits)
+        << name << " failed to canonicalize NaN in reduction";
+  }
+
   // Helper function for floating point reduction operations.
   template <typename Vd, typename Vs2, typename Vs1>
   void ReductionOpFPTestHelper(absl::string_view name, int sew,
@@ -171,6 +230,14 @@ class RiscVFPReductionInstructionsTest
 // Test vector floating point sum reduction.
 TEST_F(RiscVFPReductionInstructionsTest, Vfredosum) {
   SetSemanticFunction(&Vfredosum);
+  CanonicalNaNBitwiseTestHelperReduction<float, float, float>(
+      "Vfredosum_32_nan", 32);
+  ResetInstruction();
+  SetSemanticFunction(&Vfredosum);
+  CanonicalNaNBitwiseTestHelperReduction<double, double, double>(
+      "Vfredosum_64_nan", 64);
+  ResetInstruction();
+  SetSemanticFunction(&Vfredosum);
   ReductionOpFPTestHelper<float, float, float>(
       "Vfredosum_32", /*sew*/ 32, instruction_, /*delta_position*/ 32,
       [](float val0, float val1) -> float { return val0 + val1; });
@@ -215,6 +282,14 @@ T MaxMinHelper(T vs2, T vs1, std::function<T(T, T)> operation) {
 // Test vector floating point min reduction.
 TEST_F(RiscVFPReductionInstructionsTest, Vfredmin) {
   SetSemanticFunction(&Vfredmin);
+  CanonicalNaNBitwiseTestHelperReduction<float, float, float>("Vfredmin_32_nan",
+                                                              32);
+  ResetInstruction();
+  SetSemanticFunction(&Vfredmin);
+  CanonicalNaNBitwiseTestHelperReduction<double, double, double>(
+      "Vfredmin_64_nan", 64);
+  ResetInstruction();
+  SetSemanticFunction(&Vfredmin);
   ReductionOpFPTestHelper<float, float, float>(
       "Vfredmin_32", /*sew*/ 32, instruction_, /*delta_position*/ 32,
       [](float val0, float val1) -> float {
@@ -237,6 +312,14 @@ TEST_F(RiscVFPReductionInstructionsTest, Vfredmin) {
 
 // Test vector floating point max reduction.
 TEST_F(RiscVFPReductionInstructionsTest, Vfredmax) {
+  SetSemanticFunction(&Vfredmax);
+  CanonicalNaNBitwiseTestHelperReduction<float, float, float>("Vfredmax_32_nan",
+                                                              32);
+  ResetInstruction();
+  SetSemanticFunction(&Vfredmax);
+  CanonicalNaNBitwiseTestHelperReduction<double, double, double>(
+      "Vfredmax_64_nan", 64);
+  ResetInstruction();
   SetSemanticFunction(&Vfredmax);
   ReductionOpFPTestHelper<float, float, float>(
       "Vfredmin_32", /*sew*/ 32, instruction_, /*delta_position*/ 32,

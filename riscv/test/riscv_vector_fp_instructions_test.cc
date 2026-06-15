@@ -307,6 +307,289 @@ class RiscVFPInstructionsTest
     }
   }
 
+  // Tests if vector arithmetic instructions properly canonicalize NaNs.
+  template <typename Vd, typename Vs2, typename Vs1>
+  void CanonicalNaNBitwiseTestHelperVV(absl::string_view name, int sew,
+                                       bool has_fflags = false) {
+    constexpr int vs2_size = kVectorLengthInBytes / sizeof(Vs2);
+    constexpr int vs1_size = kVectorLengthInBytes / sizeof(Vs1);
+    Vs2 vs2_value[vs2_size * 8];
+    Vs1 vs1_value[vs1_size * 8];
+    auto vs2_span = Span<Vs2>(vs2_value);
+    auto vs1_span = Span<Vs1>(vs1_value);
+
+    AppendVectorRegisterOperands({kVs2, kVs1, kVmask}, {kVd});
+    if (has_fflags) {
+      auto* flag_op =
+          rv_fp_->fflags()->CreateSetDestinationOperand(0, "fflags");
+      instruction_->AppendDestination(flag_op);
+    }
+    SetVectorRegisterValues<uint8_t>(
+        {{kVmaskName, Span<const uint8_t>(kA5Mask)}});
+    vreg_[kVmask]->data_buffer()->Set<uint8_t>(0, 0xff);
+
+    // Fill vs2 and vs1 elements with non-canonical NaNs
+    using Vs2Int = typename FPTypeInfo<Vs2>::IntType;
+    using Vs1Int = typename FPTypeInfo<Vs1>::IntType;
+    Vs2Int non_canonical_nan_vs2 =
+        (sizeof(Vs2) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Vs1Int non_canonical_nan_vs1 =
+        (sizeof(Vs1) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Vs2 non_canonical_fp_nan_vs2 =
+        *reinterpret_cast<Vs2*>(&non_canonical_nan_vs2);
+    Vs1 non_canonical_fp_nan_vs1 =
+        *reinterpret_cast<Vs1*>(&non_canonical_nan_vs1);
+
+    for (int i = 0; i < vs2_size * 8; i++)
+      vs2_span[i] = non_canonical_fp_nan_vs2;
+    for (int i = 0; i < vs1_size * 8; i++)
+      vs1_span[i] = non_canonical_fp_nan_vs1;
+
+    for (int i = 0; i < 8; i++) {
+      auto vs2_name = absl::StrCat("v", kVs2 + i);
+      auto vs1_name = absl::StrCat("v", kVs1 + i);
+      SetVectorRegisterValues<Vs2>(
+          {{vs2_name, vs2_span.subspan(vs2_size * i, vs2_size)}});
+      SetVectorRegisterValues<Vs1>(
+          {{vs1_name, vs1_span.subspan(vs1_size * i, vs1_size)}});
+    }
+
+    int byte_sew = sew / 8;
+    uint32_t vtype =
+        (kSewSettingsByByteSize[byte_sew] << 3) | kLmulSettings[3];  // LMUL = 1
+    int vlen = kVectorLengthInBytes / byte_sew;
+    ConfigureVectorUnit(vtype, vlen);
+    rv_vector_->set_vstart(0);
+
+    instruction_->Execute();
+
+    auto* dest_db = vreg_[kVd]->data_buffer();
+    using VdInt = typename FPTypeInfo<Vd>::IntType;
+    VdInt expected_bits = FPTypeInfo<Vd>::kCanonicalNaN;
+    for (int i = 0; i < 4; i++) {  // Check first 4 elements which are unmasked
+      VdInt result_bits = dest_db->Get<VdInt>(i);
+      EXPECT_EQ(result_bits, expected_bits)
+          << name << " failed to canonicalize NaN at index " << i;
+    }
+  }
+
+  template <typename Vd, typename Vs2, typename Fs1>
+  void CanonicalNaNBitwiseTestHelperVX(absl::string_view name, int sew,
+                                       bool has_fflags = false) {
+    constexpr int vs2_size = kVectorLengthInBytes / sizeof(Vs2);
+    Vs2 vs2_value[vs2_size * 8];
+    auto vs2_span = Span<Vs2>(vs2_value);
+
+    AppendVectorRegisterOperands({kVs2}, {kVd});
+    AppendRegisterOperands<RVScalarRegister>({kFs1Name}, {});
+    if (has_fflags) {
+      auto* flag_op =
+          rv_fp_->fflags()->CreateSetDestinationOperand(0, "fflags");
+      instruction_->AppendDestination(flag_op);
+    }
+    AppendVectorRegisterOperands({kVmask}, {});
+
+    SetVectorRegisterValues<uint8_t>(
+        {{kVmaskName, Span<const uint8_t>(kA5Mask)}});
+    vreg_[kVmask]->data_buffer()->Set<uint8_t>(0, 0xff);
+
+    // Fill vs2 elements with non-canonical NaNs
+    using Vs2Int = typename FPTypeInfo<Vs2>::IntType;
+    using Fs1Int = typename FPTypeInfo<Fs1>::IntType;
+    Vs2Int non_canonical_nan_vs2 =
+        (sizeof(Vs2) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Fs1Int non_canonical_nan_fs1 =
+        (sizeof(Fs1) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Vs2 non_canonical_fp_nan_vs2 =
+        *reinterpret_cast<Vs2*>(&non_canonical_nan_vs2);
+    Fs1 non_canonical_fp_nan_fs1 =
+        *reinterpret_cast<Fs1*>(&non_canonical_nan_fs1);
+
+    for (int i = 0; i < vs2_size * 8; i++)
+      vs2_span[i] = non_canonical_fp_nan_vs2;
+
+    for (int i = 0; i < 8; i++) {
+      auto vs2_name = absl::StrCat("v", kVs2 + i);
+      SetVectorRegisterValues<Vs2>(
+          {{vs2_name, vs2_span.subspan(vs2_size * i, vs2_size)}});
+    }
+
+    typename RVScalarRegister::ValueType fs1_reg_value =
+        NaNBox<Fs1, typename RVScalarRegister::ValueType>(
+            non_canonical_fp_nan_fs1);
+    SetRegisterValues<typename RVScalarRegister::ValueType, RVScalarRegister>(
+        {{kFs1Name, fs1_reg_value}});
+
+    int byte_sew = sew / 8;
+    uint32_t vtype =
+        (kSewSettingsByByteSize[byte_sew] << 3) | kLmulSettings[3];  // LMUL = 1
+    int vlen = kVectorLengthInBytes / byte_sew;
+    ConfigureVectorUnit(vtype, vlen);
+    rv_vector_->set_vstart(0);
+
+    instruction_->Execute();
+
+    auto* dest_db = vreg_[kVd]->data_buffer();
+    using VdInt = typename FPTypeInfo<Vd>::IntType;
+    VdInt expected_bits = FPTypeInfo<Vd>::kCanonicalNaN;
+    for (int i = 0; i < 4; i++) {  // Check first 4 elements which are unmasked
+      VdInt result_bits = dest_db->Get<VdInt>(i);
+      EXPECT_EQ(result_bits, expected_bits)
+          << name << " failed to canonicalize NaN at index " << i;
+    }
+  }
+
+  template <typename Vd, typename Vs2, typename Vs1>
+  void CanonicalNaNBitwiseTestHelperTernaryVV(absl::string_view name, int sew,
+                                              bool has_fflags = false) {
+    constexpr int vs2_size = kVectorLengthInBytes / sizeof(Vs2);
+    constexpr int vs1_size = kVectorLengthInBytes / sizeof(Vs1);
+    constexpr int vd_size = kVectorLengthInBytes / sizeof(Vd);
+    Vs2 vs2_value[vs2_size * 8];
+    Vs1 vs1_value[vs1_size * 8];
+    Vd vd_value[vd_size * 8];
+    auto vs2_span = Span<Vs2>(vs2_value);
+    auto vs1_span = Span<Vs1>(vs1_value);
+    auto vd_span = Span<Vd>(vd_value);
+
+    AppendVectorRegisterOperands({kVs2, kVs1, kVd, kVmask}, {kVd});
+    if (has_fflags) {
+      auto* flag_op =
+          rv_fp_->fflags()->CreateSetDestinationOperand(0, "fflags");
+      instruction_->AppendDestination(flag_op);
+    }
+    SetVectorRegisterValues<uint8_t>(
+        {{kVmaskName, Span<const uint8_t>(kA5Mask)}});
+    vreg_[kVmask]->data_buffer()->Set<uint8_t>(0, 0xff);
+
+    // Fill elements with non-canonical NaNs
+    using Vs2Int = typename FPTypeInfo<Vs2>::IntType;
+    using Vs1Int = typename FPTypeInfo<Vs1>::IntType;
+    using VdInt = typename FPTypeInfo<Vd>::IntType;
+    Vs2Int non_canonical_nan_vs2 =
+        (sizeof(Vs2) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Vs1Int non_canonical_nan_vs1 =
+        (sizeof(Vs1) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    VdInt non_canonical_nan_vd =
+        (sizeof(Vd) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Vs2 non_canonical_fp_nan_vs2 =
+        *reinterpret_cast<Vs2*>(&non_canonical_nan_vs2);
+    Vs1 non_canonical_fp_nan_vs1 =
+        *reinterpret_cast<Vs1*>(&non_canonical_nan_vs1);
+    Vd non_canonical_fp_nan_vd = *reinterpret_cast<Vd*>(&non_canonical_nan_vd);
+
+    for (int i = 0; i < vs2_size * 8; i++)
+      vs2_span[i] = non_canonical_fp_nan_vs2;
+    for (int i = 0; i < vs1_size * 8; i++)
+      vs1_span[i] = non_canonical_fp_nan_vs1;
+    for (int i = 0; i < vd_size * 8; i++) vd_span[i] = non_canonical_fp_nan_vd;
+
+    for (int i = 0; i < 8; i++) {
+      auto vs2_name = absl::StrCat("v", kVs2 + i);
+      auto vs1_name = absl::StrCat("v", kVs1 + i);
+      auto vd_name = absl::StrCat("v", kVd + i);
+      SetVectorRegisterValues<Vs2>(
+          {{vs2_name, vs2_span.subspan(vs2_size * i, vs2_size)}});
+      SetVectorRegisterValues<Vs1>(
+          {{vs1_name, vs1_span.subspan(vs1_size * i, vs1_size)}});
+      SetVectorRegisterValues<Vd>(
+          {{vd_name, vd_span.subspan(vd_size * i, vd_size)}});
+    }
+
+    int byte_sew = sew / 8;
+    uint32_t vtype =
+        (kSewSettingsByByteSize[byte_sew] << 3) | kLmulSettings[3];  // LMUL = 1
+    int vlen = kVectorLengthInBytes / byte_sew;
+    ConfigureVectorUnit(vtype, vlen);
+    rv_vector_->set_vstart(0);
+
+    instruction_->Execute();
+
+    auto* dest_db = vreg_[kVd]->data_buffer();
+    VdInt expected_bits = FPTypeInfo<Vd>::kCanonicalNaN;
+    for (int i = 0; i < 4; i++) {  // Check first 4 elements which are unmasked
+      VdInt result_bits = dest_db->Get<VdInt>(i);
+      EXPECT_EQ(result_bits, expected_bits)
+          << name << " failed to canonicalize NaN at index " << i;
+    }
+  }
+
+  template <typename Vd, typename Vs2, typename Fs1>
+  void CanonicalNaNBitwiseTestHelperTernaryVX(absl::string_view name, int sew,
+                                              bool has_fflags = false) {
+    constexpr int vs2_size = kVectorLengthInBytes / sizeof(Vs2);
+    constexpr int vd_size = kVectorLengthInBytes / sizeof(Vd);
+    Vs2 vs2_value[vs2_size * 8];
+    Vd vd_value[vd_size * 8];
+    auto vs2_span = Span<Vs2>(vs2_value);
+    auto vd_span = Span<Vd>(vd_value);
+
+    AppendVectorRegisterOperands({kVs2}, {kVd});
+    AppendRegisterOperands<RVScalarRegister>({kFs1Name}, {});
+    AppendVectorRegisterOperands({kVd, kVmask}, {kVd});
+    if (has_fflags) {
+      auto* flag_op =
+          rv_fp_->fflags()->CreateSetDestinationOperand(0, "fflags");
+      instruction_->AppendDestination(flag_op);
+    }
+
+    SetVectorRegisterValues<uint8_t>(
+        {{kVmaskName, Span<const uint8_t>(kA5Mask)}});
+    vreg_[kVmask]->data_buffer()->Set<uint8_t>(0, 0xff);
+
+    // Fill elements with non-canonical NaNs
+    using Vs2Int = typename FPTypeInfo<Vs2>::IntType;
+    using Fs1Int = typename FPTypeInfo<Fs1>::IntType;
+    using VdInt = typename FPTypeInfo<Vd>::IntType;
+    Vs2Int non_canonical_nan_vs2 =
+        (sizeof(Vs2) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Fs1Int non_canonical_nan_fs1 =
+        (sizeof(Fs1) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    VdInt non_canonical_nan_vd =
+        (sizeof(Vd) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Vs2 non_canonical_fp_nan_vs2 =
+        *reinterpret_cast<Vs2*>(&non_canonical_nan_vs2);
+    Fs1 non_canonical_fp_nan_fs1 =
+        *reinterpret_cast<Fs1*>(&non_canonical_nan_fs1);
+    Vd non_canonical_fp_nan_vd = *reinterpret_cast<Vd*>(&non_canonical_nan_vd);
+
+    for (int i = 0; i < vs2_size * 8; i++)
+      vs2_span[i] = non_canonical_fp_nan_vs2;
+    for (int i = 0; i < vd_size * 8; i++) vd_span[i] = non_canonical_fp_nan_vd;
+
+    for (int i = 0; i < 8; i++) {
+      auto vs2_name = absl::StrCat("v", kVs2 + i);
+      auto vd_name = absl::StrCat("v", kVd + i);
+      SetVectorRegisterValues<Vs2>(
+          {{vs2_name, vs2_span.subspan(vs2_size * i, vs2_size)}});
+      SetVectorRegisterValues<Vd>(
+          {{vd_name, vd_span.subspan(vd_size * i, vd_size)}});
+    }
+
+    typename RVScalarRegister::ValueType fs1_reg_value =
+        NaNBox<Fs1, typename RVScalarRegister::ValueType>(
+            non_canonical_fp_nan_fs1);
+    SetRegisterValues<typename RVScalarRegister::ValueType, RVScalarRegister>(
+        {{kFs1Name, fs1_reg_value}});
+
+    int byte_sew = sew / 8;
+    uint32_t vtype =
+        (kSewSettingsByByteSize[byte_sew] << 3) | kLmulSettings[3];  // LMUL = 1
+    int vlen = kVectorLengthInBytes / byte_sew;
+    ConfigureVectorUnit(vtype, vlen);
+    rv_vector_->set_vstart(0);
+
+    instruction_->Execute();
+
+    auto* dest_db = vreg_[kVd]->data_buffer();
+    VdInt expected_bits = FPTypeInfo<Vd>::kCanonicalNaN;
+    for (int i = 0; i < 4; i++) {  // Check first 4 elements which are unmasked
+      VdInt result_bits = dest_db->Get<VdInt>(i);
+      EXPECT_EQ(result_bits, expected_bits)
+          << name << " failed to canonicalize NaN at index " << i;
+    }
+  }
+
   // Floating point test needs to ensure to use the fp special values (inf, NaN
   // etc.) during testing, not just random values. This function handles vector
   // scalar instructions.
@@ -505,6 +788,12 @@ class RiscVFPInstructionsTest
 TEST_F(RiscVFPInstructionsTest, Vfadd) {
   // Vector-vector.
   SetSemanticFunction(&Vfadd);
+  CanonicalNaNBitwiseTestHelperVV<float, float, float>("Vfadd_vv32_nan", 32);
+  ResetInstruction();
+  SetSemanticFunction(&Vfadd);
+  CanonicalNaNBitwiseTestHelperVV<double, double, double>("Vfadd_vv64_nan", 64);
+  ResetInstruction();
+  SetSemanticFunction(&Vfadd);
   BinaryOpFPTestHelperVV<float, float, float>(
       "Vfadd_vv32", /*sew*/ 32, instruction_, /*delta_position*/ 32,
       [](float vs2, float vs1) -> float { return vs2 + vs1; });
@@ -514,6 +803,12 @@ TEST_F(RiscVFPInstructionsTest, Vfadd) {
       "Vfadd_vv64", /*sew*/ 64, instruction_, /*delta_position*/ 64,
       [](double vs2, double vs1) -> double { return vs2 + vs1; });
   // Vector-scalar.
+  ResetInstruction();
+  SetSemanticFunction(&Vfadd);
+  CanonicalNaNBitwiseTestHelperVX<float, float, float>("Vfadd_vx32_nan", 32);
+  ResetInstruction();
+  SetSemanticFunction(&Vfadd);
+  CanonicalNaNBitwiseTestHelperVX<double, double, double>("Vfadd_vx64_nan", 64);
   ResetInstruction();
   SetSemanticFunction(&Vfadd);
   BinaryOpFPTestHelperVX<float, float, float, RVScalarRegister>(
@@ -882,6 +1177,14 @@ TEST_F(RiscVFPInstructionsTest, Vfnmsub) {
 TEST_F(RiscVFPInstructionsTest, Vfmacc) {
   // Vector-vector.
   SetSemanticFunction(&Vfmacc);
+  CanonicalNaNBitwiseTestHelperTernaryVV<float, float, float>("Vfmacc_vv32_nan",
+                                                              32);
+  ResetInstruction();
+  SetSemanticFunction(&Vfmacc);
+  CanonicalNaNBitwiseTestHelperTernaryVV<double, double, double>(
+      "Vfmacc_vv64_nan", 64);
+  ResetInstruction();
+  SetSemanticFunction(&Vfmacc);
   TernaryOpFPTestHelperVV<float, float, float>(
       "Vfmacc_vv32", /*sew*/ 32, instruction_, /*delta_position*/ 32,
       [](float vs2, float vs1, float vd) -> float {
@@ -895,6 +1198,14 @@ TEST_F(RiscVFPInstructionsTest, Vfmacc) {
         return OptimizationBarrier(std::fma(vs1, vs2, vd));
       });
   // Vector-scalar.
+  ResetInstruction();
+  SetSemanticFunction(&Vfmacc);
+  CanonicalNaNBitwiseTestHelperTernaryVX<float, float, float>("Vfmacc_vx32_nan",
+                                                              32);
+  ResetInstruction();
+  SetSemanticFunction(&Vfmacc);
+  CanonicalNaNBitwiseTestHelperTernaryVX<double, double, double>(
+      "Vfmacc_vx64_nan", 64);
   ResetInstruction();
   SetSemanticFunction(&Vfmacc);
   TernaryOpFPTestHelperVX<float, float, float>(
@@ -1291,6 +1602,14 @@ std::tuple<T, uint32_t> MaxMinHelper(T vs2, T vs1,
 TEST_F(RiscVFPInstructionsTest, Vfmax) {
   // Vector-vector.
   SetSemanticFunction(&Vfmax);
+  CanonicalNaNBitwiseTestHelperVV<float, float, float>("Vfmax_vv32_nan", 32,
+                                                       true);
+  ResetInstruction();
+  SetSemanticFunction(&Vfmax);
+  CanonicalNaNBitwiseTestHelperVV<double, double, double>("Vfmax_vv64_nan", 64,
+                                                          true);
+  ResetInstruction();
+  SetSemanticFunction(&Vfmax);
   BinaryOpWithFflagsFPTestHelperVV<float, float, float>(
       "Vfmax_vv32", /*sew*/ 32, instruction_, /*delta_position*/ 32,
       [](float vs2, float vs1) -> std::tuple<float, uint32_t> {
@@ -1311,6 +1630,14 @@ TEST_F(RiscVFPInstructionsTest, Vfmax) {
         });
       });
   // Vector-scalar.
+  ResetInstruction();
+  SetSemanticFunction(&Vfmax);
+  CanonicalNaNBitwiseTestHelperVX<float, float, float>("Vfmax_vx32_nan", 32,
+                                                       true);
+  ResetInstruction();
+  SetSemanticFunction(&Vfmax);
+  CanonicalNaNBitwiseTestHelperVX<double, double, double>("Vfmax_vx64_nan", 64,
+                                                          true);
   ResetInstruction();
   SetSemanticFunction(&Vfmax);
   BinaryOpWithFflagsFPTestHelperVX<float, float, float, RVScalarRegister>(
@@ -1390,6 +1717,57 @@ TEST_F(RiscVFPInstructionsTest, Vfmerge) {
       [](double vs2, double vs1, bool mask) -> double {
         return mask ? vs1 : vs2;
       });
+}
+
+TEST_F(RiscVFPInstructionsTest, VfrdivCanonicalNaNBitwise) {
+  SetSemanticFunction(&Vfrdiv);
+
+  constexpr int vs2_size = kVectorLengthInBytes / sizeof(float);
+  float vs2_value[vs2_size * 8];
+  auto vs2_span = Span<float>(vs2_value);
+
+  AppendVectorRegisterOperands({kVs2}, {kVd});
+  AppendRegisterOperands<RVScalarRegister>({kFs1Name}, {});
+  AppendVectorRegisterOperands({kVmask}, {});
+
+  SetVectorRegisterValues<uint8_t>(
+      {{kVmaskName, Span<const uint8_t>(kA5Mask)}});
+  vreg_[kVmask]->data_buffer()->Set<uint8_t>(0, 0xff);
+
+  // Fill vs2 elements with non-canonical float single-precision quiet NaN
+  // payload bits (0xffc00000)
+  uint32_t non_canonical_nan = 0xffc00000;
+  float non_canonical_float_nan = *reinterpret_cast<float*>(&non_canonical_nan);
+  for (int i = 0; i < vs2_size * 8; i++) {
+    vs2_span[i] = non_canonical_float_nan;
+  }
+
+  for (int i = 0; i < 8; i++) {
+    auto vs2_name = absl::StrCat("v", kVs2 + i);
+    SetVectorRegisterValues<float>(
+        {{vs2_name, vs2_span.subspan(vs2_size * i, vs2_size)}});
+  }
+
+  // Set scalar operand fs1 value
+  float fs1_val = 1.0f;
+  typename RVScalarRegister::ValueType fs1_reg_value =
+      NaNBox<float, typename RVScalarRegister::ValueType>(fs1_val);
+  SetRegisterValues<typename RVScalarRegister::ValueType, RVScalarRegister>(
+      {{kFs1Name, fs1_reg_value}});
+
+  // sew = 32 bits = 4 bytes, sew_field = 2
+  uint32_t vtype =
+      (kSewSettingsByByteSize[4] << 3) | kLmulSettings[3];  // LMUL = 1
+  ConfigureVectorUnit(vtype, 4);
+  rv_vector_->set_vstart(0);
+
+  instruction_->Execute();
+
+  auto* dest_db = vreg_[kVd]->data_buffer();
+  for (int i = 0; i < 4; i++) {
+    uint32_t result_bits = dest_db->Get<uint32_t>(i);
+    EXPECT_EQ(result_bits, 0x7fc00000);
+  }
 }
 
 }  // namespace

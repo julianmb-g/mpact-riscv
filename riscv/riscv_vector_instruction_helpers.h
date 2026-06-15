@@ -21,10 +21,12 @@
 #include <limits>
 #include <optional>
 #include <tuple>
+#include <type_traits>
 
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "mpact/sim/generic/instruction.h"
+#include "mpact/sim/generic/type_helpers.h"
 #include "riscv/riscv_register.h"
 #include "riscv/riscv_state.h"
 #include "riscv/riscv_vector_state.h"
@@ -34,6 +36,23 @@ namespace sim {
 namespace riscv {
 
 using ::mpact::sim::generic::GetInstructionSource;
+
+template <typename T>
+inline constexpr bool IsMpactFpType =
+    std::is_floating_point<T>::value ||
+    std::is_same<typename std::decay<T>::type,
+                 mpact::sim::generic::HalfFP>::value;
+
+template <typename T>
+inline T CanonicalizeVectorNaN(T value) {
+  if constexpr (IsMpactFpType<T>) {
+    if (mpact::sim::generic::FPTypeInfo<T>::IsNaN(value)) {
+      auto nan_val = mpact::sim::generic::FPTypeInfo<T>::kCanonicalNaN;
+      return *reinterpret_cast<T*>(&nan_val);
+    }
+  }
+  return value;
+}
 
 // This helper function handles the case of instructions that target a vector
 // mask.
@@ -214,7 +233,7 @@ void RiscVMaskNullaryVectorOp(RiscVVectorState* rv_vector,
 
       auto result = op(operation_mask);
       if (mask_value) {
-        dest_span[i] = result;
+        dest_span[i] = CanonicalizeVectorNaN<Vd>(result);
       }
       vector_index++;
     }
@@ -285,7 +304,7 @@ void RiscVUnaryVectorOp(RiscVVectorState* rv_vector, const Instruction* inst,
       if (mask_value) {
         // Compute result.
         Vs2 vs2 = GetInstructionSource<Vs2>(inst, 0, vector_index);
-        dest_span[i] = op(vs2);
+        dest_span[i] = CanonicalizeVectorNaN<Vd>(op(vs2));
       }
       vector_index++;
     }
@@ -359,7 +378,7 @@ void RiscVUnaryVectorOpWithFflags(
         // Compute result.
         Vs2 vs2 = GetInstructionSource<Vs2>(inst, 0, vector_index);
         auto [value, flag] = op(vs2);
-        dest_span[i] = value;
+        dest_span[i] = CanonicalizeVectorNaN<Vd>(value);
         fflags |= flag;
       }
       vector_index++;
@@ -442,7 +461,7 @@ void RiscVMaskBinaryVectorOp(
                                           (vector_scalar ? 0 : vector_index));
       auto value = op(vs2, vs1, mask_value);
       if (value.has_value()) {
-        dest_span[i] = value.value();
+        dest_span[i] = CanonicalizeVectorNaN<Vd>(value.value());
       } else if (mask_value) {
         // If there is no value returned, but the mask_value is true, check
         // to see if there was an exception.
@@ -543,7 +562,7 @@ void RiscVBinaryVectorOpWithFflags(
                                           (vector_scalar ? 0 : vector_index));
       if (mask_value) {
         auto [value, flag] = op(vs2, vs1);
-        dest_span[i] = value;
+        dest_span[i] = CanonicalizeVectorNaN<Vd>(value);
         fflags |= flag;
         if (rv_vector->vector_exception()) {
           rv_vector->set_vstart(vector_index);
@@ -629,7 +648,7 @@ void RiscVTernaryVectorOp(RiscVVectorState* rv_vector, const Instruction* inst,
                                           (vector_scalar ? 0 : vector_index));
       Vd vd = GetInstructionSource<Vd>(inst, 2, vector_index);
       if (mask_value) {
-        dest_span[i] = op(vs2, vs1, vd);
+        dest_span[i] = CanonicalizeVectorNaN<Vd>(op(vs2, vs1, vd));
       }
       vector_index++;
     }
@@ -685,7 +704,7 @@ void RiscVBinaryReductionVectorOp(RiscVVectorState* rv_vector,
   auto* dest_op =
       static_cast<RV32VectorDestinationOperand*>(inst->Destination(0));
   auto dest_db = dest_op->CopyDataBuffer();
-  dest_db->Set<Vd>(0, accumulator);
+  dest_db->Set<Vd>(0, CanonicalizeVectorNaN<Vd>(accumulator));
   dest_db->Submit();
   rv_vector->clear_vstart();
 }

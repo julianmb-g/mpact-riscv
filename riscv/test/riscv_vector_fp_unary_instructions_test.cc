@@ -269,6 +269,59 @@ class RiscVFPUnaryInstructionsTest
     }
   }
 
+  // Tests if unary fp vector instructions properly canonicalize NaNs.
+  template <typename Vd, typename Vs2>
+  void CanonicalNaNBitwiseTestHelperUnaryV(absl::string_view name, int sew,
+                                           bool has_fflags = false) {
+    constexpr int vs2_size = kVectorLengthInBytes / sizeof(Vs2);
+    Vs2 vs2_value[vs2_size * 8];
+    auto vs2_span = Span<Vs2>(vs2_value);
+
+    AppendVectorRegisterOperands({kVs2, kVmask}, {kVd});
+    if (has_fflags) {
+      auto* flag_op =
+          rv_fp_->fflags()->CreateSetDestinationOperand(0, "fflags");
+      instruction_->AppendDestination(flag_op);
+    }
+    SetVectorRegisterValues<uint8_t>(
+        {{kVmaskName, Span<const uint8_t>(kA5Mask)}});
+    vreg_[kVmask]->data_buffer()->Set<uint8_t>(0, 0xff);
+
+    // Fill elements with non-canonical NaNs
+    using Vs2Int = typename FPTypeInfo<Vs2>::IntType;
+    Vs2Int non_canonical_nan_vs2 =
+        (sizeof(Vs2) == 4) ? 0xffc00000 : 0xfff8000000000000ULL;
+    Vs2 non_canonical_fp_nan_vs2 =
+        *reinterpret_cast<Vs2*>(&non_canonical_nan_vs2);
+
+    for (int i = 0; i < vs2_size * 8; i++)
+      vs2_span[i] = non_canonical_fp_nan_vs2;
+
+    for (int i = 0; i < 8; i++) {
+      auto vs2_name = absl::StrCat("v", kVs2 + i);
+      SetVectorRegisterValues<Vs2>(
+          {{vs2_name, vs2_span.subspan(vs2_size * i, vs2_size)}});
+    }
+
+    int byte_sew = sew / 8;
+    uint32_t vtype =
+        (kSewSettingsByByteSize[byte_sew] << 3) | kLmulSettings[3];  // LMUL = 1
+    int vlen = kVectorLengthInBytes / byte_sew;
+    ConfigureVectorUnit(vtype, vlen);
+    rv_vector_->set_vstart(0);
+
+    instruction_->Execute();
+
+    auto* dest_db = vreg_[kVd]->data_buffer();
+    using VdInt = typename FPTypeInfo<Vd>::IntType;
+    VdInt expected_bits = FPTypeInfo<Vd>::kCanonicalNaN;
+    for (int i = 0; i < 4; i++) {  // Check first 4 elements which are unmasked
+      VdInt result_bits = dest_db->Get<VdInt>(i);
+      EXPECT_EQ(result_bits, expected_bits)
+          << name << " failed to canonicalize NaN at index " << i;
+    }
+  }
+
   // Floating point test needs to ensure to use the fp special values (inf, NaN
   // etc.) during testing, not just random values.
   template <typename Vd, typename Vs2>
@@ -920,6 +973,14 @@ inline std::tuple<T, uint32_t> VfsqrtvTestHelper(T vs2) {
 
 // Test square root instruction.
 TEST_F(RiscVFPUnaryInstructionsTest, Vfsqrtv) {
+  SetSemanticFunction(&Vfsqrtv);
+  CanonicalNaNBitwiseTestHelperUnaryV<float, float>("Vfsqrt.v_32_nan", 32,
+                                                    true);
+  ResetInstruction();
+  SetSemanticFunction(&Vfsqrtv);
+  CanonicalNaNBitwiseTestHelperUnaryV<double, double>("Vfsqrt.v_64_nan", 64,
+                                                      true);
+  ResetInstruction();
   SetSemanticFunction(&Vfsqrtv);
   UnaryOpWithFflagsFPTestHelperV<float, float>(
       "Vfsqrt.v_32", /*sew*/ 32, instruction_,
